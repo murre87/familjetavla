@@ -230,6 +230,41 @@ export interface Schedule {
   enabled: boolean;
 }
 
+/** Laddfönster: 22:00–06:00 går över midnatt, samma tid i båda = hela dygnet. */
+export interface ChargeRule {
+  days: number[];
+  from: string; // "22:00"
+  to: string; // "06:00"
+}
+
+/** Laddning för en bil: det som finns i Home Assistant och tavlans eget schema. */
+export interface CarCharging {
+  /** Det som startar och stoppar laddningen: bilens laddbrytare eller laddboxens. */
+  target?: Control;
+  targetOptions: { entityId: string; name: string }[];
+  /** Bilens laddgräns i %. */
+  limit?: Control;
+  /** Laddboxens och laddappars inställningar (t.ex. EV Smart Charging). */
+  settings: Control[];
+  /** Scheman och automationer i HA som redan handlar om laddning. */
+  existing: { entityId: string; name: string; domain: "schedule" | "automation"; on: boolean; next?: string }[];
+  /** Tavlans eget schema: en schemahjälpare och en automation i HA. */
+  own?: {
+    scheduleEntity: string;
+    automationEntity?: string;
+    enabled: boolean;
+    /** Schemat är på just nu (inne i ett laddfönster). */
+    active: boolean;
+    rules: ChargeRule[];
+    target?: string;
+    limit?: number;
+    next?: string;
+    missingAutomation: boolean;
+  };
+  /** Tavlan kan skapa ett eget schema (ansluten till HA och något att styra finns). */
+  canCreate: boolean;
+}
+
 export interface NamedEntity {
   name: string;
   entityId: string;

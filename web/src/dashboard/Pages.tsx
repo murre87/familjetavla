@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Control, Dashboard, Lamp } from "../../../server/src/types";
-import { api, type CarDetails, type GraphData } from "../api";
+import type { CarCharging, ChargeRule, Control, Dashboard, Lamp } from "../../../server/src/types";
+import { api, type CarDetails, type ControlOp, type GraphData } from "../api";
 import { Icon } from "../Icon";
 import type { Actions } from "./Dashboard";
 import { Ring } from "./bits";
@@ -11,12 +11,27 @@ const fmtNum = (n: number | null | undefined, d = 1) => (n === null || n === und
 
 // ---------- Generic control (switch / select / number / button) ----------
 
-export function ControlView({ c, actions }: { c: Control; actions: Actions }) {
+export function ControlView({ c, actions, send }: { c: Control; actions: Actions; send?: (op: ControlOp, value?: string | number) => Promise<unknown> }) {
+  const call = send ?? ((op: ControlOp, value?: string | number) => api.control(c.entityId, op as "toggle" | "select" | "set" | "press", value));
+  if (c.domain === "time" || c.domain === "input_datetime") {
+    return (
+      <label className="field">
+        <span>{c.name}</span>
+        <input
+          type="time"
+          defaultValue={c.state.slice(0, 5)}
+          key={c.state}
+          disabled={c.offline}
+          onBlur={(e) => e.target.value && e.target.value !== c.state.slice(0, 5) && actions.run(c.name, () => call("time", e.target.value))}
+        />
+      </label>
+    );
+  }
   if (c.domain === "select" || c.domain === "input_select") {
     return (
       <label className="field">
         <span>{c.name}</span>
-        <select value={c.state} disabled={c.offline} onChange={(e) => actions.run(c.name, () => api.control(c.entityId, "select", e.target.value))}>
+        <select value={c.state} disabled={c.offline} onChange={(e) => actions.run(c.name, () => call("select", e.target.value))}>
           {(c.options ?? [c.state]).map((o) => (
             <option key={o} value={o}>
               {o}
@@ -29,7 +44,7 @@ export function ControlView({ c, actions }: { c: Control; actions: Actions }) {
   if (c.domain === "number" || c.domain === "input_number") {
     const v = Number(c.state);
     const step = c.step ?? 1;
-    const set = (n: number) => actions.run(c.name, () => api.control(c.entityId, "set", Math.min(c.max ?? Infinity, Math.max(c.min ?? -Infinity, n))));
+    const set = (n: number) => actions.run(c.name, () => call("set", Math.min(c.max ?? Infinity, Math.max(c.min ?? -Infinity, n))));
     return (
       <div className="row gap">
         <span className="grow">{c.name}</span>
@@ -47,7 +62,7 @@ export function ControlView({ c, actions }: { c: Control; actions: Actions }) {
   }
   if (c.domain === "button" || c.domain === "input_button") {
     return (
-      <button className="btn" disabled={c.offline} onClick={() => actions.run(c.name, () => api.control(c.entityId, "press"))}>
+      <button className="btn" disabled={c.offline} onClick={() => actions.run(c.name, () => call("press"))}>
         {c.name}
       </button>
     );
@@ -57,7 +72,7 @@ export function ControlView({ c, actions }: { c: Control; actions: Actions }) {
       className={`light-btn ${c.on ? "on" : ""} ${c.offline ? "offline" : ""}`}
       aria-pressed={c.on}
       disabled={c.offline}
-      onClick={() => actions.run(c.name, () => api.control(c.entityId, "toggle"))}
+      onClick={() => actions.run(c.name, () => call("toggle"))}
     >
       {c.name}
     </button>
@@ -297,6 +312,220 @@ function ChargingCard({ index, charging, actions }: { index: number; charging: b
   );
 }
 
+// ---------- Charging plan (own schedule in HA, chargers, existing automations) ----------
+
+/** [1,2,3,4,5] → "Mån–Fre", [6,7] → "Lör Sön". */
+function daysText(days: number[]): string {
+  if (days.length === 7) return "Alla dagar";
+  const d = [...days].sort((a, b) => a - b);
+  const run = d.every((x, i) => i === 0 || x === d[i - 1] + 1);
+  return run && d.length >= 3 ? `${DAYS[d[0] - 1]}–${DAYS[d[d.length - 1] - 1]}` : d.map((x) => DAYS[x - 1]).join(" ");
+}
+const nextText = (iso?: string) =>
+  iso ? new Date(iso).toLocaleString("sv-SE", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "";
+const ruleText = (r: ChargeRule) => (r.from === r.to ? `Hela dygnet` : `${r.from}–${r.to}`);
+
+function DayPicker({ days, onChange }: { days: number[]; onChange: (d: number[]) => void }) {
+  return (
+    <div className="row gap wrap">
+      {DAYS.map((d, i) => (
+        <button
+          key={d}
+          className={`btn small ${days.includes(i + 1) ? "selected" : ""}`}
+          aria-pressed={days.includes(i + 1)}
+          onClick={() => onChange(days.includes(i + 1) ? days.filter((y) => y !== i + 1) : [...days, i + 1].sort())}
+        >
+          {d}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ChargePlanCard({ index, car, refreshKey, actions }: { index: number; car: Dashboard["cars"][number]; refreshKey: string; actions: Actions }) {
+  const [info, setInfo] = useState<CarCharging | null>(null);
+  const [error, setError] = useState("");
+  const [rules, setRules] = useState<ChargeRule[] | null>(null);
+  const [target, setTarget] = useState("");
+  const [limit, setLimit] = useState("");
+  const load = () =>
+    api
+      .chargePlan(index)
+      .then((i) => {
+        setInfo(i);
+        setError("");
+      })
+      .catch((e: Error) => setError(e.message));
+  useEffect(() => {
+    load();
+  }, [index, refreshKey]);
+  const run = (label: string, fn: () => Promise<unknown>) =>
+    actions.run(label, async () => {
+      await fn();
+      await load();
+    });
+  const send = (entityId: string) => (op: ControlOp, value?: string | number) => api.chargePlanSet(index, entityId, op, value).then(load);
+
+  if (error || !info) {
+    return (
+      <section className="card">
+        <div className="card-head">
+          <h2>Laddschema</h2>
+        </div>
+        <p className="muted">{error || "Hämtar laddschema från Home Assistant…"}</p>
+      </section>
+    );
+  }
+
+  const own = info.own;
+  const startEdit = () => {
+    setRules(own?.rules.length ? own.rules : [{ days: [1, 2, 3, 4, 5], from: "22:00", to: "06:00" }]);
+    setTarget(own?.target ?? info.targetOptions[0]?.entityId ?? "");
+    setLimit(own?.limit !== undefined ? String(own.limit) : "");
+  };
+  // Nothing to show or create: the "Laddning" card already says what the car offers.
+  if (!info.canCreate && !info.limit && !info.settings.length && !info.existing.length && !own) return null;
+
+  return (
+    <section className="card">
+      <div className="card-head">
+        <h2>Laddschema</h2>
+      </div>
+      {info.limit && <ControlView c={{ ...info.limit, name: "Laddgräns" }} actions={actions} send={send(info.limit.entityId)} />}
+
+      {/* The board's own plan: a schedule helper + automation that live in HA */}
+      {rules ? (
+        <div className="stack">
+          <b>Tider</b>
+          {rules.map((r, i) => (
+            <div className="stack" key={i} style={{ gap: 8, paddingBottom: 10, borderBottom: "1px solid var(--card-border)" }}>
+              <DayPicker days={r.days} onChange={(days) => setRules(rules.map((x, j) => (j === i ? { ...x, days } : x)))} />
+              <div className="row gap">
+                <label className="field grow">
+                  <span>Från</span>
+                  <input type="time" value={r.from} onChange={(e) => setRules(rules.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)))} />
+                </label>
+                <label className="field grow">
+                  <span>Till</span>
+                  <input type="time" value={r.to} onChange={(e) => setRules(rules.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)))} />
+                </label>
+                {rules.length > 1 && (
+                  <button className="btn small ghost" style={{ alignSelf: "flex-end" }} aria-label="Ta bort tid" onClick={() => setRules(rules.filter((_, j) => j !== i))}>
+                    <Icon name="x" size={18} />
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          <button className="btn small" onClick={() => setRules([...rules, { days: [6, 7], from: "22:00", to: "06:00" }])}>
+            <Icon name="plus" size={18} /> Lägg till tid
+          </button>
+          {info.targetOptions.length > 1 && (
+            <label className="field">
+              <span>Styr laddningen med</span>
+              <select value={target} onChange={(e) => setTarget(e.target.value)}>
+                {info.targetOptions.map((t) => (
+                  <option key={t.entityId} value={t.entityId}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {info.limit && (
+            <label className="field">
+              <span>Ladda till (%) när schemat startar</span>
+              <input type="number" min={10} max={100} step={5} placeholder="Ändra inte" value={limit} onChange={(e) => setLimit(e.target.value)} />
+            </label>
+          )}
+          <p className="muted">Schemat sparas i Home Assistant och fungerar även när tavlan är avstängd. Tider över midnatt går bra, t.ex. 22:00–06:00.</p>
+          <div className="row gap">
+            <button className="btn grow" onClick={() => setRules(null)}>
+              Avbryt
+            </button>
+            <button
+              className="btn primary grow"
+              disabled={!target || rules.some((r) => !r.days.length || !r.from || !r.to)}
+              onClick={() => {
+                const plan = { rules, target, limit: limit ? Number(limit) : undefined };
+                setRules(null);
+                run("Laddschema", () => api.saveChargePlan(index, plan));
+              }}
+            >
+              Spara
+            </button>
+          </div>
+        </div>
+      ) : own ? (
+        <div className="stack" style={{ gap: 8 }}>
+          <div className="row gap">
+            <b className="grow">Eget schema i Home Assistant</b>
+            {own.automationEntity && (
+              <label className="switch" aria-label="Laddschema på/av">
+                <input type="checkbox" checked={own.enabled} onChange={() => run("Laddschema", () => api.chargePlanSet(index, own.automationEntity!, own.enabled ? "off" : "on"))} />
+                <span />
+              </label>
+            )}
+          </div>
+          {own.rules.map((r, i) => (
+            <div className="item-row" key={i}>
+              <b className="tabular" style={{ fontSize: 20 }}>
+                {ruleText(r)}
+              </b>
+              <span className="grow muted">{daysText(r.days)}</span>
+            </div>
+          ))}
+          <div className="chips">
+            {own.active && own.enabled && <span className="chip good">Laddfönster nu</span>}
+            {!own.active && own.next && own.enabled && <span className="chip">Nästa: {nextText(own.next)}</span>}
+            {own.limit !== undefined && <span className="chip">Till {own.limit} %</span>}
+            {!own.enabled && <span className="chip warn">Avstängt</span>}
+            {own.missingAutomation && <span className="chip warn">Automationen saknas – tryck Ändra och Spara</span>}
+          </div>
+          <div className="row gap">
+            <button className="btn grow" onClick={startEdit}>
+              Ändra
+            </button>
+            <button className="btn ghost" onClick={() => actions.confirm(`Ta bort laddschemat för ${car.name}?`, "Laddschema", async () => { await api.deleteChargePlan(index); await load(); })}>
+              Ta bort
+            </button>
+          </div>
+        </div>
+      ) : (
+        info.canCreate && (
+          <button className="btn" onClick={startEdit}>
+            <Icon name="plus" size={20} /> {info.existing.length || info.settings.length ? "Gör ett eget laddschema" : "Lägg till laddschema"}
+          </button>
+        )
+      )}
+
+      {/* What already exists in HA */}
+      {(info.existing.length > 0 || info.settings.length > 0) && (
+        <div className="stack" style={{ gap: 8 }}>
+          <b>Finns i Home Assistant</b>
+          {info.existing.map((e) => (
+            <div className="item-row" key={e.entityId}>
+              {e.domain === "automation" ? (
+                <label className="switch" aria-label={`${e.name} på/av`}>
+                  <input type="checkbox" checked={e.on} onChange={() => run(e.name, () => api.chargePlanSet(index, e.entityId, e.on ? "off" : "on"))} />
+                  <span />
+                </label>
+              ) : (
+                <span className={`chip ${e.on ? "good" : ""}`}>{e.on ? "På" : "Av"}</span>
+              )}
+              <span className="grow">{e.name}</span>
+              <span className="muted">{e.domain === "automation" ? "Automation" : e.next ? `Nästa ${nextText(e.next)}` : "Schema"}</span>
+            </div>
+          ))}
+          {info.settings.map((c) => (
+            <ControlView key={c.entityId} c={c} actions={actions} send={send(c.entityId)} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   const [sel, setSel] = useState(0);
   const [details, setDetails] = useState(false);
@@ -338,6 +567,7 @@ export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions 
           </div>
         </section>
         <ChargingCard index={data.cars.indexOf(car)} charging={Boolean(car.charging)} actions={actions} />
+        <ChargePlanCard index={data.cars.indexOf(car)} car={car} refreshKey={data.generatedAt} actions={actions} />
         <ScheduleEditor car={car} actions={actions} />
         {data.prices && <PriceCard prices={data.prices} />}
       </div>

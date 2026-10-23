@@ -1,7 +1,7 @@
 // Demo mode (VITE_DEMO=1): the whole app runs in the browser on recorded sample data.
 // Every button works against this in-memory copy; nothing leaves the page.
-import type { Config, ConfigResponse, DashEvent, Dashboard, Integration, PlanItem, Schedule, TestResult, TravelChoice, TravelLeg } from "../../../server/src/types";
-import type { CalendarTest, CarDetails, Discovery, EntityOption, GraphData, GroceryLine, PostcodeInfo, Shelf, Tile } from "../api";
+import type { CarCharging, ChargeRule, Config, ConfigResponse, Control, DashEvent, Dashboard, Integration, PlanItem, Schedule, TestResult, TravelChoice, TravelLeg } from "../../../server/src/types";
+import type { CalendarTest, CarDetails, ControlOp, Discovery, EntityOption, GraphData, GroceryLine, PostcodeInfo, Shelf, Tile } from "../api";
 import fixtures from "./fixtures.json";
 import pkg from "../../package.json";
 
@@ -14,6 +14,53 @@ const fx = structuredClone(fixtures) as unknown as {
   entities: EntityOption[];
   calendarTest: CalendarTest;
 };
+
+// Charging per car: Tesla already has a plan made from the board, the Leaf charges via an Easee box.
+const ctl = (entityId: string, name: string, state: string, extra: Partial<Control> = {}): Control => ({
+  entityId,
+  name,
+  domain: entityId.split(".")[0],
+  state,
+  on: state === "on",
+  offline: false,
+  ...extra,
+});
+const nextAt = (h: number) => {
+  const t = new Date();
+  t.setHours(h, 0, 0, 0);
+  // Next weekday (the demo plans are Mon–Fri).
+  while (t < new Date() || t.getDay() === 0 || t.getDay() === 6) t.setDate(t.getDate() + 1);
+  return t.toISOString();
+};
+const chargePlans: CarCharging[] = [
+  {
+    target: ctl("switch.car0_charger", "Laddning", "off"),
+    targetOptions: [{ entityId: "switch.car0_charger", name: "Tesla Model Y Laddning" }],
+    limit: ctl("number.tesla_charge_limit", "Laddgräns", "80", { min: 50, max: 100, step: 5, unit: "%" }),
+    settings: [],
+    existing: [],
+    own: {
+      scheduleEntity: "schedule.familjetavla_laddning_tesla_model_y",
+      automationEntity: "automation.familjetavla_ladda_tesla_model_y",
+      enabled: true,
+      active: false,
+      rules: [{ days: [1, 2, 3, 4, 5], from: "22:00", to: "06:00" }],
+      target: "switch.car0_charger",
+      limit: 80,
+      next: nextAt(22),
+      missingAutomation: false,
+    },
+    canCreate: true,
+  },
+  {
+    target: ctl("switch.easee_home_charger_enabled", "Easee Laddning", "off"),
+    targetOptions: [{ entityId: "switch.easee_home_charger_enabled", name: "Easee Home Laddning" }],
+    settings: [ctl("select.ev_smart_charging_charge_completion_time", "Klar till", "07:00", { options: ["06:00", "07:00", "08:00"] })],
+    existing: [{ entityId: "automation.ladda_leaf_billigast", name: "Ladda Leaf på billigaste timmarna", domain: "automation", on: true }],
+    canCreate: true,
+  },
+];
+
 
 // "#forsta" opens the demo as a brand-new install: empty settings, the wizard from step one.
 const firstRun = typeof location !== "undefined" && location.hash === "#forsta";
@@ -571,6 +618,43 @@ export const demoApi = {
     }
     const a = fx.cars[index].actions.find((x) => x.entityId === entityId);
     if (a && a.domain !== "button") a.state = a.domain === "lock" ? (action === "off" ? "unlocked" : "locked") : action === "off" ? "off" : "on";
+    return wait({});
+  },
+  chargePlan: (index: number) => wait(structuredClone(chargePlans[index % chargePlans.length])),
+  saveChargePlan: (index: number, plan: { rules: ChargeRule[]; target: string; limit?: number }) => {
+    const c = chargePlans[index % chargePlans.length];
+    const id = (d.cars[index]?.name ?? "bil").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    c.own = {
+      scheduleEntity: `schedule.familjetavla_laddning_${id}`,
+      automationEntity: `automation.familjetavla_ladda_${id}`,
+      enabled: true,
+      active: false,
+      rules: plan.rules,
+      target: plan.target,
+      limit: plan.limit,
+      next: nextAt(Number(plan.rules[0].from.slice(0, 2))),
+      missingAutomation: false,
+    };
+    return wait({}, 500);
+  },
+  deleteChargePlan: (index: number) => {
+    delete chargePlans[index % chargePlans.length].own;
+    return wait({});
+  },
+  chargePlanSet: (index: number, entityId: string, op: ControlOp, value?: string | number) => {
+    const c = chargePlans[index % chargePlans.length];
+    const on = (cur: boolean) => (op === "toggle" ? !cur : op !== "off");
+    if (c.own?.automationEntity === entityId) c.own.enabled = on(c.own.enabled);
+    for (const x of c.existing) if (x.entityId === entityId) x.on = on(x.on);
+    for (const x of [c.target, c.limit, ...c.settings]) {
+      if (!x || x.entityId !== entityId) continue;
+      if (op === "set" || op === "select" || op === "time") x.state = op === "time" ? `${value}:00` : String(value);
+      else {
+        x.on = on(x.on);
+        x.state = x.on ? "on" : "off";
+      }
+    }
+    
     return wait({});
   },
   run: (entityId: string, action: "on" | "off" | "press" = "on") => {
