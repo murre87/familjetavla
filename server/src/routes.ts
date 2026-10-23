@@ -11,6 +11,7 @@ import { duties, dutiesIcs } from "./plan.js";
 import { loadShelf, saveDinner, saveShelf } from "./meals.js";
 import { carActions, carCharging, carRows, deviceEntities, discover, readRegistry } from "./discovery.js";
 import { runEntityAction } from "./scheduler.js";
+import { chargingEntities, deleteOwnPlan, readCharging, saveOwnPlan, setChargeEntity } from "./chargeplan.js";
 import { haSocket } from "./connectors/haws.js";
 import { energyLive, liveEnergyIds } from "./energy.js";
 import { publishToHa } from "./publisher.js";
@@ -921,6 +922,77 @@ export async function registerRoutes(app: FastifyInstance) {
       if (!entityId || !ents.some((x) => x.e === entityId)) throw new Error("Entiteten hör inte till bilen.");
       await runEntityAction(entityId, action ?? "on");
       invalidate("car:");
+      invalidate("ha:states");
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, e);
+    }
+  });
+
+  // ---------- Car charging: read what HA has, and the board's own plan (a schedule helper + automation in HA) ----------
+  const liveStates = async (conn: NonNullable<ReturnType<typeof haConnection>>) => {
+    const sock = haSocket();
+    const list = sock?.connected ? [...sock.states.values()] : await ha.states(conn);
+    return new Map(list.map((s) => [s.entity_id, s]));
+  };
+  const charging = async (index: number) => {
+    const car = loadConfig().entities.cars[index];
+    const conn = haConnection();
+    if (!car || !conn) throw new Error(car ? "Home Assistant är inte anslutet." : "Okänd bil");
+    const [all, states] = await Promise.all([cached("registry", 30_000, () => readRegistry(conn)), liveStates(conn)]);
+    const dev = all.find((x) => x.e === car.battery)?.d;
+    const carEnts = dev ? all.filter((x) => x.d === dev) : [];
+    return { car, conn, states, info: await readCharging(conn, car, all, carEnts, states) };
+  };
+  const chargeRule = z.object({
+    days: z.array(z.number().int().min(1).max(7)).min(1).max(7),
+    from: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+    to: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  });
+  const chargePlan = z.object({ rules: z.array(chargeRule).min(1).max(8), target: entity, limit: z.number().int().min(10).max(100).optional() });
+  const carIndex = (req: FastifyRequest) => Number((req.params as { index: string }).index);
+
+  app.get("/api/car/:index/charging", async (req, reply) => {
+    try {
+      return (await charging(carIndex(req))).info;
+    } catch (e) {
+      return fail(reply, e);
+    }
+  });
+
+  app.put("/api/car/:index/charging", async (req, reply) => {
+    const parsed = chargePlan.safeParse(req.body);
+    if (!parsed.success) return fail(reply, new Error("Ogiltigt laddschema"));
+    try {
+      const { car, conn, states, info } = await charging(carIndex(req));
+      const plan = parsed.data;
+      if (!info.targetOptions.some((t) => t.entityId === plan.target)) throw new Error("Hittar inte det som ska styra laddningen.");
+      const limit = plan.limit !== undefined && info.limit ? { entityId: info.limit.entityId, value: plan.limit } : undefined;
+      await saveOwnPlan(conn, car, states, { rules: plan.rules, target: plan.target, limit });
+      invalidate("registry");
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, new Error(`Kunde inte spara laddschemat i Home Assistant: ${(e as Error).message}`));
+    }
+  });
+
+  app.delete("/api/car/:index/charging", async (req, reply) => {
+    try {
+      const { car, conn, states } = await charging(carIndex(req));
+      await deleteOwnPlan(conn, car, states);
+      invalidate("registry");
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, e);
+    }
+  });
+
+  app.post("/api/car/:index/charging/set", async (req, reply) => {
+    const { entityId, op, value } = (req.body ?? {}) as { entityId?: string; op?: "toggle" | "on" | "off" | "press" | "set" | "select" | "time"; value?: string | number };
+    try {
+      const { conn, info } = await charging(carIndex(req));
+      if (!entityId || !chargingEntities(info).has(entityId)) throw new Error("Okänt reglage");
+      await setChargeEntity(conn, entityId, op ?? "toggle", value);
       invalidate("ha:states");
       return { ok: true };
     } catch (e) {

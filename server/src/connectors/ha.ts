@@ -125,6 +125,12 @@ export const ha = {
     return out;
   },
 
+  /** Automations in automations.yaml – the same API HA's own editor uses. Needs an admin token. */
+  automationConfig: (c: HaConn, id: string) => call<unknown>(c, `/config/automation/config/${encodeURIComponent(id)}`),
+  saveAutomation: (c: HaConn, id: string, config: unknown) =>
+    call<unknown>(c, `/config/automation/config/${encodeURIComponent(id)}`, { method: "POST", body: JSON.stringify(config) }),
+  deleteAutomation: (c: HaConn, id: string) => call<unknown>(c, `/config/automation/config/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
   async todoItems(c: HaConn, entityId: string): Promise<{ uid: string; summary: string; status: string }[]> {
     const res = (await ha.service(c, "todo", "get_items", { entity_id: entityId }, true)) as {
       service_response?: Record<string, { items: { uid: string; summary: string; status: string }[] }>;

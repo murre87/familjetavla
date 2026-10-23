@@ -39,7 +39,7 @@ Kalendrar, **barnvecka**, barnens **sport** (SportAdmin, laget.se) med **dit/hem
 - Ljust/mörkt tema eller **dygnsfärger**, nattläge med klocka som flyttar sig (skonar OLED).
 
 **Flikar** (visas bara om du har något att visa)
-- **Bil:** batteri, räckvidd, hemma/borta, "data 18 h gammal", **Alla data** (bilens alla entiteter i grupper, ✓/⚠), bilens knappar (blinka, tuta, lås), **Starta värme nu** och **schema per veckodag**.
+- **Bil:** batteri, räckvidd, hemma/borta, "data 18 h gammal", **Alla data** (bilens alla entiteter i grupper, ✓/⚠), bilens knappar (blinka, tuta, lås), **Starta värme nu** och **schema per veckodag**. **Laddschema:** laddgräns, laddboxens inställningar och laddautomationer som redan finns i HA – eller ett eget laddschema (t.ex. mån–fre 22–06) som sparas i Home Assistant och fungerar även när tavlan är avstängd.
 - **Ljus:** rum med Tänd alla / Släck alla, "6 av 8 tända · offline: …", egna knappar för scener ("Godnatt – släck uppe").
 - **Musik:** alla svenska radiokanaler (Sveriges Radio med alla P4, Mix Megapol, RIX FM …) i fliken Musik, favoriterna som en liten ruta på startsidan. Spelar i vald högtalare – Google Home/Nest, Chromecast, Sonos eller annat i Home Assistant – med Stopp och volym. Radion behöver inget extra.
   - **Spotify med spellistor, album, poddar och sök** (omslag som i bilens musikspelare) kräver [Music Assistant](https://music-assistant.io), gratis:
