@@ -1,5 +1,5 @@
 name: Familjetavla
-version: "0.14.0"
+version: "0.12.0"
 slug: familjetavla
 description: Familjetavla för surfplattan – kalendrar, barnvecka, skola, sport, sopor, inköp och elpris, plus bilar, ljus och värme från Home Assistant.
 url: https://github.com/murre87/familjetavla
