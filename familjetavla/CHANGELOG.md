@@ -2,6 +2,9 @@
 
 ## 0.14.0
 
+- **Nu spelas:** stort omslag, förloppsrad och, för radio, rullande RDS-text med låt och artist.
+- **Temperaturer** med tydligare siffror och färg per rum.
+- **Grafer, Hushåll och Säkerhet i ny design:** mjukare linjer med rena axlar och chips för period, Husgeråd med ikon, status och förloppsrad per maskin, och Säkerhet med chips för öppna dörrar och fönster samt larmstatus. Större tryckytor och bättre läsbarhet.
 - **Nytt volymreglage:** en riktig skjutreglage (fylld bana, stor tumme, ljudikon som stänger av ljudet) i musikkortet och i Musik, och ett glas-reglage när man sveper för volym. Det klipps inte längre av kortet.
 - **Notis när det finns en ny version** av Familjetavlan, till de vuxna som har notiser på (en gång per version; kan stängas av under Notiser).
 - **Ladda om-knapp** uppe till höger (pilarna), bredvid temat och inställningarna. Den laddar om tavlan och hämtar senaste versionen. Att dra ner för att ladda om sidan finns kvar, men händer inte längre när du sveper ner för att sänka volymen.

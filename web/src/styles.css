@@ -4237,11 +4237,9 @@ marker.pf-buy path {
 @keyframes view-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 /* Skelett medan tavlan hämtas */
@@ -4297,4 +4295,247 @@ marker.pf-buy path {
 .vol-ico {
   width: 44px;
   height: 44px;
+}
+
+/* ---------- Grafer ---------- */
+.graph-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+.graph-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  background: rgba(127, 135, 160, 0.14);
+}
+.graph-chip .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.graph-chip b {
+  font-size: 15px;
+}
+.chart-plot {
+  position: relative;
+  height: 180px;
+  margin-left: 34px;
+  touch-action: pan-y;
+  cursor: crosshair;
+  color: var(--text);
+}
+.chart-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.chart-y {
+  position: absolute;
+  left: -34px;
+  width: 30px;
+  transform: translateY(-50%);
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.chart-dot {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-solid, #fff);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+.chart-dot.on {
+  width: 13px;
+  height: 13px;
+  margin: -6.5px 0 0 -6.5px;
+}
+.chart-cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: currentColor;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.chart-tip {
+  position: absolute;
+  top: 4px;
+  z-index: 2;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--bg-solid) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+}
+.chart-tip span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-tip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ---------- Säkerhet ---------- */
+.security .code-field {
+  min-height: 48px;
+  width: 150px;
+  padding: 8px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--control-border);
+  background: var(--control);
+  color: inherit;
+  font-size: 18px;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+.security .alarm h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.security .alarm.armed {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+.security .alarm.triggered {
+  box-shadow: inset 4px 0 0 #e5484d, 0 0 0 2px rgba(229, 72, 77, 0.35);
+}
+.security .big-btn {
+  min-height: 64px;
+  height: auto;
+  padding: 12px 18px;
+  border-radius: 20px;
+  font-size: 18px;
+}
+.security .camera-img {
+  border-radius: 20px;
+}
+.open-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.open-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  background: rgba(127, 135, 160, 0.13);
+}
+.open-chip.open {
+  color: var(--amber, #b45309);
+  background: var(--amber-soft, rgba(245, 158, 11, 0.16));
+  font-weight: 650;
+}
+
+/* ---------- Hushåll ---------- */
+.machine {
+  padding: 4px 0;
+}
+.machine-row {
+  align-items: center;
+  gap: 14px;
+}
+.machine-ico {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  color: var(--accent);
+  background: var(--accent-soft, rgba(52, 224, 161, 0.16));
+}
+.machine.m-running .machine-ico {
+  animation: machine-pulse 2.4s ease-in-out infinite;
+}
+@keyframes machine-pulse {
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+}
+.machine-row .sec-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.machine-label {
+  font-size: 14.5px;
+  color: var(--muted);
+}
+.machine-label.ph-running {
+  color: var(--accent);
+  font-weight: 650;
+}
+.machine-label.ph-done {
+  color: var(--accent);
+  font-weight: 650;
+}
+.machine-label.ph-error {
+  color: #e5484d;
+  font-weight: 650;
+}
+.machine-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
+}
+.machine-end small {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.machine-end b {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.machine-bar {
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 8px;
+  background: rgba(127, 135, 160, 0.25);
+  overflow: hidden;
+}
+.machine-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #5ab8ff));
+  transition: width 0.6s var(--ease, ease-out);
+}
+.household .robot .big-buttons {
+  gap: 10px;
+}
+.household .robot .big-btn {
+  min-height: 60px;
+  height: auto;
+  border-radius: 20px;
+  font-size: 18px;
 }

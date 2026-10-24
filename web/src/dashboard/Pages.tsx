@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { Control, Dashboard, Lamp } from "../../../server/src/types";
 import { api, type CarDetails, type GraphData } from "../api";
 import { Icon } from "../Icon";
@@ -924,34 +924,133 @@ function PowerFlow({ e, price, spot }: { e: NonNullable<Dashboard["energy"]>; pr
 
 // ---------- Graphs ----------
 
+/** Jämna skalvärden (…, 20, 25, 30 …) i stället för 14,6 och 2666,7. */
+function niceTicks(lo: number, hi: number, count: number): number[] {
+  const range = hi - lo || Math.abs(hi) || 1;
+  const rough = range / Math.max(1, count - 1);
+  const mag = 10 ** Math.floor(Math.log10(rough));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= rough) ?? mag * 10;
+  const out: number[] = [];
+  for (let v = Math.floor(lo / step) * step; v <= hi + step * 0.001; v += step) out.push(Math.round(v / step) * step);
+  return out;
+}
+
+/** Mjuk kurva (horisontella tangenter: ingen översvängning), i segment när det saknas värden. */
+function smoothPath(pts: ({ x: number; y: number } | null)[]): { line: string; area: string } {
+  let line = "";
+  let area = "";
+  let run: { x: number; y: number }[] = [];
+  const flush = (bottom: number) => {
+    if (run.length < 2) {
+      run = [];
+      return;
+    }
+    let d = `M${run[0]!.x.toFixed(1)},${run[0]!.y.toFixed(1)}`;
+    for (let i = 1; i < run.length; i++) {
+      const p0 = run[i - 1]!;
+      const p1 = run[i]!;
+      const mx = (p0.x + p1.x) / 2;
+      d += ` C${mx.toFixed(1)},${p0.y.toFixed(1)} ${mx.toFixed(1)},${p1.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
+    }
+    line += (line ? " " : "") + d;
+    area += `${area ? " " : ""}${d} L${run[run.length - 1]!.x.toFixed(1)},${bottom} L${run[0]!.x.toFixed(1)},${bottom} Z`;
+    run = [];
+  };
+  for (const p of pts) {
+    if (p) run.push(p);
+    else flush(180);
+  }
+  flush(180);
+  return { line, area };
+}
+
 function LineChart({ data }: { data: GraphData }) {
   const W = 600;
   const H = 180;
+  const id = useId().replace(/:/g, "");
+  const [hover, setHover] = useState<number | null>(null);
   const all = data.series.flatMap((s) => s.points.filter((p): p is number => p !== null));
   if (!all.length) return <p className="muted">Ingen historik ännu.</p>;
-  const min = Math.min(...all);
-  const max = Math.max(...all);
+  const lo = Math.min(...all);
+  const hi = Math.max(...all);
+  const pad = (hi - lo || 1) * 0.08;
+  const min = lo - pad;
+  const max = hi + pad;
   const span = max - min || 1;
   const n = Math.max(...data.series.map((s) => s.points.length));
   const x = (i: number) => (i / Math.max(1, n - 1)) * W;
-  const y = (v: number) => H - 8 - ((v - min) / span) * (H - 16);
-  const path = (pts: (number | null)[]) =>
-    pts
-      .map((p, i) => (p === null ? null : `${i === 0 || pts[i - 1] === null ? "M" : "L"}${x(i).toFixed(1)},${y(p).toFixed(1)}`))
-      .filter(Boolean)
-      .join(" ");
+  const y = (v: number) => H - 6 - ((v - min) / span) * (H - 12);
   const time = (iso: string) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+  const stamp = (i: number) => {
+    const t0 = new Date(data.from).getTime();
+    const t1 = new Date(data.to).getTime();
+    return time(new Date(t0 + ((t1 - t0) * i) / Math.max(1, n - 1)).toISOString());
+  };
+  const ticks = niceTicks(lo, hi, 4).filter((t) => t >= min && t <= max);
+  const at = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setHover(Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width) * (n - 1)))));
+  };
   return (
     <div className="chart">
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={data.title}>
-        {data.series.map((s) => (
-          <path key={s.name} d={path(s.points)} fill="none" stroke={s.color} strokeWidth={2.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+      <div className="chart-plot" onPointerMove={at} onPointerDown={at} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={data.title}>
+          <defs>
+            {data.series.map((s, i) => (
+              <linearGradient key={s.name} id={`${id}-${i}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor={s.color} stopOpacity="0.30" />
+                <stop offset="1" stopColor={s.color} stopOpacity="0" />
+              </linearGradient>
+            ))}
+          </defs>
+          {ticks.map((t, k) => (
+            <line key={k} x1="0" x2={W} y1={y(t)} y2={y(t)} stroke="currentColor" strokeOpacity="0.1" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" />
+          ))}
+          {data.series.map((s, i) => {
+            const { line, area } = smoothPath(s.points.map((p, j) => (p === null ? null : { x: x(j), y: y(p) })));
+            return (
+              <g key={s.name}>
+                <path d={area} fill={`url(#${id}-${i})`} stroke="none" />
+                <path d={line} fill="none" stroke={s.color} strokeWidth={2.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+              </g>
+            );
+          })}
+        </svg>
+        {ticks.map((t, k) => (
+          <span key={k} className="chart-y" style={{ top: `${(y(t) / H) * 100}%` }}>
+            {fmtNum(t)}
+          </span>
         ))}
-      </svg>
+        {/* Senaste värdet som punkt, och markören när man trycker eller drar */}
+        {hover === null &&
+          data.series.map((s) => {
+            const last = s.points.length - 1;
+            const v = s.points[last];
+            return v === null || v === undefined ? null : <i key={s.name} className="chart-dot" style={{ left: `${(x(last) / W) * 100}%`, top: `${(y(v) / H) * 100}%`, background: s.color }} />;
+          })}
+        {hover !== null && (
+          <>
+            <i className="chart-cursor" style={{ left: `${(x(hover) / W) * 100}%` }} />
+            {data.series.map((s) => {
+              const v = s.points[hover];
+              return v === null || v === undefined ? null : <i key={s.name} className="chart-dot on" style={{ left: `${(x(hover) / W) * 100}%`, top: `${(y(v) / H) * 100}%`, background: s.color }} />;
+            })}
+            <div className="chart-tip" style={{ left: `${Math.min(78, Math.max(2, (x(hover) / W) * 100 - 10))}%` }}>
+              <b>{stamp(hover)}</b>
+              {data.series.map((s) => (
+                <span key={s.name}>
+                  <i style={{ background: s.color }} />
+                  {s.name} {s.points[hover] === null || s.points[hover] === undefined ? "–" : fmtNum(s.points[hover] as number)}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
       <div className="axis">
         <span>{time(data.from)}</span>
         <span>
-          min {fmtNum(min)} · max {fmtNum(max)}
+          min {fmtNum(lo)} · max {fmtNum(hi)}
         </span>
         <span>{time(data.to)}</span>
       </div>
@@ -972,23 +1071,19 @@ function GraphCard({ index }: { index: number }) {
     <section className="card">
       <div className="card-head">
         <h2>{data?.title ?? "Graf"}</h2>
-        <span className="muted tabular">
-          {data?.series
-            .map((s) => {
-              const last = [...s.points].reverse().find((p) => p !== null);
-              return last === undefined ? "–" : fmtNum(last);
-            })
-            .join(" · ")}
-        </span>
       </div>
       {data && (
-        <div className="legend">
-          {data.series.map((s) => (
-            <span key={s.name}>
-              <span className="dot" style={{ background: s.color, width: 16, height: 4 }} />
-              {s.name}
-            </span>
-          ))}
+        <div className="graph-chips">
+          {data.series.map((s) => {
+            const last = [...s.points].reverse().find((p) => p !== null);
+            return (
+              <span key={s.name} className="graph-chip">
+                <span className="dot" style={{ background: s.color }} />
+                {s.name}
+                <b className="tabular">{last === undefined ? "–" : fmtNum(last)}</b>
+              </span>
+            );
+          })}
         </div>
       )}
       {error && <p className="error-text">{error}</p>}
