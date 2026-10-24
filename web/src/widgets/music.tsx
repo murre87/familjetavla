@@ -431,7 +431,8 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
           </div>
         )}
         <NowPlaying sp={sp} actions={actions} showName={m.speakers.length < 2} logo={sp.station !== undefined ? m.stations[sp.station]?.logo : undefined} />
-        {m.stations.length > 0 && (
+        {/* The favourites are for the radio: while the library is open they only take room from it. */}
+        {source === "radio" && m.stations.length > 0 && (
           <div className="music-favs">
             {m.stations.map((s) => (
               <StationButton key={s.index} name={s.name} logo={s.logo} on={sp.playing && sp.station === s.index} disabled={sp.offline} onPlay={() => void c.playFav(s.index, s.name)} />
@@ -454,7 +455,7 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
         {source === "radio" ? <AllStations m={m} sp={sp} actions={actions} /> : m.assistant ? <Library sp={sp} connect={m.spotify?.devices ?? []} actions={actions} /> : <AssistantSetup />}
       </section>
 
-      {source === "library" && m.spotify && <SpotifyBox sp={m.spotify} actions={actions} />}
+      {source === "library" && m.assistant && m.spotify && <SpotifyBox sp={m.spotify} actions={actions} />}
     </div>
   );
 }
@@ -788,7 +789,7 @@ function LibraryHome({ sp, play }: { sp: Speaker; play: (t: Tile) => unknown }) 
         <>
           <h3 className="lib-h">Senast spelat</h3>
           <div className="chip-grid">
-            {recent.slice(0, 6).map((t) => (
+            {recent.slice(0, 4).map((t) => (
               <button key={t.uri} className="cover-chip" disabled={sp.offline} onClick={() => void play(t)} aria-label={`${t.type === "playlist" || t.type === "album" ? "Öppna" : "Spela"} ${t.title}`}>
                 <span className="cover-img">
                   {t.image ? <img src={t.image} alt="" loading="lazy" onError={(e) => (e.currentTarget.style.display = "none")} /> : null}
