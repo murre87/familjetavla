@@ -1363,13 +1363,15 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNo
   const put = (i: Integration | null) =>
     set({ ...cfg, integrations: i ? cfg.integrations.map((x) => (x.id === i.id ? i : x)) : cfg.integrations.filter((x) => x.id !== integ?.id) });
   const choose = (provider: string) => {
+    // The shop you pick is the one the shopping list goes to (the "Skicka inköpslistan till" list can change that).
     const have = stores.find((x) => x.provider === provider);
     if (have) {
       setActive(have.id);
+      set({ ...cfg, shopping: { ...cfg.shopping, sendTo: have.id } });
       return;
     }
     const id = stores.some((x) => x.id === "grocery") ? `g-${provider}` : "grocery";
-    set({ ...cfg, integrations: [...cfg.integrations, { id, category: "grocery", provider, settings: {} }] });
+    set({ ...cfg, integrations: [...cfg.integrations, { id, category: "grocery", provider, settings: {} }], shopping: { ...cfg.shopping, sendTo: id } });
     setActive(id);
   };
   return (

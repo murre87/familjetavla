@@ -293,9 +293,9 @@ const asArray = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? (
 const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 
 /** The offers of the favourite stores in the ICA app (the first store only, to keep it short). */
-export async function icaOffers(s: IcaSession, limit = 24): Promise<{ store?: string; offers: IcaOffer[] }> {
+export async function icaOffers(s: IcaSession, limit = 24, chosen?: string): Promise<{ store?: string; offers: IcaOffer[] }> {
   const fav = await api<{ favoriteStores?: (number | string)[] }>(s, "mobile/storeservice/v1/favorites");
-  const storeId = fav?.favoriteStores?.[0];
+  const storeId = chosen && /^\d+$/.test(chosen) ? chosen : fav?.favoriteStores?.[0];
   if (storeId === undefined) return { offers: [] };
   const [store, data] = await Promise.all([
     api<{ marketingName?: string }>(s, `mobile/storeservice/v1/stores/${storeId}`).catch(() => null),
@@ -367,5 +367,17 @@ export async function icaCommon(s: IcaSession, limit = 24): Promise<{ name: stri
     if (name && !out.some((o) => o.name.toLowerCase() === name.toLowerCase())) out.push({ name });
     if (out.length >= limit) break;
   }
+  return out;
+}
+
+/** The stores you have as favourites in the ICA app. */
+export async function icaFavoriteStores(s: IcaSession): Promise<{ value: string; label: string }[]> {
+  const fav = await api<{ favoriteStores?: (number | string)[] }>(s, "mobile/storeservice/v1/favorites");
+  const out = await Promise.all(
+    (fav?.favoriteStores ?? []).map(async (id) => {
+      const st = await api<{ marketingName?: string }>(s, `mobile/storeservice/v1/stores/${id}`).catch(() => null);
+      return { value: String(id), label: str(st?.marketingName) ?? `Butik ${id}` };
+    }),
+  );
   return out;
 }

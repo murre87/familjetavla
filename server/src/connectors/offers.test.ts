@@ -31,7 +31,7 @@ describe("Axfood offers", () => {
 
   it("asks for a town when there is none, and says when the town has no store", async () => {
     vi.stubGlobal("fetch", async () => json([{ storeId: "1", name: "Willys Boden", address: { town: "Boden" } }]));
-    await expect(axfoodOffers(AXFOOD_SITES.willys!, "")).rejects.toThrow(/Ange en ort/);
+    await expect(axfoodOffers(AXFOOD_SITES.willys!, "")).rejects.toThrow(/Välj en butik/);
     await expect(axfoodOffers(AXFOOD_SITES.willys!, "Atlantis")).rejects.toThrow(/ingen butik/);
   });
 });

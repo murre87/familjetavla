@@ -106,7 +106,7 @@ export interface Actions {
   run: (label: string, fn: () => Promise<unknown>, verify?: Verify) => Promise<void>;
   /** Like run, but asks "Är du säker?" first – for heating, locks and similar. */
   confirm: (question: string, label: string, fn: () => Promise<unknown>) => void;
-  openGrocery: () => void;
+  openGrocery: (store?: string) => void;
   /** Tap on an event: show its details in a sheet. */
   openEvent: (e: DashEvent & { dayLabel?: string }) => void;
   /** "Planera veckan": set who drops off / picks up / drives for the whole week (or plan the food). */
@@ -862,7 +862,7 @@ export function Dashboard() {
   const [installOpen, setInstallOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [toast, setToast] = useState("");
-  const [grocery, setGrocery] = useState(false);
+  const [grocery, setGrocery] = useState<{ store?: string } | null>(null);
   const [awakeUntil, setAwakeUntil] = useState(0);
   const [themeOverride, setThemeOverride] = useState(readThemeOverride);
   const [asking, setAsking] = useState<{ question: string; label: string; fn: () => Promise<unknown> } | null>(null);
@@ -977,7 +977,7 @@ export function Dashboard() {
   };
   const actions: Actions = {
     refresh,
-    openGrocery: () => setGrocery(true),
+    openGrocery: (store) => setGrocery({ store }),
     run,
     confirm: (question, label, fn) => setAsking({ question, label, fn }),
     openEvent: setEventOpen,
@@ -1307,9 +1307,10 @@ export function Dashboard() {
 
       {grocery && (
         <GroceryModal
-          onClose={() => setGrocery(false)}
+          storeId={grocery.store}
+          onClose={() => setGrocery(null)}
           onDone={(msg) => {
-            setGrocery(false);
+            setGrocery(null);
             showToast(msg);
             refresh();
           }}

@@ -78,17 +78,20 @@ export async function axfoodLogin(site: AxfoodSite, username: string, password: 
   try {
     const ctx = await browser.newContext({ userAgent: UA, viewport: { width: 1920, height: 1080 }, locale: "sv-SE" });
     const page = await ctx.newPage();
-    await page.goto(`${site.base}/anvandare/inloggning`, { waitUntil: "networkidle", timeout: 30_000 });
+    // "networkidle" never comes on these sites (they keep polling): wait for the page, then for the form.
+    await page.goto(`${site.base}/anvandare/inloggning`, { waitUntil: "domcontentloaded", timeout: 30_000 });
     await page.waitForTimeout(1500);
-    const consent = page.locator('button[id*="accept"]').first();
+    const consent = page.locator('button[id*="accept"], button:has-text("Acceptera"), button:has-text("Godkänn")').first();
     if (await consent.isVisible().catch(() => false)) {
       await consent.click();
       await page.waitForTimeout(1200);
     }
-    const user = page.locator('input[name="j_username"], input[type="text"]').first();
+    // The login fields by name: the first text input on the page is the search box in the header.
+    const named = page.locator('input[name="j_username"]');
+    const user = (await named.count()) ? named.first() : page.locator('form:has(input[type="password"]) input[type="text"]').first();
     const pass = page.locator('input[name="j_password"], input[type="password"]').first();
     try {
-      await pass.waitFor({ timeout: 10_000 });
+      await pass.waitFor({ timeout: 20_000 });
     } catch {
       throw new Error(
         site.label === "Hemköp"
@@ -99,8 +102,11 @@ export async function axfoodLogin(site: AxfoodSite, username: string, password: 
     await user.pressSequentially(username, { delay: 30 });
     await pass.pressSequentially(password, { delay: 30 });
 
+    // Enter in the password field submits the form even when a banner sits over the button.
+    await pass.press("Enter");
+    await page.waitForTimeout(1500);
     const button = page.getByRole("button", { name: /^logga in$/i }).first();
-    if (await button.isVisible().catch(() => false)) await button.click();
+    if ((await page.locator('input[type="password"]').count()) && (await button.isVisible().catch(() => false))) await button.click({ force: true, timeout: 8000 }).catch(() => undefined);
     await page.waitForTimeout(5000);
     // Fallback documented by willys-mcp: if the click did nothing, submit the form itself.
     if (await page.locator('input[type="password"]').count()) {
@@ -175,7 +181,7 @@ export interface AxfoodOffer {
   validTo?: string;
 }
 
-interface AxStore {
+export interface AxStore {
   storeId: string;
   name?: string;
   address?: { town?: string | null } | null;
@@ -183,7 +189,7 @@ interface AxStore {
 
 const storeLists = new Map<string, { at: number; list: AxStore[] }>();
 
-async function axfoodStoreList(site: AxfoodSite): Promise<AxStore[]> {
+export async function axfoodStoreList(site: AxfoodSite): Promise<AxStore[]> {
   const hit = storeLists.get(site.base);
   if (hit && Date.now() - hit.at < 6 * 3600_000) return hit.list;
   const res = await fetchWithTimeout(`${site.base}/axfood/rest/store`, { headers: { accept: "application/json", "user-agent": UA }, timeoutMs: 20_000 });
@@ -196,8 +202,10 @@ async function axfoodStoreList(site: AxfoodSite): Promise<AxStore[]> {
 /** The stores in a town, then the offers of the first one that has any (not every store sells online). */
 export async function axfoodOffers(site: AxfoodSite, place: string, size = 24): Promise<{ store: string; offers: AxfoodOffer[] }> {
   const want = place.trim().toLowerCase();
-  if (!want) throw new Error(`Ange en ort för ${site.label} (Butik (ort)) – eller sätt orten under Hem.`);
-  const stores = (await axfoodStoreList(site)).filter((s) => (s.address?.town ?? "").toLowerCase() === want || (s.name ?? "").toLowerCase().includes(want));
+  if (!want) throw new Error(`Välj en butik för ${site.label} (eller sätt orten under Hem).`);
+  const all = await axfoodStoreList(site);
+  // A chosen store is saved as its id; a town gives every store in it.
+  const stores = /^\d{3,5}$/.test(want) ? all.filter((s) => s.storeId === want) : all.filter((s) => (s.address?.town ?? "").toLowerCase() === want || (s.name ?? "").toLowerCase().includes(want));
   if (!stores.length) throw new Error(`${site.label} har ingen butik som heter ${place}.`);
   type Promo = { rewardLabel?: string; conditionLabel?: string; validUntil?: number };
   type R = { code: string; name: string; manufacturer?: string; displayVolume?: string; image?: { url?: string }; potentialPromotions?: Promo[] };
@@ -264,4 +272,13 @@ export async function axfoodCommon(site: AxfoodSite, cookies: string, orders = 1
     .sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name, "sv"))
     .slice(0, size)
     .map((x) => ({ name: x.name }));
+}
+
+/** The stores to pick from: those in the town first, then the rest by name. */
+export async function axfoodStoreOptions(site: AxfoodSite, place: string): Promise<{ value: string; label: string }[]> {
+  const want = place.trim().toLowerCase();
+  const all = (await axfoodStoreList(site)).filter((s) => s.storeId && s.name);
+  const here = (s: AxStore) => want !== "" && ((s.address?.town ?? "").toLowerCase() === want || (s.name ?? "").toLowerCase().includes(want));
+  const sorted = [...all.filter(here), ...all.filter((s) => !here(s))];
+  return sorted.map((s) => ({ value: s.storeId, label: s.name! }));
 }

@@ -204,3 +204,12 @@ export async function cityGrossCommon(token: string, size = 16): Promise<{ name:
   const named = await Promise.all(ids.slice(0, size).map((id) => cityGrossProduct(id).then((p) => p.name).catch(() => null)));
   return named.filter((n): n is string => Boolean(n)).map((name) => ({ name }));
 }
+
+/** The City Gross stores that match a town or name. */
+export async function cityGrossStoreOptions(query: string): Promise<{ value: string; label: string }[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const res = await fetchWithTimeout(`${BASE}/api/v1/Loop54/search?${new URLSearchParams({ SearchQuery: q, take: "1" })}`, { headers: { accept: "application/json", "user-agent": UA }, timeoutMs: 15_000 });
+  const data = (await res.json()) as { searchResults?: { stores?: { name: string; pagetype?: string }[] } };
+  return (data.searchResults?.stores ?? []).filter((s) => s.pagetype === "StorePage").map((s) => ({ value: s.name, label: `City Gross ${s.name}` }));
+}

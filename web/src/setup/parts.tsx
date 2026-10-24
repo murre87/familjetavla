@@ -437,6 +437,18 @@ export function ProviderForm({
         // EDP: the API URL field only matters for "Annan".
         if (f.key === "apiUrl" && integ.settings.municipality !== "custom") return null;
         if (f.key === "building" && !choices.building && !integ.settings.building) return null;
+        if (meta.storePicker?.field === f.key)
+          return (
+            <StorePicker
+              key={f.key}
+              f={f}
+              integ={integ}
+              ready={!meta.storePicker.needsLogin || Boolean(verified)}
+              typed={meta.fields.filter((x) => x.secret && secrets[sk(x.key)]).reduce<Record<string, string>>((o, x) => ({ ...o, [x.key]: secrets[sk(x.key)]! }), {})}
+              value={String(integ.settings[f.key] ?? "")}
+              onPick={(v) => onChange({ ...integ, settings: { ...integ.settings, [f.key]: v } })}
+            />
+          );
         return (
           <FieldInput
             key={f.key}
@@ -532,5 +544,35 @@ export function ProviderTiles({
           </button>
         ))}
     </div>
+  );
+}
+
+/** Pick a shop from the ones the provider lists (several in every town). The list is fetched once the sign-in works. */
+function StorePicker({ f, integ, ready, typed, value, onPick }: { f: ProviderField; integ: Integration; ready: boolean; typed: Record<string, string>; value: string; onPick: (v: string) => void }) {
+  const [options, setOptions] = useState<{ value: string; label: string }[] | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    api
+      .providerStores(integ, typed)
+      .then((o) => alive && setOptions(o))
+      .catch((e) => alive && setError((e as Error).message));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, integ.id, integ.provider]);
+  if (!ready) return <p className="faint">{f.label}: logga in först (tryck Testa) – då kan du välja butik i en lista.</p>;
+  if (error || !options) return error ? <Text label={f.label} value={value} placeholder={f.placeholder} help={`${error} – skriv orten i stället.`} onChange={onPick} /> : <p className="faint" role="status">Hämtar butiker…</p>;
+  const known = options.some((o) => o.value === value);
+  return (
+    <Select
+      label={f.label}
+      value={value}
+      onChange={onPick}
+      help={f.help}
+      options={[{ value: "", label: "Automatiskt – orten där ni bor" }, ...(value && !known ? [{ value, label: value }] : []), ...options]}
+    />
   );
 }

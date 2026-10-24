@@ -174,6 +174,8 @@ export interface ProviderMeta {
   guide?: string[];
   /** Skola: leverantören hittar själv barnen (t.ex. Vklass) i stället för en kalender per barn. */
   discoversChildren?: boolean;
+  /** Butiker: fältet (nyckeln) där man väljer butik ur en lista, och om listan kräver inloggning. */
+  storePicker?: { field: string; needsLogin?: boolean };
 }
 
 export type SettingValue = string | number | boolean;

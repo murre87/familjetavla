@@ -1,7 +1,7 @@
 import { cached } from "../cache.js";
-import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCommon, axfoodLogin, axfoodOffers, axfoodSearch } from "../connectors/axfood.js";
-import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossCommon, cityGrossLogin, cityGrossSearch, cityGrossStore, cityGrossSummary } from "../connectors/citygross.js";
-import { IcaAuthExpired, icaAddRows, icaCommon, icaFresh, icaListId, icaLogin, icaOffers, icaRecipes, icaRefresh, icaRows, icaSearch, type IcaSession } from "../connectors/ica.js";
+import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCommon, axfoodLogin, axfoodOffers, axfoodStoreOptions, axfoodSearch } from "../connectors/axfood.js";
+import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossCommon, cityGrossLogin, cityGrossSearch, cityGrossStore, cityGrossStoreOptions, cityGrossSummary } from "../connectors/citygross.js";
+import { IcaAuthExpired, icaAddRows, icaCommon, icaFresh, icaFavoriteStores, icaListId, icaLogin, icaOffers, icaRecipes, icaRefresh, icaRows, icaSearch, type IcaSession } from "../connectors/ica.js";
 import type { FoodPart } from "../types.js";
 import type { ProviderField } from "../types.js";
 import type { GroceryProvider, ProviderCtx } from "./types.js";
@@ -31,11 +31,12 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
       category: "grocery",
       name: site.label,
       description: `Skicka inköpslistan till varukorgen på ${site.base.replace("https://www.", "")}. Du väljer produkt första gången, sedan kommer den ihåg.`,
+      storePicker: { field: "store" },
       status,
       fields: [
         { key: "username", label: "Personnummer eller kundkortsnummer", type: "text", placeholder: "ÅÅMMDDXXXX", help: "10 eller 12 siffror, eller 16 siffror för kundkort. E-post fungerar inte." },
         { key: "password", label: "Lösenord", type: "password", secret: true, help: "Kontot behöver ett lösenord – BankID går inte att automatisera." },
-        { key: "store", label: "Butik (ort)", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Veckans erbjudanden hämtas för en butik på orten. Tomt = orten där ni bor." },
+        { key: "store", label: "Butik", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Välj butik i listan. Tomt = en butik på orten där ni bor." },
         showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
         showField(SHOW.offers, "Visa veckans erbjudanden under Mat"),
       ],
@@ -49,6 +50,7 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
       await session(ctx, true);
       return { ok: true, message: `Inloggad hos ${site.label}.` };
     },
+    stores: (ctx) => axfoodStoreOptions(site, ctx.str("__place")),
     async search(ctx, query) {
       // Search works anonymously; with a session the prices match the user's own store.
       return axfoodSearch(site, ctx.secret("session") ?? "", query);
@@ -146,9 +148,11 @@ export const ica: GroceryProvider = {
     name: "ICA",
     description: "Lägg inköpslistan i en inköpslista i ICA-appen (och på ica.se) – du handlar sedan med appen i butiken.",
     status: "experimental",
+    storePicker: { field: "store", needsLogin: true },
     fields: [
       { key: "username", label: "Personnummer", type: "text", placeholder: "ÅÅÅÅMMDDXXXX", help: "12 siffror." },
       { key: "password", label: "PIN-kod i ICA-appen", type: "password", secret: true, help: "Den kod du har i ICA-appen – inte BankID." },
+      { key: "store", label: "Butik för erbjudanden", type: "text", optional: true, help: "Välj bland butikerna du har som favoriter i ICA-appen. Tomt = din första favorit." },
       { key: "list", label: "Namn på listan i ICA-appen", type: "text", optional: true, default: ICA_LIST, help: "Skapas om den inte finns." },
       showField(SHOW.list, "Visa listan i ICA-appen under Mat"),
       showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
@@ -168,12 +172,12 @@ export const ica: GroceryProvider = {
     parts: ["list", "common", "offers", "recipes"],
     async load(ctx, part) {
       const title = ctx.str("list") || ICA_LIST;
-      const key = (n: string) => `food:ica:${n}:${ctx.integration.id}`;
+      const key = (n: string) => `food:ica:${n}:${ctx.integration.id}:${n === "offers" ? ctx.str("store") : ""}`;
       try {
         if (part === "list") return { list: { name: title, rows: await icaRun(ctx, async (s) => icaRows(s, await icaListId(s, title))) } };
         if (part === "common") return { common: await cached(key("common"), 30 * 60_000, () => icaRun(ctx, (s) => icaCommon(s, 24))) };
         if (part === "offers") {
-          const o = await cached(key("offers"), 30 * 60_000, () => icaRun(ctx, (s) => icaOffers(s, 24)));
+          const o = await cached(key("offers"), 30 * 60_000, () => icaRun(ctx, (s) => icaOffers(s, 24, ctx.str("store"))));
           return { store: o.store, offers: o.offers };
         }
         return { recipes: await icaRun(ctx, (s) => icaRecipes(s, 6)) };
@@ -182,6 +186,7 @@ export const ica: GroceryProvider = {
       }
     },
   },
+  stores: (ctx) => icaRun(ctx, (s) => icaFavoriteStores(s)),
   search: (ctx, query) => icaRun(ctx, (s) => icaSearch(s, query)),
   async addToCart(ctx, lines) {
     const title = ctx.str("list") || ICA_LIST;
@@ -211,10 +216,11 @@ export const citygross: GroceryProvider = (() => {
       name: "City Gross",
       description: "Skicka inköpslistan till varukorgen på citygross.se. Du väljer produkt första gången, sedan kommer den ihåg.",
       status: "experimental",
+      storePicker: { field: "store" },
       fields: [
         { key: "username", label: "E-postadress", type: "text", placeholder: "namn@exempel.se" },
         { key: "password", label: "Lösenord", type: "password", secret: true, help: "Kontot behöver ett lösenord – BankID går inte att automatisera." },
-        { key: "store", label: "Butik (ort)", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Skriv orten så hittar tavlan butiken. Tomt = orten där ni bor. Priserna och varukorgen hör till butiken." },
+        { key: "store", label: "Butik", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Välj butik i listan. Tomt = orten där ni bor. Priserna och varukorgen hör till butiken." },
         showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
       ],
       guide: [
@@ -238,6 +244,7 @@ export const citygross: GroceryProvider = (() => {
         }
       },
     },
+    stores: (ctx) => cityGrossStoreOptions(ctx.str("store") || ctx.str("__place")),
     // Search is open; with a store the prices are that store's.
     search: async (ctx, query) => cityGrossSearch(query, String((await cityGrossStore(ctx.str("store") || ctx.str("__place")))?.no ?? "")),
     async addToCart(ctx, lines) {

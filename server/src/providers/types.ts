@@ -59,6 +59,8 @@ export interface GroceryProvider {
   test(ctx: ProviderCtx): Promise<TestResult>;
   search(ctx: ProviderCtx, query: string): Promise<Product[]>;
   addToCart(ctx: ProviderCtx, lines: { code: string; qty: number }[]): Promise<{ items: number | null; total: string | null }>;
+  /** Butikerna man kan välja bland (värde = det som sparas, etikett = det som visas). */
+  stores?(ctx: ProviderCtx): Promise<{ value: string; label: string }[]>;
   /** Fliken Mat: vilka delar butiken har, och hur en del hämtas (först när den öppnas). */
   food?: { parts: FoodPart[]; load(ctx: ProviderCtx, part: FoodPart): Promise<StoreFoodData> };
 }

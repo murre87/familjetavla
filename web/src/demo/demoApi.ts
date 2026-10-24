@@ -508,8 +508,11 @@ export const demoApi = {
     fx.config.verified = config.integrations.filter((i) => demoTested.has(i.id + i.provider)).map((i) => i.id);
     return wait(fx.config, 300);
   },
+  providerStores: () => wait([{ value: "1", label: "Demobutiken Centrum" }, { value: "2", label: "Demobutiken Norr" }]),
   foodStores: () => wait([] as never[]),
   foodPart: () => wait({}),
+  foodChoices: () => wait({ options: [], value: "" }),
+  foodSetStore: () => wait({ ok: true }),
   foodIcaStrike: () => wait({ ok: true }),
   checkPin: () => wait({ ok: true }),
   authStatus: () => wait({ paired: true, pinRequired: false, supervisor: false }),

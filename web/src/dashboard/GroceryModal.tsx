@@ -6,7 +6,7 @@ import { Icon } from "../Icon";
  * Send the shopping list to the store's cart. First time per item the user picks the product;
  * the choice is remembered and preselected next time.
  */
-export function GroceryModal({ onClose, onDone }: { onClose: () => void; onDone: (msg: string) => void }) {
+export function GroceryModal({ storeId, onClose, onDone }: { storeId?: string; onClose: () => void; onDone: (msg: string) => void }) {
   const [store, setStore] = useState("");
   const [lines, setLines] = useState<GroceryLine[] | null>(null);
   const [choice, setChoice] = useState<Record<string, { code: string; name: string; qty: number } | null>>({});
@@ -15,7 +15,7 @@ export function GroceryModal({ onClose, onDone }: { onClose: () => void; onDone:
 
   useEffect(() => {
     api
-      .groceryPreview()
+      .groceryPreview(storeId)
       .then((r) => {
         setStore(r.store);
         setLines(r.lines);
@@ -36,7 +36,7 @@ export function GroceryModal({ onClose, onDone }: { onClose: () => void; onDone:
       const picked = Object.entries(choice)
         .filter(([, v]) => v)
         .map(([item, v]) => ({ item, code: v!.code, name: v!.name, qty: v!.qty }));
-      const r = await api.grocerySend(picked);
+      const r = await api.grocerySend(picked, storeId);
       onDone(`${picked.length} varor lagda i ${r.store}-varukorgen${r.total ? ` · ${r.total}` : ""}`);
     } catch (e) {
       setError((e as Error).message);

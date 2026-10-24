@@ -318,9 +318,12 @@ export const configSchema = z
     for (const i of c.integrations) {
       if (!findProvider(i.category as IntegrationCategory, i.provider)) ctx.addIssue({ code: "custom", message: `okänd leverantör ${i.provider}`, path: ["integrations"] });
     }
-    for (const cat of ["grocery", "waste", "price"] as const) {
+    for (const cat of ["waste", "price"] as const) {
       if (c.integrations.filter((i) => i.category === cat).length > 1) ctx.addIssue({ code: "custom", message: `bara en ${cat} åt gången`, path: ["integrations"] });
     }
+    // Several stores are fine, but each only once.
+    const stores = c.integrations.filter((i) => i.category === "grocery").map((i) => i.provider);
+    if (new Set(stores).size !== stores.length) ctx.addIssue({ code: "custom", message: "samma butik två gånger", path: ["integrations"] });
   });
 
 function allowedSecret(k: string): k is SecretKey {
@@ -585,13 +588,32 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!provider) return fail(reply, new Error("Okänd leverantör"));
     if (provider.meta.needsHa && !haConnection()) return fail(reply, new Error("Anslut Home Assistant först."));
     try {
-      const result = await provider.test(makeCtx(integ, secrets ?? {}));
+      // A shop that never answers must not leave the screen waiting.
+      const result = await Promise.race([
+        provider.test(makeCtx(integ, secrets ?? {})),
+        new Promise<never>((_, no) => setTimeout(() => no(new Error("Testet tog för lång tid – butikens sida svarar inte. Försök igen om en stund.")), 85_000).unref()),
+      ]);
       // A test that went through (and does not ask for more) is remembered for exactly these values.
       const fp = fingerprint(integ, secrets ?? {});
       setSecret(secretKey(integ.id, "ok"), result.ok && !result.choices && fp ? fp : null);
       return result;
     } catch (e) {
       setSecret(secretKey(integ.id, "ok"), null);
+      return fail(reply, e);
+    }
+  });
+
+  /** The shops to pick from, for a provider that has a list (the sign-in typed in the wizard is used when it is needed). */
+  app.post("/api/providers/stores", { preHandler: guard }, async (req, reply) => {
+    const { integration, secrets } = (req.body ?? {}) as { integration?: Integration; secrets?: Record<string, string> };
+    const parsed = integrationSchema.safeParse(integration);
+    if (!parsed.success) return fail(reply, new Error("Ogiltig koppling"));
+    const integ = parsed.data as Integration;
+    const provider = findProvider(integ.category, integ.provider);
+    if (!provider || !("stores" in provider) || !provider.stores) return [];
+    try {
+      return await provider.stores(makeCtx(integ, secrets ?? {}));
+    } catch (e) {
       return fail(reply, e);
     }
   });
@@ -691,9 +713,14 @@ export async function registerRoutes(app: FastifyInstance) {
   });
 
   // ---------- Grocery: send the shopping list to a store ----------
-  app.post("/api/grocery/preview", async (_req, reply) => {
+  /** The store named in the request (its integration id), else the one the list is set to go to. */
+  const storeFor = (cfg: Config, body: unknown) => {
+    const id = (body as { store?: string } | null)?.store;
+    return (id ? groceryIntegrations(cfg).find((x) => x.integ.id === id) : undefined) ?? groceryIntegration(cfg);
+  };
+  app.post("/api/grocery/preview", async (req, reply) => {
     const cfg = loadConfig();
-    const g = groceryIntegration(cfg);
+    const g = storeFor(cfg, req.body);
     if (!g) return fail(reply, new Error("Ingen butik vald."));
     const dash = await buildDashboard();
     const remembered = cfg.shopping.mappings[g.provider.meta.id] ?? {};
@@ -717,6 +744,30 @@ export async function registerRoutes(app: FastifyInstance) {
       g.provider.food ? [{ id: g.integ.id, provider: g.provider.meta.id, name: g.provider.meta.name, parts: g.provider.food.parts.filter((p) => partOnFor(g.integ.settings, p)) }] : [],
     ),
   );
+  /** The shops to switch between on the Mat tab (the board's own, from what is saved). */
+  app.get("/api/food/stores/:id/choices", async (req, reply) => {
+    const id = String((req.params as { id?: string }).id ?? "");
+    const g = groceryIntegrations(loadConfig()).find((x) => x.integ.id === id);
+    if (!g?.provider.stores) return { options: [], value: "" };
+    try {
+      return { options: await g.provider.stores(makeCtx(g.integ)), value: String(g.integ.settings.store ?? "") };
+    } catch (e) {
+      return fail(reply, e, 502);
+    }
+  });
+  app.post("/api/food/stores/:id/store", { preHandler: guard }, async (req, reply) => {
+    const id = String((req.params as { id?: string }).id ?? "");
+    const body = z.object({ value: z.string().max(80) }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Ogiltig butik"));
+    const cfg = loadConfig();
+    const integ = cfg.integrations.find((i) => i.id === id && i.category === "grocery");
+    if (!integ) return fail(reply, new Error("Okänd butik"));
+    integ.settings = { ...integ.settings, store: body.data.value };
+    saveConfig(cfg);
+    invalidate();
+    return { ok: true };
+  });
+
   app.get("/api/food/stores/:id/:part", async (req, reply): Promise<StoreFoodData | void> => {
     const q = z.object({ id: z.string().regex(ID), part: z.enum(["list", "common", "offers", "recipes"]) }).safeParse(req.params);
     if (!q.success) return fail(reply, new Error("Okänd del"));
@@ -747,7 +798,7 @@ export async function registerRoutes(app: FastifyInstance) {
     const { lines } = (req.body ?? {}) as { lines?: { item: string; code: string; name: string; qty?: number }[] };
     if (!lines?.length) return fail(reply, new Error("Inget att skicka."));
     const cfg = loadConfig();
-    const g = groceryIntegration(cfg);
+    const g = storeFor(cfg, req.body);
     if (!g) return fail(reply, new Error("Ingen butik vald."));
     try {
       const result = await g.provider.addToCart(

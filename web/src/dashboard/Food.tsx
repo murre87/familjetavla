@@ -83,6 +83,7 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
         <b>{title}</b>
         {part === "list" && data?.list && <span className="muted"> · {data.list.rows.filter((r) => !r.done).length} kvar</span>}
       </summary>
+      {part === "offers" && open && <StoreSwitch store={store} onChanged={() => { setData(null); load(); }} />}
       {busy && !data && <p className="faint" role="status">Hämtar…</p>}
       {err && <p className="faint">{err}</p>}
       {data?.list && (
@@ -151,5 +152,42 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
         </>
       )}
     </details>
+  );
+}
+
+/** Change which shop the offers are for (saved, so it stays): a list of the shops the provider has. */
+function StoreSwitch({ store, onChanged }: { store: StoreFood; onChanged: () => void }) {
+  const [c, setC] = useState<{ options: { value: string; label: string }[]; value: string } | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    api
+      .foodChoices(store.id)
+      .then(setC)
+      .catch(() => setC({ options: [], value: "" }));
+  }, [store.id]);
+  if (!c || c.options.length < 2) return null;
+  return (
+    <label className="field" style={{ marginBottom: 10 }}>
+      <span>Butik</span>
+      <select
+        value={c.value}
+        onChange={(e) => {
+          const value = e.target.value;
+          setC({ ...c, value });
+          api
+            .foodSetStore(store.id, value)
+            .then(onChanged)
+            .catch((er) => setError((er as Error).message));
+        }}
+      >
+        <option value="">Automatiskt – orten där ni bor</option>
+        {c.options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {error && <small className="error-text">{error}</small>}
+    </label>
   );
 }

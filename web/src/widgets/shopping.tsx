@@ -55,12 +55,14 @@ export function Shopping({ data, actions, limit }: { data: Dashboard; actions: A
             Rensa avbockade
           </button>
         )}
-        {data.grocery && open > 0 && (
-          <button className="btn primary grow" onClick={actions.openGrocery}>
-            <Icon name="cart" size={20} />
-            Skicka till {data.grocery.name}
-          </button>
-        )}
+        {open > 0 &&
+          // One button per chosen store, so the list goes to the one you press.
+          (data.groceries && data.groceries.length > 1 ? data.groceries : data.grocery ? [{ id: undefined, provider: data.grocery.provider, name: data.grocery.name }] : []).map((g, i) => (
+            <button key={g.id ?? g.provider} className={`btn grow ${i === 0 ? "primary" : ""}`} onClick={() => actions.openGrocery(g.id)}>
+              <Icon name="cart" size={20} />
+              Skicka till {g.name}
+            </button>
+          ))}
       </div>
     </section>
   );
