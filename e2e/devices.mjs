@@ -95,7 +95,8 @@ for (const [name0, dev, tablet] of DEVICES) {
       const card = p.locator(".wsize > .card").first();
       await card.scrollIntoViewIfNeeded();
       const b = await card.boundingBox();
-      await p.mouse.move(b.x + b.width / 2, b.y + 20);
+      // A card taller than the screen is centred, so its top can be off screen: hold the visible part.
+      await p.mouse.move(b.x + b.width / 2, Math.max(b.y, 0) + 20);
       await p.mouse.down();
       await p.waitForTimeout(800);
       await p.mouse.up();
@@ -183,6 +184,8 @@ for (const [name0, dev, tablet] of DEVICES) {
         for (let r of range.getClientRects()) {
           if (r.width < 2 || r.height < 2) continue;
           if (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) continue;
+          // A radio station's scrolling text slides on purpose.
+          if (el.closest(".ticker")) continue;
           // Hidden by a fit area or a scroll box? Then it is not shown – skip.
           let clipped = false;
           for (let a = el; a && a !== document.body; a = a.parentElement) {

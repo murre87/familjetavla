@@ -190,6 +190,7 @@ function NowPlaying({ sp, actions, showName, logo }: { sp: Speaker; actions: Act
           <Ticker className="now-sub" text={sp.radioText ?? ([sp.artist, sp.album].filter(Boolean).join(" · ") || (showName ? "" : sp.name) || sp.name)} />
           <NowProgress sp={sp} />
         </div>
+        <div className="now-row">
         <div className="now-ctl">
           {sp.canPrev && (
             <button className="now-btn" aria-label="Föregående" onClick={() => void transport("previous", "Föregående")}>
@@ -215,6 +216,7 @@ function NowPlaying({ sp, actions, showName, logo }: { sp: Speaker; actions: Act
             <VolumeSlider value={vol} label={`Volym i ${sp.name}`} onCommit={(v) => void c.volume(v)} />
           </div>
         )}
+        </div>
       </div>
     );
   }

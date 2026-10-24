@@ -4053,10 +4053,10 @@ marker.pf-buy path {
 .music-now.now-rich {
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-areas: "cover main" "ctl ctl" "vol vol";
+  grid-template-areas: "cover main" "row row";
   align-items: center;
-  gap: 12px 14px;
-  padding: 14px;
+  gap: 10px 14px;
+  padding: 12px 14px;
   margin-bottom: 12px;
   border-radius: 24px;
   color: var(--fg);
@@ -4067,9 +4067,9 @@ marker.pf-buy path {
   grid-area: cover;
   display: grid;
   place-items: center;
-  width: 84px;
-  height: 84px;
-  border-radius: 18px;
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
   overflow: hidden;
   color: var(--accent);
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 35%, transparent), color-mix(in srgb, var(--accent) 10%, transparent));
@@ -4128,18 +4128,25 @@ marker.pf-buy path {
   background: var(--accent);
   transition: width 1s linear;
 }
+.now-row {
+  grid-area: row;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 16px;
+}
 .now-ctl {
-  grid-area: ctl;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 10px;
 }
 .now-btn {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 50%;
   color: var(--fg);
@@ -4151,14 +4158,15 @@ marker.pf-buy path {
   transform: scale(0.92);
 }
 .now-btn.big {
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
   color: #fff;
   background: var(--accent);
   box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .now-vol {
-  grid-area: vol;
+  flex: 1 1 150px;
+  min-width: 150px;
 }
 .now-vol .vol-slider {
   max-width: none;
