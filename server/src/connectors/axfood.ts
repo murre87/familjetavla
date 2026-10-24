@@ -1,3 +1,4 @@
+import { createCipheriv, pbkdf2Sync, randomBytes, randomInt } from "node:crypto";
 import { chromium } from "playwright-core";
 import { fetchWithTimeout } from "../http.js";
 
@@ -281,4 +282,55 @@ export async function axfoodStoreOptions(site: AxfoodSite, place: string): Promi
   const here = (s: AxStore) => want !== "" && ((s.address?.town ?? "").toLowerCase() === want || (s.name ?? "").toLowerCase().includes(want));
   const sorted = [...all.filter(here), ...all.filter((s) => !here(s))];
   return sorted.map((s) => ({ value: s.storeId, label: s.name! }));
+}
+
+// ---------- Login without a browser (mapped by github.com/ErikHellman/hemkop-cli, MIT) ----------
+
+/** The way the site's own login form hides the fields: AES-128-CBC with a PBKDF2 key from a random 16-digit number. */
+export function axfoodEncrypt(plain: string, key = `${String(randomInt(1e8)).padStart(8, "0")}${String(randomInt(1e8)).padStart(8, "0")}`, iv = randomBytes(16), salt = randomBytes(16)) {
+  const derived = pbkdf2Sync(key, salt, 1000, 16, "sha1");
+  const c = createCipheriv("aes-128-cbc", derived, iv);
+  const enc = Buffer.concat([c.update(plain, "utf8"), c.final()]);
+  const inner = `${iv.toString("hex")}::${salt.toString("hex")}::${enc.toString("base64")}`;
+  return { key, encrypted: Buffer.from(inner).toString("base64") };
+}
+
+/** Sign in with a plain request: POST /login with the encrypted fields. Returns the cookies, or throws with the shop's own answer. */
+export async function axfoodLoginHttp(site: AxfoodSite, username: string, password: string): Promise<string> {
+  if (!AXFOOD_USERNAME.test(username)) {
+    throw new Error(`${site.label}: användarnamnet ska vara personnummer (10 eller 12 siffror) eller kundkortsnummer (16 siffror), inte e-post.`);
+  }
+  const jar = new Map<string, string>();
+  const take = (res: Response) => {
+    for (const sc of res.headers.getSetCookie?.() ?? []) {
+      const [pair] = sc.split(";");
+      const i = pair!.indexOf("=");
+      if (i > 0) jar.set(pair!.slice(0, i).trim(), pair!.slice(i + 1).trim());
+    }
+  };
+  const cookie = () => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
+  const home = await fetchWithTimeout(`${site.base}/`, { headers: { "user-agent": UA, accept: "text/html" }, timeoutMs: 20_000 });
+  take(home);
+  const u = axfoodEncrypt(username);
+  const p = axfoodEncrypt(password);
+  const res = await fetchWithTimeout(`${site.base}/login`, {
+    method: "POST",
+    headers: { "user-agent": UA, "content-type": "application/json", accept: "application/json", cookie: cookie() },
+    body: JSON.stringify({ j_username: u.encrypted, j_username_key: u.key, j_password: p.encrypted, j_password_key: p.key, j_remember_me: true }),
+    timeoutMs: 25_000,
+  });
+  take(res);
+  const text = await res.text();
+  let body: { login_successful?: string } = {};
+  try {
+    body = JSON.parse(text);
+  } catch {
+    /* not JSON */
+  }
+  if (res.status === 401 || res.status === 403 || (res.ok && body.login_successful === "false")) throw new Error(`${site.label} avvisade inloggningen – kontrollera personnummer och lösenord (BankID-konton behöver ett lösenord).`);
+  if (!res.ok || body.login_successful !== "true") throw new Error(`${site.label} svarade ${res.status} vid inloggningen: ${text.slice(0, 120)}`);
+  const cookies = [...jar].filter(([k]) => FUNCTIONAL_COOKIES.includes(k)).map(([k, v]) => `${k}=${v}`).join("; ");
+  if (!cookies.includes("JSESSIONID")) throw new Error(`${site.label} gav ingen session efter inloggning.`);
+  await api(site, "/axfood/rest/account/orders", cookies);
+  return cookies;
 }

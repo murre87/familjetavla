@@ -2,6 +2,7 @@
 
 ## 0.14.0
 
+- **Willys och Hemköp loggar in utan webbläsare:** tavlan använder samma krypterade inloggningsanrop som butikernas egna sidor (kartlagt av hemkop-cli och willys-mcp, båda MIT). Det går på någon sekund i stället för en halv minut, och Hemköp fungerar igen.
 - **Ny flik Mat:** veckans mat på ett ställe – barnens skollunch per dag, familjens middagar (med Planera), inköpslistan och, om ni valt ICA, **ICA-erbjudanden** från er favoritbutik (med "På listan"), **recept** och själva **ICA-listan** att bocka av. Fliken ligger först efter Hem och kan flyttas eller döljas under Startskärm.
 - **Dra ned för att ladda om fungerar nu** även på riktiga telefoner och plattor (Chrome tog över svepet förut). Volymsvepet i Musik gäller bara när musik spelar. Ladda om-knappen finns alltid kvar.
 - **Installationen visar vad som är anslutet:** en butik med sparad inloggning får märket "Ansluten ✓" och formuläret säger "Inloggad". Det finns också en **Ladda om**-knapp överst på inställningssidorna.

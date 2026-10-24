@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AXFOOD_SITES, axfoodCommon, axfoodOffers } from "./axfood.js";
+import { createDecipheriv, pbkdf2Sync } from "node:crypto";
+import { AXFOOD_SITES, axfoodCommon, axfoodEncrypt, axfoodLoginHttp, axfoodOffers } from "./axfood.js";
 import { groceryIntegration, groceryIntegrations } from "../sources.js";
 import type { Config } from "../types.js";
 
@@ -44,6 +45,31 @@ describe("Axfood most bought", () => {
       return json({ entries: [{ product: { code: "1_ST", name: "Mjölk" }, quantity: 2 }, { product: { code: "3_ST", name: "Ägg" }, quantity: 1 }] });
     });
     expect(await axfoodCommon(AXFOOD_SITES.willys!, "c=1")).toEqual([{ name: "Mjölk" }, { name: "Bröd" }, { name: "Ägg" }]);
+  });
+});
+
+describe("Axfood login without a browser", () => {
+  it("encrypts like the site's form (PBKDF2 + AES-128-CBC), so the shop can decrypt it", () => {
+    const { key, encrypted } = axfoodEncrypt("lösen ord 123");
+    const [iv, salt, data] = Buffer.from(encrypted, "base64").toString().split("::");
+    const d = createDecipheriv("aes-128-cbc", pbkdf2Sync(key, Buffer.from(salt!, "hex"), 1000, 16, "sha1"), Buffer.from(iv!, "hex"));
+    expect(Buffer.concat([d.update(Buffer.from(data!, "base64")), d.final()]).toString("utf8")).toBe("lösen ord 123");
+    expect(key).toMatch(/^\d{16}$/);
+  });
+
+  it("posts the encrypted fields and reads login_successful", async () => {
+    let sent: Record<string, string> = {};
+    vi.stubGlobal("fetch", async (url: string, init: RequestInit = {}) => {
+      if (url.endsWith("/login")) {
+        sent = JSON.parse(String(init.body));
+        return new Response(JSON.stringify({ login_successful: "false" }), { status: 200 });
+      }
+      return new Response("<html/>", { status: 200, headers: { "set-cookie": "JSESSIONID=abc; Path=/" } });
+    });
+    await expect(axfoodLoginHttp(AXFOOD_SITES.hemkop!, "198708302479", "fel")).rejects.toThrow(/avvisade inloggningen/);
+    expect(Object.keys(sent).sort()).toEqual(["j_password", "j_password_key", "j_remember_me", "j_username", "j_username_key"]);
+    expect(sent.j_password).not.toContain("fel");
+    await expect(axfoodLoginHttp(AXFOOD_SITES.hemkop!, "x@y.se", "p")).rejects.toThrow(/personnummer/);
   });
 });
 

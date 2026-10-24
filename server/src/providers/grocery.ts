@@ -1,5 +1,5 @@
 import { cached } from "../cache.js";
-import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCommon, axfoodLogin, axfoodOffers, axfoodStoreOptions, axfoodSearch } from "../connectors/axfood.js";
+import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCommon, axfoodLoginHttp, axfoodOffers, axfoodStoreOptions, axfoodSearch } from "../connectors/axfood.js";
 import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossCommon, cityGrossLogin, cityGrossSearch, cityGrossStore, cityGrossStoreOptions, cityGrossSummary } from "../connectors/citygross.js";
 import { IcaAuthExpired, icaAddRows, icaCommon, icaFresh, icaFavoriteStores, icaListId, icaLogin, icaOffers, icaRecipes, icaRefresh, icaRows, icaSearch, type IcaSession } from "../connectors/ica.js";
 import type { FoodPart } from "../types.js";
@@ -20,7 +20,8 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
     const username = ctx.str("username");
     const password = ctx.secret("password");
     if (!username || !password) throw new Error(`${site.label} är inte inställt.`);
-    const cookies = await axfoodLogin(site, username, password);
+    // A plain request, no hidden browser: fast and it works on both shops (the site's own encrypted login call).
+    const cookies = await axfoodLoginHttp(site, username, password);
     ctx.remember("session", cookies);
     return cookies;
   }
@@ -41,7 +42,7 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
         showField(SHOW.offers, "Visa veckans erbjudanden under Mat"),
       ],
       guide: [
-        "Inloggningen görs av en dold webbläsare på servern, precis som när du loggar in själv.",
+        "Inloggningen görs av tavlan på servern med samma anrop som butikens egen inloggning.",
         "Varorna läggs i varukorgen – du väljer tid och betalar själv i appen.",
         "Inofficiell koppling: kan sluta fungera om butiken ändrar sin webb.",
       ],
@@ -93,8 +94,7 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
 }
 
 export const willys = axfoodProvider("willys", "beta");
-export const hemkop = axfoodProvider("hemkop", "experimental");
-hemkop.meta.description = "Fungerar inte just nu: Hemköp har bytt inloggning. " + hemkop.meta.description;
+export const hemkop = axfoodProvider("hemkop", "beta");
 
 export const ICA_LIST = "Familjetavlan";
 
