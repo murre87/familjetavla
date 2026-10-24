@@ -146,11 +146,19 @@ export async function collectPrices(cfg: Config, now: Date, errors: SourceError[
   }
 }
 
+/** Every chosen store (the list goes to the one in `shopping.sendTo`, else the first). */
+export function groceryIntegrations(cfg: Config) {
+  return cfg.integrations
+    .filter((i) => i.category === "grocery")
+    .flatMap((integ) => {
+      const provider = findProvider("grocery", integ.provider);
+      return provider ? [{ integ, provider }] : [];
+    });
+}
+
 export function groceryIntegration(cfg: Config) {
-  const integ = single(cfg, "grocery");
-  if (!integ) return null;
-  const provider = findProvider("grocery", integ.provider);
-  return provider ? { integ, provider } : null;
+  const all = groceryIntegrations(cfg);
+  return all.find((g) => g.integ.id === cfg.shopping.sendTo) ?? all[0] ?? null;
 }
 
 /** Total price per kWh incl. markup, grid fee, energy tax and VAT, from spot SEK/kWh. */

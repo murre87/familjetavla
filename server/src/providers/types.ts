@@ -2,7 +2,7 @@ import type { CalEvent } from "../connectors/ics.js";
 import type { Product } from "../connectors/axfood.js";
 import type { HourPrice } from "../connectors/elpris.js";
 import type { Pickup } from "../connectors/waste.js";
-import type { Integration, ProviderMeta, SettingValue, TestResult } from "../types.js";
+import type { FoodPart, Integration, ProviderMeta, SettingValue, StoreFoodData, TestResult } from "../types.js";
 
 /**
  * Context handed to a provider. `secret(key)` reads an encrypted field of this integration
@@ -59,6 +59,8 @@ export interface GroceryProvider {
   test(ctx: ProviderCtx): Promise<TestResult>;
   search(ctx: ProviderCtx, query: string): Promise<Product[]>;
   addToCart(ctx: ProviderCtx, lines: { code: string; qty: number }[]): Promise<{ items: number | null; total: string | null }>;
+  /** Fliken Mat: vilka delar butiken har, och hur en del hämtas (först när den öppnas). */
+  food?: { parts: FoodPart[]; load(ctx: ProviderCtx, part: FoodPart): Promise<StoreFoodData> };
 }
 
 export interface WasteProvider {

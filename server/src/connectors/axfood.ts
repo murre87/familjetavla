@@ -161,3 +161,64 @@ export async function axfoodAddToCart(site: AxfoodSite, cookies: string, lines: 
   const cart = await api<{ totalItems?: number; totalPrice?: string }>(site, "/axfood/rest/cart", cookies, { csrf });
   return { items: cart?.totalItems ?? null, total: cart?.totalPrice ?? null };
 }
+
+// ---------- Offers (open, no login): the campaigns of a store ----------
+
+export interface AxfoodOffer {
+  id: string;
+  name: string;
+  brand?: string;
+  size?: string;
+  price?: string;
+  note?: string;
+  image?: string;
+  validTo?: string;
+}
+
+interface AxStore {
+  storeId: string;
+  name?: string;
+  address?: { town?: string | null } | null;
+}
+
+const storeLists = new Map<string, { at: number; list: AxStore[] }>();
+
+async function axfoodStoreList(site: AxfoodSite): Promise<AxStore[]> {
+  const hit = storeLists.get(site.base);
+  if (hit && Date.now() - hit.at < 6 * 3600_000) return hit.list;
+  const res = await fetchWithTimeout(`${site.base}/axfood/rest/store`, { headers: { accept: "application/json", "user-agent": UA }, timeoutMs: 20_000 });
+  if (!res.ok) throw new Error(`${site.label} svarade ${res.status} på butikslistan`);
+  const list = (await res.json()) as AxStore[];
+  storeLists.set(site.base, { at: Date.now(), list });
+  return list;
+}
+
+/** The stores in a town, then the offers of the first one that has any (not every store sells online). */
+export async function axfoodOffers(site: AxfoodSite, place: string, size = 24): Promise<{ store: string; offers: AxfoodOffer[] }> {
+  const want = place.trim().toLowerCase();
+  if (!want) throw new Error(`Ange en ort för ${site.label} (Butik (ort)) – eller sätt orten under Hem.`);
+  const stores = (await axfoodStoreList(site)).filter((s) => (s.address?.town ?? "").toLowerCase() === want || (s.name ?? "").toLowerCase().includes(want));
+  if (!stores.length) throw new Error(`${site.label} har ingen butik som heter ${place}.`);
+  type Promo = { rewardLabel?: string; conditionLabel?: string; validUntil?: number };
+  type R = { code: string; name: string; manufacturer?: string; displayVolume?: string; image?: { url?: string }; potentialPromotions?: Promo[] };
+  for (const st of stores.slice(0, 5)) {
+    const res = await fetchWithTimeout(`${site.base}/search/campaigns/online?${new URLSearchParams({ q: st.storeId, type: "PERSONAL_GENERAL", size: String(size), page: "0" })}`, { headers: { accept: "application/json", "user-agent": UA }, timeoutMs: 20_000 });
+    if (!res.ok) continue;
+    const data = (await res.json()) as { results?: R[] };
+    const offers: AxfoodOffer[] = (data.results ?? []).map((r) => {
+      const p = r.potentialPromotions?.[0];
+      return {
+        id: r.code,
+        name: r.name,
+        brand: r.manufacturer || undefined,
+        size: r.displayVolume || undefined,
+        price: p?.rewardLabel || undefined,
+        note: p?.conditionLabel || undefined,
+        image: r.image?.url,
+        validTo: p?.validUntil ? new Date(p.validUntil).toISOString() : undefined,
+      };
+    });
+    if (offers.length) return { store: st.name ?? place, offers };
+  }
+  return { store: stores[0]!.name ?? place, offers: [] };
+}

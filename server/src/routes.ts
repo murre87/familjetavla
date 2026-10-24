@@ -19,9 +19,9 @@ import { haSocket } from "./connectors/haws.js";
 import { energyLive, liveEnergyIds } from "./energy.js";
 import { publishToHa } from "./publisher.js";
 import { MULTIPLE, allMeta, findProvider, makeCtx, secretKey } from "./providers/registry.js";
-import { calendarEvents, groceryIntegration, newsFiles } from "./sources.js";
-import { icaOffers, icaListId, icaRecipes, icaRows, icaStrike } from "./connectors/ica.js";
-import { ICA_LIST, icaRun } from "./providers/grocery.js";
+import { calendarEvents, groceryIntegration, groceryIntegrations, newsFiles } from "./sources.js";
+import { icaListId, icaStrike } from "./connectors/ica.js";
+import { ICA_LIST, SHOW, icaRun } from "./providers/grocery.js";
 import { addOwnEvent, markNewsSeen, removeOwnEvent } from "./news.js";
 import { vklassFile, vklassLogin } from "./connectors/vklass.js";
 import { saveTravel } from "./travel.js";
@@ -50,7 +50,7 @@ import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
 import { alarmCall, robotCall } from "./security.js";
 import { MEDIA_TYPES, SHELVES, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
-import { HOME_WIDGETS, TAB_IDS, type Config, type FoodIca, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
+import { HOME_WIDGETS, TAB_IDS, type Config, type FoodPart, type StoreFood, type StoreFoodData, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
 
 export { VERSION } from "./version.js";
 import { VERSION } from "./version.js";
@@ -228,6 +228,7 @@ export const configSchema = z
     shopping: z.object({
       source: z.enum(["local", "ha"]),
       entityId: entity.optional(),
+      sendTo: z.string().regex(ID).optional(),
       mappings: z.record(z.record(z.object({ code: z.string(), name: z.string() }))),
     }),
     electricity: z.object({
@@ -335,10 +336,23 @@ function isUserSecret(k: string, cfg: Config): boolean {
   return Boolean(provider?.meta.fields.some((f) => f.key === m[2] && f.secret));
 }
 
+/** What a test vouches for: the provider and every field (secrets from `typed` or the stored ones). Any edit changes it. */
+function fingerprint(integ: Integration, typed: Record<string, string> = {}): string | null {
+  const provider = findProvider(integ.category, integ.provider);
+  if (!provider) return null;
+  const values = provider.meta.fields.map((f) => (f.secret ? (typed[f.key] || getSecret(secretKey(integ.id, f.key)) || "") : String(integ.settings[f.key] ?? "").trim()));
+  return createHash("sha256").update(JSON.stringify([integ.provider, values])).digest("hex");
+}
+
 function configResponse(): ConfigResponse {
+  const config = loadConfig();
   return {
-    config: loadConfig(),
-    secretsSet: listSecretKeys().filter((k) => !k.endsWith(".session")),
+    config,
+    verified: config.integrations.filter((i) => {
+      const fp = fingerprint(i);
+      return fp !== null && getSecret(secretKey(i.id, "ok")) === fp;
+    }).map((i) => i.id),
+    secretsSet: listSecretKeys().filter((k) => !k.endsWith(".session") && !k.endsWith(".ok")),
     providers: allMeta(),
     runtime: { supervisor: Boolean(process.env.SUPERVISOR_TOKEN), version: VERSION, pinRequired: Boolean(getSecret("admin.pin")) },
   };
@@ -402,6 +416,11 @@ export async function registerRoutes(app: FastifyInstance) {
     for (const [k, v] of Object.entries(body.secrets ?? {})) {
       if (!isUserSecret(k, next)) return fail(reply, new Error(`Okänd hemlighet ${k}`));
       if (k === "admin.pin" && v && !/^\d{4,8}$/.test(String(v))) return fail(reply, new Error("PIN-koden ska vara 4–8 siffror."));
+    }
+    // Another provider in the same slot must not inherit the old one's password or session.
+    for (const i of next.integrations) {
+      const was = prev.integrations.find((x) => x.id === i.id);
+      if (was && was.provider !== i.provider) for (const k of listSecretKeys()) if (k.startsWith(`int.${i.id}.`)) setSecret(k as SecretKey, null);
     }
     for (const [k, v] of Object.entries(body.secrets ?? {})) setSecret(k as SecretKey, v);
     // Setting a PIN here must not lock out the screen doing it.
@@ -566,8 +585,13 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!provider) return fail(reply, new Error("Okänd leverantör"));
     if (provider.meta.needsHa && !haConnection()) return fail(reply, new Error("Anslut Home Assistant först."));
     try {
-      return await provider.test(makeCtx(integ, secrets ?? {}));
+      const result = await provider.test(makeCtx(integ, secrets ?? {}));
+      // A test that went through (and does not ask for more) is remembered for exactly these values.
+      const fp = fingerprint(integ, secrets ?? {});
+      setSecret(secretKey(integ.id, "ok"), result.ok && !result.choices && fp ? fp : null);
+      return result;
     } catch (e) {
+      setSecret(secretKey(integ.id, "ok"), null);
       return fail(reply, e);
     }
   });
@@ -686,34 +710,30 @@ export async function registerRoutes(app: FastifyInstance) {
     return { store: g.provider.meta.name, lines };
   });
 
-  // ---------- Mat: what ICA shows besides the list ----------
-  app.get("/api/food/ica", async (): Promise<FoodIca> => {
-    const g = groceryIntegration(loadConfig());
-    if (!g || g.provider.meta.id !== "ica") return { enabled: false };
-    const ctx = makeCtx(g.integ);
-    const title = ctx.str("list") || ICA_LIST;
-    const errors: Record<string, string> = {};
-    const part = async <T>(name: string, run: () => Promise<T>): Promise<T | undefined> => {
-      try {
-        return await run();
-      } catch (e) {
-        errors[name] = (e as Error).message;
-        return undefined;
-      }
-    };
-    const [offers, recipes, rows] = await Promise.all([
-      part("offers", () => cached(`food:ica:offers:${g.integ.id}`, 30 * 60_000, () => icaRun(ctx, (s) => icaOffers(s, 24)))),
-      part("recipes", () => cached(`food:ica:recipes:${g.integ.id}`, 30 * 60_000, () => icaRun(ctx, (s) => icaRecipes(s, 6)))),
-      part("list", () => icaRun(ctx, async (s) => icaRows(s, await icaListId(s, title)))),
-    ]);
-    return { enabled: true, store: offers?.store, offers: offers?.offers, recipes, list: rows ? { name: title, rows } : undefined, errors: Object.keys(errors).length ? errors : undefined };
+  // ---------- Mat: every chosen store; the content of a part is fetched when it is opened ----------
+  const partOnFor = (settings: Record<string, unknown>, part: FoodPart) => settings[SHOW[part]] !== "false" && settings[SHOW[part]] !== false;
+  app.get("/api/food/stores", async (): Promise<StoreFood[]> =>
+    groceryIntegrations(loadConfig()).flatMap((g) =>
+      g.provider.food ? [{ id: g.integ.id, provider: g.provider.meta.id, name: g.provider.meta.name, parts: g.provider.food.parts.filter((p) => partOnFor(g.integ.settings, p)) }] : [],
+    ),
+  );
+  app.get("/api/food/stores/:id/:part", async (req, reply): Promise<StoreFoodData | void> => {
+    const q = z.object({ id: z.string().regex(ID), part: z.enum(["list", "common", "offers", "recipes"]) }).safeParse(req.params);
+    if (!q.success) return fail(reply, new Error("Okänd del"));
+    const g = groceryIntegrations(loadConfig()).find((x) => x.integ.id === q.data.id);
+    if (!g?.provider.food || !g.provider.food.parts.includes(q.data.part) || !partOnFor(g.integ.settings, q.data.part)) return fail(reply, new Error("Den delen visas inte."));
+    try {
+      return await g.provider.food.load(makeCtx(g.integ), q.data.part);
+    } catch (e) {
+      return { errors: { [q.data.part]: (e as Error).message } };
+    }
   });
 
   app.post("/api/food/ica/strike", async (req, reply) => {
     const body = z.object({ id: z.string().min(1).max(80), name: z.string().min(1).max(120), done: z.boolean() }).safeParse(req.body);
     if (!body.success) return fail(reply, new Error("Ogiltig rad"));
-    const g = groceryIntegration(loadConfig());
-    if (!g || g.provider.meta.id !== "ica") return fail(reply, new Error("ICA är inte vald."));
+    const g = groceryIntegrations(loadConfig()).find((x) => x.provider.meta.id === "ica");
+    if (!g) return fail(reply, new Error("ICA är inte vald."));
     const ctx = makeCtx(g.integ);
     try {
       await icaRun(ctx, async (s) => icaStrike(s, await icaListId(s, ctx.str("list") || ICA_LIST), body.data, body.data.done));

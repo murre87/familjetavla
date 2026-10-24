@@ -281,6 +281,8 @@ export interface Config {
   shopping: {
     source: "local" | "ha";
     entityId?: string; // todo.* i Home Assistant
+    /** Vilken butik (kopplingens id) listan skickas till när flera är valda. */
+    sendTo?: string;
     /** Inköpsrad (gemener) → vald produkt per butik: mappings[provider][rad] */
     mappings: Record<string, Record<string, { code: string; name: string }>>;
   };
@@ -357,6 +359,8 @@ export interface ConfigResponse {
   config: Config;
   /** Vilka hemligheter som är satta (aldrig deras värden). */
   secretsSet: string[];
+  /** Kopplingar (id) vars sparade uppgifter klarade senaste testet. */
+  verified: string[];
   providers: ProviderMeta[];
   runtime: {
     supervisor: boolean;
@@ -510,6 +514,8 @@ export interface Dashboard {
   shopping: { source: "local" | "ha"; items: { id: string; name: string; done: boolean }[] };
   /** Butik att skicka inköpslistan till, om en är vald. */
   grocery?: { provider: string; name: string };
+  /** Alla valda butiker (listan skickas till `grocery`). */
+  groceries?: { id: string; provider: string; name: string }[];
   prices?: {
     now: number;
     level: "billigt" | "normalt" | "dyrt";
@@ -777,13 +783,25 @@ export interface ApplianceView {
   progress?: number;
 }
 
-/** Fliken Mat: det ICA-appen visar utöver listan (erbjudanden, recept och själva listan). */
-export interface FoodIca {
-  enabled: boolean;
+/** Delar av en butik under fliken Mat. */
+export type FoodPart = "list" | "common" | "offers" | "recipes";
+
+/** Fliken Mat, en butik: vilka delar som finns och är påslagna (innehållet hämtas först när delen öppnas). */
+export interface StoreFood {
+  id: string;
+  provider: string;
+  name: string;
+  parts: FoodPart[];
+}
+
+/** Innehållet i en del, hämtat på begäran. */
+export interface StoreFoodData {
+  /** Butiken erbjudandena gäller (orten eller butiksnamnet). */
   store?: string;
-  offers?: { id: string; name: string; brand?: string; size?: string; price?: string; image?: string; validTo?: string }[];
+  offers?: { id: string; name: string; brand?: string; size?: string; price?: string; note?: string; image?: string; validTo?: string }[];
+  /** "Mina vanligaste varor". */
+  common?: { name: string }[];
   recipes?: { id: number; title: string; time?: string; ingredients?: number; image?: string; url: string }[];
   list?: { name: string; rows: { id: string; name: string; done: boolean }[] };
-  /** Delar som inte gick att hämta, med skälet. */
   errors?: Record<string, string>;
 }

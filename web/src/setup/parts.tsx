@@ -373,6 +373,7 @@ export function ProviderForm({
   secretsSet,
   extra,
   saveNow,
+  verified,
 }: {
   meta: ProviderMeta;
   integ: Integration;
@@ -383,6 +384,8 @@ export function ProviderForm({
   extra?: (result: TestResult | null) => React.ReactNode;
   /** Saves the settings: a successful test saves by itself, and "Spara" next to Testa does it by hand. */
   saveNow?: () => Promise<void>;
+  /** The saved details passed the last test. */
+  verified?: boolean;
 }) {
   const [saved, setSaved] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
@@ -416,16 +419,11 @@ export function ProviderForm({
     }
   };
 
-  // Saved sign-in details: say so instead of asking to log in again.
-  const signedIn =
-    meta.fields.some((f) => f.secret) &&
-    meta.fields.filter((f) => f.secret).every((f) => secretsSet.includes(sk(f.key))) &&
-    meta.fields.filter((f) => !f.secret && !f.optional && f.type === "text").every((f) => String(integ.settings[f.key] ?? "").trim());
   return (
     <div className="stack">
-      {signedIn && (
-        <div className="result ok" role="status">
-          <b>✓ Inloggad hos {meta.name}.</b> Uppgifterna är sparade – ändra bara om du vill byta konto.
+      {verified && (
+        <div className="result connected-note" role="status">
+          <b>✓ Inloggad hos {meta.name}.</b> Uppgifterna är sparade och fungerade vid senaste testet – ändra bara om du vill byta konto.
         </div>
       )}
       {meta.guide && (
@@ -520,7 +518,7 @@ export function ProviderTiles({
         .map((p) => (
           <button
             key={p.id}
-            className={`tile ${selected === p.id ? "selected" : ""}`}
+            className={`tile ${selected === p.id ? "selected" : ""} ${connected === p.id ? "connected" : ""}`}
             aria-pressed={selected === p.id}
             disabled={p.needsHa && !haAvailable}
             onClick={() => onSelect(p.id)}
@@ -528,7 +526,7 @@ export function ProviderTiles({
             <b>{p.name}</b>
             <small>{p.needsHa && !haAvailable ? "Kräver Home Assistant" : p.description}</small>
             <span className="row gap" style={{ flexWrap: "wrap" }}>
-              {connected === p.id && <span className="badge stable">Ansluten ✓</span>}
+              {connected === p.id && <span className="badge stable">✓ Inloggad</span>}
               {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
             </span>
           </button>

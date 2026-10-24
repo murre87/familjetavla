@@ -356,3 +356,16 @@ export async function icaStrike(s: IcaSession, listId: string, row: { id: string
     body: JSON.stringify({ changedRows: [{ offlineId: row.id, productName: row.name, isStrikedOver: done, latestChange: now }] }),
   });
 }
+
+/** "Mina vanligaste varor" as the ICA app keeps them. */
+export async function icaCommon(s: IcaSession, limit = 24): Promise<{ name: string }[]> {
+  const data = await api<{ commonArticles?: unknown } | unknown[]>(s, `${LISTS}/common`);
+  const rows = asArray(Array.isArray(data) ? data : (data as { commonArticles?: unknown })?.commonArticles);
+  const out: { name: string }[] = [];
+  for (const r of rows) {
+    const name = str(r.productName ?? r.ProductName ?? r.name);
+    if (name && !out.some((o) => o.name.toLowerCase() === name.toLowerCase())) out.push({ name });
+    if (out.length >= limit) break;
+  }
+  return out;
+}

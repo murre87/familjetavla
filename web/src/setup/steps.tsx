@@ -1348,7 +1348,7 @@ export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode,
               {cfg.household.municipality} finns inte i listan. Prova <b>Eget schema</b> eller Waste Collection Schedule i Home Assistant.
             </p>
           )}
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} />
+          <ProviderForm key={`${integ.id}-${integ.provider}`} meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} verified={resp.verified.includes(integ.id)} />
         </section>
       )}
     </div>
@@ -1356,8 +1356,22 @@ export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode,
 }
 
 export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow }: StepProps) {
-  const [integ, put] = useIntegration(cfg, set, "grocery");
+  const stores = cfg.integrations.filter((i) => i.category === "grocery");
+  const [activeId, setActive] = useState<string | null>(stores[0]?.id ?? null);
+  const integ = stores.find((i) => i.id === activeId) ?? stores[0];
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "grocery");
+  const put = (i: Integration | null) =>
+    set({ ...cfg, integrations: i ? cfg.integrations.map((x) => (x.id === i.id ? i : x)) : cfg.integrations.filter((x) => x.id !== integ?.id) });
+  const choose = (provider: string) => {
+    const have = stores.find((x) => x.provider === provider);
+    if (have) {
+      setActive(have.id);
+      return;
+    }
+    const id = stores.some((x) => x.id === "grocery") ? `g-${provider}` : "grocery";
+    set({ ...cfg, integrations: [...cfg.integrations, { id, category: "grocery", provider, settings: {} }] });
+    setActive(id);
+  };
   return (
     <div className="stack">
       <section className="card">
@@ -1380,24 +1394,43 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNo
           <EntityPicker label="Lista" domains={["todo"]} value={cfg.shopping.entityId} onChange={(v) => set({ ...cfg, shopping: { ...cfg.shopping, entityId: v } })} optional={false} />
         )}
       </section>
-      <h2 style={{ fontSize: 18 }}>Skicka listan till en butik</h2>
-      <ProviderTiles
-        providers={resp.providers}
-        category="grocery"
-        selected={integ?.provider}
-        allowNone="Ingen butik"
-        haAvailable={haOk}
-        connected={integ && meta && meta.fields.filter((f) => f.secret).every((f) => resp.secretsSet.includes(`int.${integ.id}.${f.key}`)) && meta.fields.filter((f) => !f.secret && !f.optional && f.type === "text").every((f) => String(integ.settings[f.key] ?? "").trim()) ? integ.provider : undefined}
-        onSelect={(id) => {
-          // Pressing the chosen shop again keeps what is filled in.
-          if (id && id === integ?.provider) return;
-          put(id ? { id: "grocery", category: "grocery", provider: id, settings: {} } : null);
-        }}
-      />
+      <h2 style={{ fontSize: 18 }}>Butiker</h2>
+      <p className="muted" style={{ margin: 0 }}>Välj en eller flera. Varje butik får egna erbjudanden, vanliga varor och recept under fliken Mat.</p>
+      <div className="tiles">
+        {resp.providers
+          .filter((p) => p.category === "grocery")
+          .map((p) => {
+            const mine = stores.find((x) => x.provider === p.id);
+            const ok = mine && resp.verified.includes(mine.id);
+            return (
+              <button key={p.id} className={`tile ${integ && mine && integ.id === mine.id ? "selected" : ""} ${ok ? "connected" : ""}`} aria-pressed={Boolean(mine)} onClick={() => choose(p.id)}>
+                <b>{p.name}</b>
+                <small>{p.description}</small>
+                <span className="row gap" style={{ flexWrap: "wrap" }}>
+                  {ok ? <span className="badge stable">✓ Inloggad</span> : mine ? <span className="badge">Inte provad</span> : null}
+                  {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
+                </span>
+              </button>
+            );
+          })}
+      </div>
+      {stores.length > 1 && (
+        <section className="card">
+          <Select
+            label="Skicka inköpslistan till"
+            value={cfg.shopping.sendTo && stores.some((x) => x.id === cfg.shopping.sendTo) ? cfg.shopping.sendTo : stores[0]!.id}
+            onChange={(v) => set({ ...cfg, shopping: { ...cfg.shopping, sendTo: v } })}
+            options={stores.map((x) => ({ value: x.id, label: resp.providers.find((p) => p.id === x.provider)?.name ?? x.provider }))}
+          />
+        </section>
+      )}
       {integ && meta && (
         <section className="card">
           <h2>{meta.name}</h2>
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} />
+          <ProviderForm key={`${integ.id}-${integ.provider}`} meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} verified={resp.verified.includes(integ.id)} />
+          <button className="btn small" style={{ alignSelf: "flex-start", marginTop: 10 }} onClick={() => { put(null); setActive(null); }}>
+            Ta bort {meta.name}
+          </button>
         </section>
       )}
     </div>
@@ -1444,7 +1477,7 @@ export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, pos
       {integ && meta && (
         <section className="card">
           <h2>{meta.name}</h2>
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} />
+          <ProviderForm key={`${integ.id}-${integ.provider}`} meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} verified={resp.verified.includes(integ.id)} />
         </section>
       )}
       {integ && (

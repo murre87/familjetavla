@@ -18,7 +18,7 @@ export const PROVIDERS = {
 } satisfies Record<IntegrationCategory, AnyProvider[]>;
 
 /** Which categories allow several integrations at once (one school calendar per child). */
-export const MULTIPLE: Record<IntegrationCategory, boolean> = { school: true, grocery: false, waste: false, price: false };
+export const MULTIPLE: Record<IntegrationCategory, boolean> = { school: true, grocery: true, waste: false, price: false };
 
 export function allMeta(): ProviderMeta[] {
   return Object.values(PROVIDERS).flat().map((p) => p.meta);

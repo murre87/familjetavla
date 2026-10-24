@@ -4593,3 +4593,37 @@ marker.pf-buy path {
 .fit-tight .tight-hide {
   display: none;
 }
+
+/* Butik/koppling som klarat testet: kortet blir grönt och säger att man är inloggad. */
+.tile.connected {
+  background: color-mix(in srgb, #1fa774 22%, var(--card, transparent));
+  border-color: color-mix(in srgb, #1fa774 70%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #1fa774 45%, transparent) inset;
+}
+.connected-note {
+  background: color-mix(in srgb, #1fa774 20%, transparent);
+  border: 1px solid color-mix(in srgb, #1fa774 55%, transparent);
+}
+
+.fd-part > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.fd-part > summary::-webkit-details-marker {
+  display: none;
+}
+.fd-part > summary::after {
+  content: "▾";
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+.fd-part[open] > summary::after {
+  transform: rotate(180deg);
+}
+.fd-part[open] > summary {
+  margin-bottom: 8px;
+}

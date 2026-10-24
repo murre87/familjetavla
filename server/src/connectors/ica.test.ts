@@ -123,12 +123,16 @@ describe("City Gross", () => {
     expect(bodyOf(calls[0]!)).toContain("grant_type=password");
   });
 
-  it("adds to what is already in the cart", async () => {
-    mock(() => json({ id: "C", items: [{ itemNo: "1_ST", quantity: 3 }], totalPrice: 49.5 }));
-    const cart = { id: "C", items: [{ itemNo: "1_ST", quantity: 3 }] };
-    const out = await cityGrossAdd("T", cart, [{ code: "1_ST", qty: 2 }]);
-    expect(JSON.parse(bodyOf(calls[0]!))).toEqual({ quantity: 5 });
-    expect(calls[0]!.url).toContain("/carts/C/items/1_ST");
-    expect(cityGrossSummary(out)).toEqual({ items: 3, total: "49,50 kr" });
+  it("adds lines with the site's additems call, described the way the site does", async () => {
+    mock((url) =>
+      url.includes("/Loop54/products/")
+        ? json({ items: [{ id: "1_ST", gtin: "734", name: "Mjölk", netContent: { value: 1500 }, countryOfOriginIsoCode: "SE" }] })
+        : json({ id: "C", items: [{ itemNo: "1_ST", quantity: { value: 2 } }], totalPrice: 49.5 }),
+    );
+    const out = await cityGrossAdd("T", { id: "C" }, [{ code: "1_ST", qty: 2 }]);
+    const post = calls.find((c) => c.url.endsWith("/additems"))!;
+    expect(post.url).toContain("/carts/C/additems");
+    expect(JSON.parse(bodyOf(post))).toEqual({ items: [{ countryOfOrigin: "SE", gtin: "734", itemNo: "1_ST", name: "Mjölk", netContent: { value: 1500 }, quantity: { value: 2, unit: "Piece", originalUnit: "Piece" } }] });
+    expect(cityGrossSummary(out)).toEqual({ items: 2, total: "49,50 kr" });
   });
 });

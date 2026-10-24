@@ -20,6 +20,7 @@ import {
   collectSchool,
   collectWaste,
   groceryIntegration,
+  groceryIntegrations,
   hasPriceExtras,
   totalPrice,
   type SourceError,
@@ -378,6 +379,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
       const g = groceryIntegration(cfg);
       return g ? { provider: g.provider.meta.id, name: g.provider.meta.name } : undefined;
     })(),
+    groceries: groceryIntegrations(cfg).map((g) => ({ id: g.integ.id, provider: g.provider.meta.id, name: g.provider.meta.name })),
     prices: buildPrices(cfg, prices, now),
     energy: buildEnergy(cfg, stateMap, energySeries, prices),
     schoolFood: todaysFood(family.schoolFood, now),
