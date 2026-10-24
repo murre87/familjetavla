@@ -34,7 +34,7 @@ export function defaultConfig(): Config {
     dashboard: {
       accent: "#34e0a1",
       theme: "auto",
-      home: HOME_WIDGETS.map((id) => ({ id, on: !["temps", "energy", "climates", "chores"].includes(id) })),
+      home: HOME_WIDGETS.map((id) => ({ id, on: !["temps", "energy", "climates", "chores", "homestatus"].includes(id) })),
       tabs: TAB_IDS.map((id) => ({ id, on: true })),
       nightFrom: "22:00",
       nightTo: "06:00",
