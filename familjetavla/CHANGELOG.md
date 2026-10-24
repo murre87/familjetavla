@@ -2,6 +2,7 @@
 
 ## 0.14.0
 
+- **Installationen visar vad som är anslutet:** en butik med sparad inloggning får märket "Ansluten ✓" och formuläret säger "Inloggad". Det finns också en **Ladda om**-knapp överst på inställningssidorna.
 - **Spara-knapp bredvid Testa** i installationen, och ett lyckat test sparar av sig självt. Förut sparades inget förrän man tryckt Nästa hela vägen.
 - **Menyn längst ner tar dig alltid till flikens första sida:** även när du är inne på en sida (Veckan, Maten …) går **Hem** till startsidan och en flik till sin början. Trycker du på fliken du redan är på går den till toppen (Musik tillbaka till radion).
 - **Fler butiker för inköpslistan:** **ICA** (listan läggs i en inköpslista i ICA-appen, med personnummer och PIN som i appen – tack till [ha-ica-todo](https://github.com/lazytarget/ha-ica-todo) för kartläggningen) och **City Gross** (sök med pris och bild per butik, och varukorgen på citygross.se). Willys och Hemköp fanns redan. Alla tre är inofficiella och märkta experimentella.

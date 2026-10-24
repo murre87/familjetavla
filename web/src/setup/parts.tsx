@@ -416,8 +416,15 @@ export function ProviderForm({
     }
   };
 
+  // Saved sign-in details: say so instead of asking to log in again.
+  const signedIn = meta.fields.some((f) => f.secret) && meta.fields.filter((f) => f.secret).every((f) => secretsSet.includes(sk(f.key)));
   return (
     <div className="stack">
+      {signedIn && (
+        <div className="result ok" role="status">
+          <b>✓ Inloggad hos {meta.name}.</b> Uppgifterna är sparade – ändra bara om du vill byta konto.
+        </div>
+      )}
       {meta.guide && (
         <ol className="guide">
           {meta.guide.map((g, i) => (
@@ -486,10 +493,13 @@ export function ProviderTiles({
   onSelect,
   allowNone,
   haAvailable,
+  connected,
 }: {
   providers: ProviderMeta[];
   category: IntegrationCategory;
   selected?: string;
+  /** The provider whose sign-in details are saved: its tile says so. */
+  connected?: string;
   onSelect: (id: string | null) => void;
   allowNone?: string;
   haAvailable: boolean;
@@ -514,7 +524,10 @@ export function ProviderTiles({
           >
             <b>{p.name}</b>
             <small>{p.needsHa && !haAvailable ? "Kräver Home Assistant" : p.description}</small>
-            {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
+            <span className="row gap" style={{ flexWrap: "wrap" }}>
+              {connected === p.id && <span className="badge stable">Ansluten ✓</span>}
+              {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
+            </span>
           </button>
         ))}
     </div>

@@ -70,6 +70,11 @@ describe("ICA", () => {
   it("reads suggestions from several response shapes", async () => {
     mock(() => json({ articles: [{ name: "Mjölk" }, { productName: "Mjölk" }, { title: "Mjölkchoklad" }] }));
     expect((await icaSearch(session, "mjölk")).map((p) => p.name)).toEqual(["Mjölk", "Mjölkchoklad"]);
+    mock(() => json({ documents: [{ name: "mjölk", articleGroupName: "Mejeri" }, { name: "mjölk grön", articleGroupName: "Mejeri" }] }));
+    expect(await icaSearch(session, "mjölk")).toEqual([
+      { code: "mjölk", name: "Mjölk", volume: "Mejeri" },
+      { code: "mjölk grön", name: "Mjölk grön", volume: "Mejeri" },
+    ]);
     mock(() => json([{ name: "Smör" }]));
     expect((await icaSearch(session, "smör"))[0]!.code).toBe("Smör");
   });

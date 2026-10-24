@@ -196,18 +196,13 @@ interface IcaList {
 /** Suggestions from ICA's own article search (what the app offers when you type). */
 export async function icaSearch(s: IcaSession, query: string, size = 6): Promise<Product[]> {
   const data = await api<unknown>(s, `shoppinglistarticlesearch/v1/search?${form({ query })}`);
-  const rows = Array.isArray(data)
-    ? data
-    : Array.isArray((data as Record<string, unknown>)?.articles)
-      ? ((data as Record<string, unknown>).articles as unknown[])
-      : Array.isArray((data as Record<string, unknown>)?.results)
-        ? ((data as Record<string, unknown>).results as unknown[])
-        : [];
+  const o = data as Record<string, unknown> | null;
+  const rows = Array.isArray(data) ? data : Array.isArray(o?.documents) ? (o!.documents as unknown[]) : Array.isArray(o?.articles) ? (o!.articles as unknown[]) : [];
   const out: Product[] = [];
   for (const r of rows as Record<string, unknown>[]) {
     const name = String(r.name ?? r.productName ?? r.title ?? r.articleName ?? "").trim();
     if (!name || out.some((p) => p.name === name)) continue;
-    out.push({ code: name, name, brand: typeof r.brand === "string" ? r.brand : undefined });
+    out.push({ code: name, name: name.charAt(0).toUpperCase() + name.slice(1), volume: str(r.articleGroupName) });
     if (out.length >= size) break;
   }
   return out;
@@ -269,7 +264,7 @@ export interface IcaRecipe {
   id: number;
   title: string;
   time?: string;
-  portions?: number;
+  ingredients?: number;
   image?: string;
   url: string;
 }
@@ -317,7 +312,7 @@ export async function icaOffers(s: IcaSession, limit = 24): Promise<{ store?: st
       brand: str(o.brand),
       size: str(o.packageInformation),
       price: offerPrice(o.parsedMechanics as Mech | undefined),
-      image: str(o.listImageUrl) ?? str(o.pictureUrl),
+      image: str(o.pictureUrl) ?? str(o.listImageUrl),
       validTo: str(o.validTo),
     });
     if (offers.length >= limit) break;
@@ -325,22 +320,25 @@ export async function icaOffers(s: IcaSession, limit = 24): Promise<{ store?: st
   return { store: str(store?.marketingName), offers };
 }
 
+/** "Random" gives one recipe per call, so ask a few times and keep the different ones. */
 export async function icaRecipes(s: IcaSession, n = 6): Promise<IcaRecipe[]> {
-  const data = await api<unknown>(s, `mobile/recipeservice/v1/recipes/random?numberofrecipes=${n}`);
-  return asArray(Array.isArray(data) ? data : (data as Record<string, unknown>)?.recipes)
-    .map((r) => {
-      const id = Number(r.Id ?? r.id);
-      const imageId = r.ImageId ?? r.imageId;
-      return {
-        id,
-        title: str(r.Title ?? r.title) ?? "",
-        time: str(r.CookingTime ?? r.cookingTime),
-        portions: typeof (r.Portions ?? r.portions) === "number" ? (r.Portions ?? r.portions) as number : undefined,
-        image: imageId ? `https://assets.icanet.se/e_sharpen:80,q_auto,dpr_1.0,w_480/imagevaultfiles/id_${imageId}/cf_259/recept.jpg` : undefined,
-        url: `https://www.ica.se/recept/-${id}/`,
-      };
-    })
-    .filter((r) => r.title && Number.isFinite(r.id));
+  const got = await Promise.all(Array.from({ length: n }, () => api<Record<string, unknown>>(s, "mobile/recipeservice/v1/recipes/random?numberofrecipes=1").catch(() => null)));
+  const out: IcaRecipe[] = [];
+  for (const r of got) {
+    if (!r) continue;
+    const id = Number(r.id ?? r.Id);
+    const title = str(r.title ?? r.Title);
+    if (!title || !Number.isFinite(id) || out.some((x) => x.id === id)) continue;
+    out.push({
+      id,
+      title,
+      time: str(r.cookingTimeAbbreviated) ?? str(r.cookingTime),
+      ingredients: typeof r.ingredientCount === "number" ? r.ingredientCount : undefined,
+      image: str(r.listImageUrl) ?? str(r.imageUrl),
+      url: `https://www.ica.se/recept/-${id}/`,
+    });
+  }
+  return out;
 }
 
 export async function icaRows(s: IcaSession, listId: string): Promise<IcaRow[]> {

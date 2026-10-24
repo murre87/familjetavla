@@ -1387,7 +1387,12 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNo
         selected={integ?.provider}
         allowNone="Ingen butik"
         haAvailable={haOk}
-        onSelect={(id) => put(id ? { id: "grocery", category: "grocery", provider: id, settings: {} } : null)}
+        connected={integ && meta && meta.fields.filter((f) => f.secret).every((f) => resp.secretsSet.includes(`int.${integ.id}.${f.key}`)) ? integ.provider : undefined}
+        onSelect={(id) => {
+          // Pressing the chosen shop again keeps what is filled in.
+          if (id && id === integ?.provider) return;
+          put(id ? { id: "grocery", category: "grocery", provider: id, settings: {} } : null);
+        }}
       />
       {integ && meta && (
         <section className="card">

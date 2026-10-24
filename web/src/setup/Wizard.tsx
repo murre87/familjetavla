@@ -180,6 +180,9 @@ export function Wizard({ initial, startStep, onDone }: { initial: ConfigResponse
               </button>
             ))}
           </nav>
+          <button className="btn small icon" aria-label="Ladda om sidan" title="Ladda om (hämtar också senaste versionen)" style={{ flex: "none" }} onClick={() => window.location.reload()}>
+            <Icon name="refresh" size={18} />
+          </button>
           {cfg.setupComplete && (
             <a className="btn small" href="#/" style={{ flex: "none", whiteSpace: "nowrap" }}>
               Till tavlan
