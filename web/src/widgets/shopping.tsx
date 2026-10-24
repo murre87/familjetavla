@@ -26,7 +26,8 @@ export function Shopping({ data, actions, limit }: { data: Dashboard; actions: A
         {items.map((i) => (
           <label key={i.id} className={`shop-item ${i.done ? "done" : ""}`}>
             <input type="checkbox" checked={i.done} onChange={(e) => actions.run("Inköpslistan", () => api.toggleItem(i.id, e.target.checked))} />
-            <span>{i.name}</span>
+            <span className="grow">{i.name}</span>
+            {i.sent && <small className="sent-chip" title={`Skickad till ${i.sent}`}>✓ {i.sent}</small>}
           </label>
         ))}
         {hidden > 0 && <div className="more-hint">+{hidden} till – tryck för hela listan</div>}

@@ -2,6 +2,7 @@ import { fetchIcs } from "../connectors/ics.js";
 import { ha, haConnection } from "../connectors/ha.js";
 import { getJson } from "../http.js";
 import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connectors/schoolsoft.js";
+import { skola24Classes, skola24Host, skola24Lessons, skola24Units } from "../connectors/skola24.js";
 import { isGymLesson, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
 import { hhmm, shortDate, shortWeekday } from "../time.js";
 import type { ProviderCtx, SchoolEvent, SchoolProvider } from "./types.js";
@@ -236,3 +237,55 @@ export const schoolIcs: SchoolProvider = {
     return { events: evs.map((e) => ({ ...e, gym: isGymLesson(e) })) };
   },
 };
+
+export const skola24: SchoolProvider = (() => {
+  async function resolve(ctx: ProviderCtx) {
+    const host = skola24Host(ctx.str("host"));
+    if (!host) throw new Error("Skriv kommunens namn (till exempel Eskilstuna).");
+    const units = await skola24Units(host);
+    if (!units.length) throw new Error(`Hittade inga skolor på ${host} – stämmer kommunens namn? (Skola24-adressen är kommun.skola24.se.)`);
+    return { host, units, unit: units.find((u) => u.unitId === ctx.str("school")) };
+  }
+  return {
+    meta: {
+      id: "skola24",
+      category: "school",
+      name: "Skola24 (schema)",
+      description: "Skolans schema direkt från Skola24, utan inloggning (klassens schema eller barnets eget med personnummer). Alla kommuner har inte öppet schema.",
+      status: "experimental",
+      fields: [
+        { key: "host", label: "Kommun", type: "text", placeholder: "t.ex. Eskilstuna", help: "Skola24-adressen är kommun.skola24.se." },
+        { key: "school", label: "Skola", type: "select" },
+        { key: "class", label: "Klass", type: "select", help: "Välj klassen – eller fyll i barnets personnummer nedan för barnets eget schema." },
+        { key: "ssn", label: "Barnets personnummer (valfritt)", type: "password", secret: true, optional: true, help: "Ger barnets eget schema (valfria ämnen, grupper). Skickas bara till Skola24 och sparas krypterat." },
+      ],
+      guide: [
+        "Fyll i kommunens namn och tryck Testa – då hämtas skolorna. Välj skola och tryck Testa igen – då hämtas klasserna.",
+        "Visar Skola24 att schemavisaren är avstängd för kommunen finns schemat i skolans egen app (till exempel Vklass) – använd den kopplingen i stället.",
+        "Lägg till en koppling per barn och välj vilket barn den gäller.",
+      ],
+    },
+    async test(ctx) {
+      const { host, units, unit } = await resolve(ctx);
+      if (!unit) return { ok: true, message: `${units.length} skolor hittades. Välj skola och tryck Testa igen.`, choices: { field: "school", options: units.map((u) => ({ value: u.unitId, label: u.unitId })) } };
+      const ssn = ctx.secret("ssn");
+      const cls = (await skola24Classes(host, unit.unitGuid)).find((c) => c.groupName === ctx.str("class"));
+      if (!cls && !ssn) {
+        const all = await skola24Classes(host, unit.unitGuid);
+        return { ok: true, message: `${all.length} klasser hittades. Välj klass och tryck Testa igen.`, choices: { field: "class", options: all.map((c) => ({ value: c.groupName, label: c.groupName })) } };
+      }
+      const now = new Date();
+      const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, personalNumber: ssn || undefined }, now, new Date(now.getTime() + 21 * 86_400_000));
+      return { ok: true, message: `${evs.length} lektioner kommande tre veckor.`, preview: evs.slice(0, 5).map(preview) };
+    },
+    async fetch(ctx, from, to) {
+      const { host, unit } = await resolve(ctx);
+      if (!unit) return { events: [] };
+      const ssn = ctx.secret("ssn");
+      const cls = (await skola24Classes(host, unit.unitGuid)).find((c) => c.groupName === ctx.str("class"));
+      if (!cls && !ssn) return { events: [] };
+      const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, personalNumber: ssn || undefined }, from, to);
+      return { events: evs.map((e) => ({ ...e, gym: isGymLesson(e) })) };
+    },
+  };
+})();

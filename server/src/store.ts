@@ -218,6 +218,8 @@ export interface LocalItem {
 
 export interface LocalFile {
   shopping?: LocalItem[];
+  /** Varor som skickats till en butik: radens namn (gemener) → butiken och när (för märket i inköpslistan). */
+  sentToStore?: Record<string, { store: string; at: string }>;
   /** Veckans middagar: YYYY-MM-DD → "Tacos". */
   dinners?: Record<string, string>;
   /** Hur ofta en middag valts (för favoriter) och vad man brukar handla till den. */

@@ -1076,6 +1076,27 @@ export function Dashboard() {
     }
   };
 
+  // The tablet's volume buttons turn the music that plays, when the board runs in Fully Kiosk Browser
+  // (a plain browser never passes the hardware keys on). Fully reports them as the events volumeUp/volumeDown.
+  const musicRef = useRef(data?.music);
+  musicRef.current = data?.music;
+  useEffect(() => {
+    const fully = (window as unknown as { fully?: { bind?: (ev: string, js: string) => void } }).fully;
+    if (!fully?.bind) return;
+    const step = (dir: 1 | -1) => {
+      const sp = musicRef.current?.speakers.find((x) => x.playing && !x.offline && typeof x.volume === "number");
+      if (!sp) return;
+      const pct = Math.max(0, Math.min(100, Math.round((sp.volume as number) + dir * 5)));
+      void api.volume(sp.entityId, pct).then(() => refresh());
+    };
+    (window as unknown as Record<string, unknown>).__ftVolume = step;
+    fully.bind("volumeUp", "window.__ftVolume(1)");
+    fully.bind("volumeDown", "window.__ftVolume(-1)");
+    return () => {
+      delete (window as unknown as Record<string, unknown>).__ftVolume;
+    };
+  }, [refresh]);
+
   // Pull down at the top to reload. Touch events (not pointer events): the browser takes over a
   // vertical pan and cancels the pointer ones. A volume swipe in Musik (only while music plays) wins.
   useEffect(() => {

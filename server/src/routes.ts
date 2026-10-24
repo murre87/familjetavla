@@ -811,6 +811,12 @@ export async function registerRoutes(app: FastifyInstance) {
       const map = (cfg.shopping.mappings[g.provider.meta.id] ??= {});
       for (const l of lines) map[l.item.trim().toLowerCase()] = { code: l.code, name: l.name };
       saveConfig(cfg);
+      // Remember what went where, so the shopping list can show it.
+      const sent = { ...(loadLocal().sentToStore ?? {}) };
+      const at = new Date().toISOString();
+      for (const l of lines) sent[l.item.trim().toLowerCase()] = { store: g.provider.meta.name, at };
+      saveLocal({ sentToStore: sent });
+      invalidate();
       return { ok: true, store: g.provider.meta.name, ...result };
     } catch (e) {
       return fail(reply, e, 502);

@@ -513,7 +513,7 @@ export interface Dashboard {
   };
   legend: { name: string; color: string }[];
   days: DashDay[];
-  shopping: { source: "local" | "ha"; items: { id: string; name: string; done: boolean }[] };
+  shopping: { source: "local" | "ha"; items: { id: string; name: string; done: boolean; /** Skickad till den här butiken (senaste dygnen). */ sent?: string }[] };
   /** Butik att skicka inköpslistan till, om en är vald. */
   grocery?: { provider: string; name: string };
   /** Alla valda butiker (listan skickas till `grocery`). */

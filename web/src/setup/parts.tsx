@@ -437,6 +437,8 @@ export function ProviderForm({
         // EDP: the API URL field only matters for "Annan".
         if (f.key === "apiUrl" && integ.settings.municipality !== "custom") return null;
         if (f.key === "building" && !choices.building && !integ.settings.building) return null;
+        // A pick-from-the-test list (school, class) shows once the test has offered one, or something is chosen.
+        if (f.type === "select" && !f.options && !choices[f.key] && !integ.settings[f.key]) return null;
         if (meta.storePicker?.field === f.key)
           return (
             <StorePicker
@@ -459,6 +461,11 @@ export function ProviderForm({
               const settings = { ...integ.settings, [f.key]: v };
               // Changing the address invalidates the chosen building.
               if (f.key === "address" || f.key === "municipality") delete settings.building;
+              if (f.key === "host") {
+                delete settings.school;
+                delete settings.class;
+              }
+              if (f.key === "school") delete settings.class;
               onChange({ ...integ, settings });
             }}
             secretSet={secretsSet.includes(sk(f.key))}

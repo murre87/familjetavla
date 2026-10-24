@@ -608,14 +608,24 @@ async function loadShopping(cfg: Config, errors: SourceError[]): Promise<Dashboa
     if (conn) {
       try {
         const items = await cached(`todo:${cfg.shopping.entityId}`, 15_000, () => ha.todoItems(conn, cfg.shopping.entityId!));
-        return { source: "ha", items: items.map((i) => ({ id: i.uid, name: i.summary, done: i.status === "completed" })) };
+        return { source: "ha", items: markSent(items.map((i) => ({ id: i.uid, name: i.summary, done: i.status === "completed" }))) };
       } catch (e) {
         errors.push({ source: "Inköpslista", message: (e as Error).message });
       }
     }
     return { source: "ha", items: [] };
   }
-  return { source: "local", items: loadLocalList() };
+  return { source: "local", items: markSent(loadLocalList()) };
+}
+
+/** Items that were sent to a shop in the last days get a mark (the shop's name), so the list shows what is already ordered. */
+function markSent<T extends { name: string; done: boolean }>(items: T[]): (T & { sent?: string })[] {
+  const sent = loadLocal().sentToStore ?? {};
+  const limit = Date.now() - 3 * 86_400_000;
+  return items.map((i) => {
+    const s = sent[i.name.trim().toLowerCase()];
+    return s && !i.done && Date.parse(s.at) > limit ? { ...i, sent: s.store } : i;
+  });
 }
 
 const WEEKDAY_NAMES = ["söndag", "måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag"];
