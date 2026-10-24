@@ -126,7 +126,7 @@ export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders",
 export type HomeWidget = (typeof HOME_WIDGETS)[number];
 /** Startskärmens rutor: "auto" följer hur många rutor som visas, annars liten/normal/stor. */
 export type WidgetSize = "auto" | "s" | "m" | "l";
-export const TAB_IDS = ["cars", "lights", "house", "energy", "graphs", "music", "security", "household"] as const;
+export const TAB_IDS = ["food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
 // ---------- Leverantörsmoduler (skola, mataffär, sopor, elpris) ----------
@@ -775,4 +775,15 @@ export interface ApplianceView {
   /** "11:20". */
   endsAt?: string;
   progress?: number;
+}
+
+/** Fliken Mat: det ICA-appen visar utöver listan (erbjudanden, recept och själva listan). */
+export interface FoodIca {
+  enabled: boolean;
+  store?: string;
+  offers?: { id: string; name: string; brand?: string; size?: string; price?: string; image?: string; validTo?: string }[];
+  recipes?: { id: number; title: string; time?: string; ingredients?: number; image?: string; url: string }[];
+  list?: { name: string; rows: { id: string; name: string; done: boolean }[] };
+  /** Delar som inte gick att hämta, med skälet. */
+  errors?: Record<string, string>;
 }

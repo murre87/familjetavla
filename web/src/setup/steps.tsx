@@ -1387,7 +1387,7 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNo
         selected={integ?.provider}
         allowNone="Ingen butik"
         haAvailable={haOk}
-        connected={integ && meta && meta.fields.filter((f) => f.secret).every((f) => resp.secretsSet.includes(`int.${integ.id}.${f.key}`)) ? integ.provider : undefined}
+        connected={integ && meta && meta.fields.filter((f) => f.secret).every((f) => resp.secretsSet.includes(`int.${integ.id}.${f.key}`)) && meta.fields.filter((f) => !f.secret && !f.optional && f.type === "text").every((f) => String(integ.settings[f.key] ?? "").trim()) ? integ.provider : undefined}
         onSelect={(id) => {
           // Pressing the chosen shop again keeps what is filled in.
           if (id && id === integ?.provider) return;
@@ -1778,7 +1778,7 @@ function PhotoFrame({ cfg, set }: { cfg: Config; set: (c: Config) => void }) {
 
 // ======================= Startskärm =======================
 
-const TAB_LABELS: Record<string, string> = { cars: "Bil", lights: "Ljus", house: "Hus", energy: "Energi", graphs: "Grafer", music: "Musik" };
+const TAB_LABELS: Record<string, string> = { food: "Mat", security: "Säkerhet", household: "Hushåll", cars: "Bil", lights: "Ljus", house: "Hus", energy: "Energi", graphs: "Grafer", music: "Musik" };
 
 const SIZE_OPTIONS = [
   { value: "auto", label: "Auto" },

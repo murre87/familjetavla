@@ -1,4 +1,4 @@
-import type { ApplianceEntities, CarEntity, Config, SecurityEntities, ConfigResponse, Dashboard, Integration, NamedEntity, Schedule, TestResult, TravelChoice } from "../../server/src/types";
+import type { ApplianceEntities, CarEntity, Config, SecurityEntities, ConfigResponse, Dashboard, FoodIca, Integration, NamedEntity, Schedule, TestResult, TravelChoice } from "../../server/src/types";
 
 /** A station in the Musik tab: every Swedish station from the radio directory. */
 export interface DirStation {
@@ -188,6 +188,9 @@ const realApi = {
   groceryPreview: () => post<{ store: string; lines: GroceryLine[] }>("grocery/preview"),
   grocerySend: (lines: { item: string; code: string; name: string; qty: number }[]) =>
     post<{ ok: boolean; store: string; items: number | null; total: string | null }>("grocery/send", { lines }),
+
+  foodIca: () => request<FoodIca>("food/ica"),
+  foodIcaStrike: (id: string, name: string, done: boolean) => post("food/ica/strike", { id, name, done }),
 
   discover: () => request<Discovery>("ha/discover"),
   car: (index: number) => request<CarDetails>(`car/${index}`),

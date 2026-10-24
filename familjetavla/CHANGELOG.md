@@ -2,6 +2,8 @@
 
 ## 0.14.0
 
+- **Ny flik Mat:** veckans mat på ett ställe – barnens skollunch per dag, familjens middagar (med Planera), inköpslistan och, om ni valt ICA, **ICA-erbjudanden** från er favoritbutik (med "På listan"), **recept** och själva **ICA-listan** att bocka av. Fliken ligger först efter Hem och kan flyttas eller döljas under Startskärm.
+- **Dra ned för att ladda om fungerar nu** även på riktiga telefoner och plattor (Chrome tog över svepet förut). Volymsvepet i Musik gäller bara när musik spelar. Ladda om-knappen finns alltid kvar.
 - **Installationen visar vad som är anslutet:** en butik med sparad inloggning får märket "Ansluten ✓" och formuläret säger "Inloggad". Det finns också en **Ladda om**-knapp överst på inställningssidorna.
 - **Spara-knapp bredvid Testa** i installationen, och ett lyckat test sparar av sig självt. Förut sparades inget förrän man tryckt Nästa hela vägen.
 - **Menyn längst ner tar dig alltid till flikens första sida:** även när du är inne på en sida (Veckan, Maten …) går **Hem** till startsidan och en flik till sin början. Trycker du på fliken du redan är på går den till toppen (Musik tillbaka till radion).

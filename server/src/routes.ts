@@ -20,6 +20,8 @@ import { energyLive, liveEnergyIds } from "./energy.js";
 import { publishToHa } from "./publisher.js";
 import { MULTIPLE, allMeta, findProvider, makeCtx, secretKey } from "./providers/registry.js";
 import { calendarEvents, groceryIntegration, newsFiles } from "./sources.js";
+import { icaOffers, icaListId, icaRecipes, icaRows, icaStrike } from "./connectors/ica.js";
+import { ICA_LIST, icaRun } from "./providers/grocery.js";
 import { addOwnEvent, markNewsSeen, removeOwnEvent } from "./news.js";
 import { vklassFile, vklassLogin } from "./connectors/vklass.js";
 import { saveTravel } from "./travel.js";
@@ -48,7 +50,7 @@ import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
 import { alarmCall, robotCall } from "./security.js";
 import { MEDIA_TYPES, SHELVES, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
-import { HOME_WIDGETS, TAB_IDS, type Config, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
+import { HOME_WIDGETS, TAB_IDS, type Config, type FoodIca, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
 
 export { VERSION } from "./version.js";
 import { VERSION } from "./version.js";
@@ -682,6 +684,43 @@ export async function registerRoutes(app: FastifyInstance) {
         })),
     );
     return { store: g.provider.meta.name, lines };
+  });
+
+  // ---------- Mat: what ICA shows besides the list ----------
+  app.get("/api/food/ica", async (): Promise<FoodIca> => {
+    const g = groceryIntegration(loadConfig());
+    if (!g || g.provider.meta.id !== "ica") return { enabled: false };
+    const ctx = makeCtx(g.integ);
+    const title = ctx.str("list") || ICA_LIST;
+    const errors: Record<string, string> = {};
+    const part = async <T>(name: string, run: () => Promise<T>): Promise<T | undefined> => {
+      try {
+        return await run();
+      } catch (e) {
+        errors[name] = (e as Error).message;
+        return undefined;
+      }
+    };
+    const [offers, recipes, rows] = await Promise.all([
+      part("offers", () => cached(`food:ica:offers:${g.integ.id}`, 30 * 60_000, () => icaRun(ctx, (s) => icaOffers(s, 24)))),
+      part("recipes", () => cached(`food:ica:recipes:${g.integ.id}`, 30 * 60_000, () => icaRun(ctx, (s) => icaRecipes(s, 6)))),
+      part("list", () => icaRun(ctx, async (s) => icaRows(s, await icaListId(s, title)))),
+    ]);
+    return { enabled: true, store: offers?.store, offers: offers?.offers, recipes, list: rows ? { name: title, rows } : undefined, errors: Object.keys(errors).length ? errors : undefined };
+  });
+
+  app.post("/api/food/ica/strike", async (req, reply) => {
+    const body = z.object({ id: z.string().min(1).max(80), name: z.string().min(1).max(120), done: z.boolean() }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Ogiltig rad"));
+    const g = groceryIntegration(loadConfig());
+    if (!g || g.provider.meta.id !== "ica") return fail(reply, new Error("ICA är inte vald."));
+    const ctx = makeCtx(g.integ);
+    try {
+      await icaRun(ctx, async (s) => icaStrike(s, await icaListId(s, ctx.str("list") || ICA_LIST), body.data, body.data.done));
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, e, 502);
+    }
   });
 
   app.post("/api/grocery/send", async (req, reply) => {

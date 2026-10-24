@@ -417,7 +417,10 @@ export function ProviderForm({
   };
 
   // Saved sign-in details: say so instead of asking to log in again.
-  const signedIn = meta.fields.some((f) => f.secret) && meta.fields.filter((f) => f.secret).every((f) => secretsSet.includes(sk(f.key)));
+  const signedIn =
+    meta.fields.some((f) => f.secret) &&
+    meta.fields.filter((f) => f.secret).every((f) => secretsSet.includes(sk(f.key))) &&
+    meta.fields.filter((f) => !f.secret && !f.optional && f.type === "text").every((f) => String(integ.settings[f.key] ?? "").trim());
   return (
     <div className="stack">
       {signedIn && (
