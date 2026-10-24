@@ -1,13 +1,13 @@
 import { cached } from "../cache.js";
-import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCommon, axfoodLoginHttp, axfoodOffers, axfoodStoreOptions, axfoodSearch } from "../connectors/axfood.js";
-import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossCommon, cityGrossLogin, cityGrossSearch, cityGrossStore, cityGrossStoreOptions, cityGrossSummary } from "../connectors/citygross.js";
+import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCart, axfoodCommon, axfoodLoginHttp, axfoodOffers, axfoodStoreOptions, axfoodSearch } from "../connectors/axfood.js";
+import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossCartItems, cityGrossCommon, cityGrossLogin, cityGrossSearch, cityGrossStore, cityGrossStoreOptions, cityGrossSummary } from "../connectors/citygross.js";
 import { IcaAuthExpired, icaAddRows, icaCommon, icaFresh, icaFavoriteStores, icaListId, icaLogin, icaOffers, icaRecipes, icaRefresh, icaRows, icaSearch, type IcaSession } from "../connectors/ica.js";
-import type { FoodPart } from "../types.js";
+import type { FoodPart, StoreFoodData } from "../types.js";
 import type { ProviderField } from "../types.js";
 import type { GroceryProvider, ProviderCtx } from "./types.js";
 /** Fields that choose what the Mat tab shows from a store (each part is only fetched when opened). */
 const showField = (key: string, label: string): ProviderField => ({ key, label, type: "toggle", default: "true" });
-export const SHOW = { list: "showList", common: "showCommon", offers: "showOffers", recipes: "showRecipes" } as const;
+export const SHOW = { list: "showList", cart: "showCart", common: "showCommon", offers: "showOffers", recipes: "showRecipes" } as const;
 export const partOn = (ctx: ProviderCtx, part: FoodPart) => ctx.str(SHOW[part]) !== "false";
 
 
@@ -38,6 +38,7 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
         { key: "username", label: "Personnummer eller kundkortsnummer", type: "text", placeholder: "ÅÅMMDDXXXX", help: "10 eller 12 siffror, eller 16 siffror för kundkort. E-post fungerar inte." },
         { key: "password", label: "Lösenord", type: "password", secret: true, help: "Kontot behöver ett lösenord – BankID går inte att automatisera." },
         { key: "store", label: "Butik", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Välj butik i listan. Tomt = en butik på orten där ni bor." },
+        showField(SHOW.cart, "Visa varukorgen under Mat"),
         showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
         showField(SHOW.offers, "Visa veckans erbjudanden under Mat"),
       ],
@@ -57,9 +58,18 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
       return axfoodSearch(site, ctx.secret("session") ?? "", query);
     },
     food: {
-      parts: ["common", "offers"],
+      parts: ["cart", "common", "offers"],
       async load(ctx, part) {
         try {
+          if (part === "cart") {
+            const run = async (force: boolean) => axfoodCart(site, await session(ctx, force));
+            try {
+              return { cart: await run(false) };
+            } catch (e) {
+              if (e instanceof AuthExpired) return { cart: await run(true) };
+              throw e;
+            }
+          }
           if (part === "common") {
             // Needs the login (the hidden browser), so it is kept for hours.
             const run = async (force: boolean) => axfoodCommon(site, await session(ctx, force));
@@ -194,7 +204,7 @@ export const ica: GroceryProvider = {
   search: (ctx, query) => icaRun(ctx, (s) => icaSearch(s, query)),
   async addToCart(ctx, lines) {
     const title = ctx.str("list") || ICA_LIST;
-    const n = await icaRun(ctx, async (s) => icaAddRows(s, await icaListId(s, title), lines.map((l) => ({ name: l.code, qty: l.qty }))));
+    const n = await icaRun(ctx, async (s) => icaAddRows(s, await icaListId(s, title), lines.map((l) => ({ name: l.code, qty: l.qty, item: l.item, offerId: l.offerId }))));
     return { items: n, total: null };
   },
 };
@@ -225,6 +235,7 @@ export const citygross: GroceryProvider = (() => {
         { key: "username", label: "E-postadress", type: "text", placeholder: "namn@exempel.se" },
         { key: "password", label: "Lösenord", type: "password", secret: true, help: "Kontot behöver ett lösenord – BankID går inte att automatisera." },
         { key: "store", label: "Butik", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Välj butik i listan. Tomt = orten där ni bor. Priserna och varukorgen hör till butiken." },
+        showField(SHOW.cart, "Visa varukorgen under Mat"),
         showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
       ],
       guide: [
@@ -238,8 +249,16 @@ export const citygross: GroceryProvider = (() => {
       return { ok: true, message: st ? `Inloggad hos City Gross. Butik: ${st.name}.` : "Inloggad hos City Gross, men ingen butik hittades på orten – skriv ortens namn under Butik." };
     },
     food: {
-      parts: ["common"],
-      async load(ctx) {
+      parts: ["cart", "common"],
+      async load(ctx, part): Promise<StoreFoodData> {
+        if (part === "cart") {
+          try {
+            const id = ctx.secret("cart");
+            return { cart: id ? await cityGrossCartItems(await token(ctx), id) : { items: [] } };
+          } catch (e) {
+            return { errors: { cart: (e as Error).message } };
+          }
+        }
         try {
           return { common: await cached(`food:cg:common:${ctx.integration.id}`, 30 * 60_000, async () => cityGrossCommon(await token(ctx))) };
         } catch (e) {

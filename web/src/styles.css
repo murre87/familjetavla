@@ -4646,3 +4646,13 @@ marker.pf-buy path {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   white-space: nowrap;
 }
+
+.fd-cart-row {
+  align-items: baseline;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(127, 135, 160, 0.14);
+}
+.fd-cart-total {
+  align-self: flex-end;
+  margin-top: 8px;
+}

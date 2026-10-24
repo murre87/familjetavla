@@ -786,7 +786,7 @@ export interface ApplianceView {
 }
 
 /** Delar av en butik under fliken Mat. */
-export type FoodPart = "list" | "common" | "offers" | "recipes";
+export type FoodPart = "list" | "cart" | "common" | "offers" | "recipes";
 
 /** Fliken Mat, en butik: vilka delar som finns och är påslagna (innehållet hämtas först när delen öppnas). */
 export interface StoreFood {
@@ -801,6 +801,8 @@ export interface StoreFoodData {
   /** Butiken erbjudandena gäller (orten eller butiksnamnet). */
   store?: string;
   offers?: { id: string; name: string; brand?: string; size?: string; price?: string; note?: string; image?: string; validTo?: string }[];
+  /** Vad som redan ligger i butikens varukorg. */
+  cart?: { items: { name: string; qty: string; price?: string }[]; total?: string };
   /** "Mina vanligaste varor". */
   common?: { name: string }[];
   recipes?: { id: number; title: string; time?: string; ingredients?: number; image?: string; url: string }[];

@@ -213,3 +213,12 @@ export async function cityGrossStoreOptions(query: string): Promise<{ value: str
   const data = (await res.json()) as { searchResults?: { stores?: { name: string; pagetype?: string }[] } };
   return (data.searchResults?.stores ?? []).filter((s) => s.pagetype === "StorePage").map((s) => ({ value: s.name, label: `City Gross ${s.name}` }));
 }
+
+/** The cart the board fills (the one remembered from the last send), described for the Mat tab. */
+export async function cityGrossCartItems(token: string, cartId: string): Promise<{ items: { name: string; qty: string; price?: string }[]; total?: string }> {
+  const c = await api<{ items?: { name?: string; quantity?: { value?: number } | number; amount?: number }[]; totalAmount?: number }>(token, `/carts/${encodeURIComponent(cartId)}`);
+  return {
+    items: (c?.items ?? []).filter((i) => i.name).map((i) => ({ name: i.name!, qty: `${num(i.quantity) ?? 1} st`, price: typeof i.amount === "number" ? `${i.amount.toFixed(2).replace(".", ",")} kr` : undefined })),
+    total: typeof c?.totalAmount === "number" ? `${c.totalAmount.toFixed(2).replace(".", ",")} kr` : undefined,
+  };
+}

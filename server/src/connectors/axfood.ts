@@ -343,3 +343,13 @@ export async function axfoodLoginHttp(site: AxfoodSite, username: string, passwo
   await api(site, "/axfood/rest/account/orders", cookies);
   return cookies;
 }
+
+/** What is already in the shop's cart (the same cart you see on the shop's own site). */
+export async function axfoodCart(site: AxfoodSite, cookies: string): Promise<{ items: { name: string; qty: string; price?: string }[]; total?: string }> {
+  type P = { name?: string; quantity?: number; unit?: { name?: string }; totalPrice?: string };
+  const c = await api<{ products?: P[]; totalPrice?: string }>(site, "/axfood/rest/cart", cookies);
+  return {
+    items: (c?.products ?? []).filter((p) => p.name).map((p) => ({ name: p.name!, qty: `${p.quantity ?? 1} ${p.unit?.name ?? "st"}`.trim(), price: p.totalPrice })),
+    total: c?.totalPrice,
+  };
+}

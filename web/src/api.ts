@@ -249,7 +249,7 @@ const realApi = {
   musicTransport: (speaker: string, action: "play_pause" | "next" | "previous") => post("music/transport", { speaker, action }),
   volume: (speaker: string, pct: number) => post("music/volume", { speaker, pct }),
   searchStations: (q: string) => request<{ stations: StationHit[] }>(`radio/search?q=${encodeURIComponent(q)}`),
-  addItem: (name: string) => post("shopping/add", { name }),
+  addItem: (name: string, offer?: { store: string; id: string }) => post("shopping/add", { name, offer }),
   toggleItem: (id: string, done: boolean) => post("shopping/toggle", { id, done }),
   clearDone: () => post("shopping/clear-done"),
 };

@@ -214,6 +214,8 @@ export interface LocalItem {
   id: string;
   name: string;
   done: boolean;
+  /** Gjord av ett erbjudande: butikens kopplings-id och erbjudandets id (så ICA visar priset på raden). */
+  offer?: { store: string; id: string };
 }
 
 export interface LocalFile {

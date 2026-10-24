@@ -772,7 +772,7 @@ export async function registerRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/food/stores/:id/:part", async (req, reply): Promise<StoreFoodData | void> => {
-    const q = z.object({ id: z.string().regex(ID), part: z.enum(["list", "common", "offers", "recipes"]) }).safeParse(req.params);
+    const q = z.object({ id: z.string().regex(ID), part: z.enum(["list", "cart", "common", "offers", "recipes"]) }).safeParse(req.params);
     if (!q.success) return fail(reply, new Error("Okänd del"));
     const g = groceryIntegrations(loadConfig()).find((x) => x.integ.id === q.data.id);
     if (!g?.provider.food || !g.provider.food.parts.includes(q.data.part) || !partOnFor(g.integ.settings, q.data.part)) return fail(reply, new Error("Den delen visas inte."));
@@ -806,7 +806,10 @@ export async function registerRoutes(app: FastifyInstance) {
     try {
       const result = await g.provider.addToCart(
         makeCtx(g.integ),
-        lines.map((l) => ({ code: l.code, qty: Math.max(1, Math.min(20, Math.round(l.qty ?? 1))) })),
+        lines.map((l) => {
+          const local = loadLocalList().find((i) => !i.done && i.name.trim().toLowerCase() === l.item.trim().toLowerCase());
+          return { code: l.code, qty: Math.max(1, Math.min(20, Math.round(l.qty ?? 1))), item: l.item, offerId: local?.offer?.store === g.integ.id ? local.offer.id : undefined };
+        }),
       );
       const map = (cfg.shopping.mappings[g.provider.meta.id] ??= {});
       for (const l of lines) map[l.item.trim().toLowerCase()] = { code: l.code, name: l.name };
@@ -1446,7 +1449,7 @@ export async function registerRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/shopping/add", async (req, reply) => {
-    const { name } = (req.body ?? {}) as { name?: string };
+    const { name, offer } = (req.body ?? {}) as { name?: string; offer?: { store?: string; id?: string } };
     const clean = name?.trim().slice(0, 80);
     if (!clean) return fail(reply, new Error("Skriv en vara."));
     const cfg = loadConfig();
@@ -1457,7 +1460,7 @@ export async function registerRoutes(app: FastifyInstance) {
       invalidate("todo:");
     } else {
       const list = loadLocalList();
-      list.push({ id: Math.random().toString(36).slice(2, 10), name: clean, done: false });
+      list.push({ id: Math.random().toString(36).slice(2, 10), name: clean, done: false, ...(offer?.store && offer.id ? { offer: { store: String(offer.store).slice(0, 40), id: String(offer.id).slice(0, 80) } } : {}) });
       saveLocalList(list);
     }
     return { ok: true };

@@ -193,19 +193,66 @@ interface IcaList {
   title?: string;
 }
 
-/** Suggestions from ICA's own article search (what the app offers when you type). */
-export async function icaSearch(s: IcaSession, query: string, size = 6): Promise<Product[]> {
+interface IcaDoc {
+  name: string;
+  articleGroupName?: string;
+  articleGroupId?: number;
+  expandedArticleGroupId?: number;
+  productEan?: string;
+}
+
+/** "2 kg mjöl", "mjölk 3", "4 x ägg" → the name and the amount written with it. */
+export function parseQuantity(text: string): { name: string; quantity?: number; unit?: string } {
+  const UNIT = "(?:kg|hg|g|l|dl|cl|ml|st|stycken|styck|förp|förpackningar|förpackning|pkt|paket|burk|burkar|flaskor|flaska|påse|påsar|x)";
+  const num = (v: string) => Number(v.replace(",", "."));
+  const lead = new RegExp(`^(\\d+(?:[.,]\\d+)?)\\s*(${UNIT})?\\.?\\s+(.+)$`, "i").exec(text.trim());
+  if (lead) return { name: lead[3]!.trim(), quantity: num(lead[1]!), unit: normUnit(lead[2]) };
+  const tail = new RegExp(`^(.+?)\\s+(\\d+(?:[.,]\\d+)?)\\s*(${UNIT})?\\.?$`, "i").exec(text.trim());
+  if (tail) return { name: tail[1]!.trim(), quantity: num(tail[2]!), unit: normUnit(tail[3]) };
+  return { name: text.trim() };
+}
+
+function normUnit(u?: string): string | undefined {
+  if (!u) return undefined;
+  const l = u.toLowerCase();
+  if (l === "x" || l.startsWith("styck") || l === "st") return "st";
+  if (l.startsWith("förp")) return "förp";
+  if (l.startsWith("burk")) return "burk";
+  if (l.startsWith("flask")) return "flaska";
+  if (l.startsWith("påse") || l.startsWith("pås")) return "påse";
+  if (l === "paket" || l === "pkt") return "pkt";
+  return l;
+}
+
+async function icaSearchDocs(s: IcaSession, query: string): Promise<IcaDoc[]> {
   const data = await api<unknown>(s, `shoppinglistarticlesearch/v1/search?${form({ query })}`);
   const o = data as Record<string, unknown> | null;
   const rows = Array.isArray(data) ? data : Array.isArray(o?.documents) ? (o!.documents as unknown[]) : Array.isArray(o?.articles) ? (o!.articles as unknown[]) : [];
-  const out: Product[] = [];
+  const out: IcaDoc[] = [];
   for (const r of rows as Record<string, unknown>[]) {
     const name = String(r.name ?? r.productName ?? r.title ?? r.articleName ?? "").trim();
-    if (!name || out.some((p) => p.name === name)) continue;
-    out.push({ code: name, name: name.charAt(0).toUpperCase() + name.slice(1), volume: str(r.articleGroupName) });
+    if (name) out.push({ name, articleGroupName: str(r.articleGroupName), articleGroupId: typeof r.articleGroupId === "number" ? r.articleGroupId : undefined, expandedArticleGroupId: typeof r.expandedArticleGroupId === "number" ? r.expandedArticleGroupId : undefined, productEan: str(r.productEan) });
+  }
+  return out;
+}
+
+/** Suggestions from ICA's own article search (what the app offers when you type). The amount written in the text is left out of the search. */
+export async function icaSearch(s: IcaSession, query: string, size = 6): Promise<Product[]> {
+  const docs = await icaSearchDocs(s, parseQuantity(query).name || query);
+  const out: Product[] = [];
+  for (const d of docs) {
+    if (out.some((p) => p.name.toLowerCase() === d.name.toLowerCase())) continue;
+    out.push({ code: d.name, name: d.name.charAt(0).toUpperCase() + d.name.slice(1), volume: d.articleGroupName });
     if (out.length >= size) break;
   }
   return out;
+}
+
+/** The article group ICA files an item under (so the list in the app is sorted by the shop's aisles). */
+async function icaGroup(s: IcaSession, name: string): Promise<{ group: number; extended: number } | null> {
+  const docs = await icaSearchDocs(s, name).catch(() => []);
+  const hit = docs.find((d) => d.name.toLowerCase() === name.toLowerCase() && d.articleGroupId) ?? docs.find((d) => d.articleGroupId);
+  return hit?.articleGroupId ? { group: hit.articleGroupId, extended: hit.expandedArticleGroupId ?? hit.articleGroupId } : null;
 }
 
 /** The list the board writes to: found by title, created when missing. */
@@ -230,19 +277,38 @@ export async function icaListId(s: IcaSession, title: string): Promise<string> {
   return offlineId;
 }
 
-export async function icaAddRows(s: IcaSession, listId: string, lines: { name: string; qty: number }[]): Promise<number> {
+export interface IcaLine {
+  /** The article to add (the name picked from the suggestions). */
+  name: string;
+  qty: number;
+  /** What was written on the list ("2 kg mjöl"): the amount is read from it. */
+  item?: string;
+  /** An offer the line was made from: the app then shows the offer price on the row. */
+  offerId?: string;
+}
+
+export async function icaAddRows(s: IcaSession, listId: string, lines: IcaLine[]): Promise<number> {
   const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
-  const createdRows = lines.map((l) => ({
-    offlineId: randomUUID(),
-    productName: l.name,
-    ...(l.qty > 1 ? { quantity: l.qty, unit: "st" } : {}),
-    isStrikedOver: false,
-    sourceId: -1,
-    internalOrder: 999,
-    articleGroupId: DEFAULT_GROUP,
-    articleGroupIdExtended: DEFAULT_GROUP,
-    latestChange: now,
-  }));
+  const createdRows = await Promise.all(
+    lines.map(async (l) => {
+      const written = parseQuantity(l.item ?? l.name);
+      const quantity = written.quantity !== undefined ? written.quantity * (l.qty > 1 ? l.qty : 1) : l.qty > 1 ? l.qty : undefined;
+      const unit = written.quantity !== undefined ? (written.unit ?? "st") : "st";
+      const grp = l.offerId ? null : await icaGroup(s, l.name);
+      return {
+        offlineId: randomUUID(),
+        productName: l.name,
+        ...(quantity !== undefined ? { quantity, unit } : {}),
+        ...(l.offerId ? { offerId: l.offerId } : {}),
+        isStrikedOver: false,
+        sourceId: -1,
+        internalOrder: 999,
+        articleGroupId: grp?.group ?? DEFAULT_GROUP,
+        articleGroupIdExtended: grp?.extended ?? DEFAULT_GROUP,
+        latestChange: now,
+      };
+    }),
+  );
   await api(s, `${LISTS}/${encodeURIComponent(listId)}/sync`, { method: "POST", body: JSON.stringify({ createdRows }) });
   return createdRows.length;
 }

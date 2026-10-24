@@ -771,7 +771,7 @@ export const demoApi = {
         { name: "RIX FM", url: "https://fm01-ice.stream.khz.se/fm01_mp3", country: "SE", quality: "MP3 128 kbit/s" },
       ].filter((x) => x.name.toLowerCase().includes(q.toLowerCase().slice(0, 2))),
     }),
-  addItem: (name: string) => {
+  addItem: (name: string, _offer?: { store: string; id: string }) => {
     d.shopping.items.push({ id: String(Date.now()), name, done: false });
     return wait({});
   },

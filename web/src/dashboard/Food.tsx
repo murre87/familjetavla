@@ -85,7 +85,7 @@ function Stores({ actions }: { actions: Actions }) {
   );
 }
 
-const TITLES: Record<FoodPart, string> = { list: "Listan i appen", common: "Mina vanligaste varor", offers: "Erbjudanden", recipes: "Receptförslag" };
+const TITLES: Record<FoodPart, string> = { list: "Listan i appen", cart: "Varukorgen", common: "Mina vanligaste varor", offers: "Erbjudanden", recipes: "Receptförslag" };
 
 /** One dropdown: nothing is fetched until it is opened (the list opens by itself, it is what you shop from). */
 function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; actions: Actions }) {
@@ -94,8 +94,10 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
   const [busy, setBusy] = useState(false);
   const load = useCallback(() => {
     setBusy(true);
-    api
-      .foodPart(store.id, part)
+    // One quiet retry: a request that fails to connect is usually the board restarting for an update.
+    const once = () => api.foodPart(store.id, part);
+    once()
+      .catch(() => new Promise<StoreFoodData>((r) => setTimeout(r, 2500)).then(once))
       .then(setData)
       .catch((e) => setData({ errors: { [part]: (e as Error).message } }))
       .finally(() => setBusy(false));
@@ -104,13 +106,14 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
     if (open && !data && !busy) load();
   }, [open, data, busy, load]);
   const err = data?.errors?.[part];
-  const add = (name: string) => void actions.run("Inköpslistan", () => api.addItem(name));
+  const add = (name: string, offerId?: string) => void actions.run("Inköpslistan", () => api.addItem(name, offerId ? { store: store.id, id: offerId } : undefined));
   const title = `${TITLES[part]}${data?.store && part === "offers" ? ` · ${data.store}` : ""}`;
   return (
     <details className="card fd-part" open={open} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
       <summary>
         <b>{title}</b>
         {part === "list" && data?.list && <span className="muted"> · {data.list.rows.filter((r) => !r.done).length} kvar</span>}
+        {part === "cart" && data?.cart && <span className="muted"> · {data.cart.items.length} varor{data.cart.total ? ` · ${data.cart.total}` : ""}</span>}
       </summary>
       {part === "offers" && open && <StoreSwitch store={store} onChanged={() => { setData(null); load(); }} />}
       {busy && !data && <p className="faint" role="status">Hämtar…</p>}
@@ -139,6 +142,19 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
           ))}
         </div>
       )}
+      {data?.cart && (
+        <div className="stack" style={{ gap: 2 }}>
+          {data.cart.items.length === 0 && <p className="faint">Varukorgen är tom.</p>}
+          {data.cart.items.map((c, i) => (
+            <div key={`${c.name}-${i}`} className="row gap fd-cart-row">
+              <span className="grow">{c.name}</span>
+              <small className="muted">{c.qty}</small>
+              {c.price && <small className="muted">{c.price}</small>}
+            </div>
+          ))}
+          {data.cart.total && <b className="fd-cart-total">Totalt {data.cart.total}</b>}
+        </div>
+      )}
       {data?.common && (
         <div className="row gap wrap">
           {data.common.length === 0 && <p className="faint">Inget att visa ännu – det fylls på när ni handlat.</p>}
@@ -162,7 +178,7 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
                 <span className="fd-price">{o.price ?? ""}</span>
                 <small className="muted">{until(o.validTo)}</small>
               </div>
-              <button className="btn small" aria-label={`Lägg ${o.name} på inköpslistan`} onClick={() => add(o.name)}>
+              <button className="btn small" aria-label={`Lägg ${o.name} på inköpslistan`} onClick={() => add(o.name, store.provider === "ica" ? o.id : undefined)}>
                 <Icon name="plus" size={16} /> På listan
               </button>
             </div>

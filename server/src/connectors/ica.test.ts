@@ -88,7 +88,7 @@ describe("ICA", () => {
     expect(JSON.parse(bodyOf(calls[1]!)).title).toBe("Familjetavlan");
     mock(() => new Response("", { status: 200 }));
     expect(await icaAddRows(session, "L1", [{ name: "Mjölk", qty: 2 }, { name: "Bröd", qty: 1 }])).toBe(2);
-    const sync = calls[0]!;
+    const sync = calls.find((c) => c.url.includes("/sync"))!;
     expect(sync.url).toContain("/shoppinglists/L1/sync");
     const rows = JSON.parse(bodyOf(sync)).createdRows;
     expect(rows[0]).toMatchObject({ productName: "Mjölk", quantity: 2, unit: "st", sourceId: -1, isStrikedOver: false });
@@ -134,5 +134,27 @@ describe("City Gross", () => {
     expect(post.url).toContain("/carts/C/additems");
     expect(JSON.parse(bodyOf(post))).toEqual({ items: [{ countryOfOrigin: "SE", gtin: "734", itemNo: "1_ST", name: "Mjölk", netContent: { value: 1500 }, quantity: { value: 2, unit: "Piece", originalUnit: "Piece" } }] });
     expect(cityGrossSummary(out)).toEqual({ items: 2, total: "49,50 kr" });
+  });
+});
+
+describe("ICA amounts and article groups", () => {
+  it("reads the amount written with the item", async () => {
+    const { parseQuantity } = await import("./ica.js");
+    expect(parseQuantity("2 kg mjöl")).toEqual({ name: "mjöl", quantity: 2, unit: "kg" });
+    expect(parseQuantity("mjölk 3")).toEqual({ name: "mjölk", quantity: 3, unit: undefined });
+    expect(parseQuantity("4 x ägg")).toEqual({ name: "ägg", quantity: 4, unit: "st" });
+    expect(parseQuantity("1,5 l mjölk")).toEqual({ name: "mjölk", quantity: 1.5, unit: "l" });
+    expect(parseQuantity("kaffe")).toEqual({ name: "kaffe" });
+  });
+
+  it("files rows under the article's group, carries the amount and an offer id", async () => {
+    mock((url) => (url.includes("shoppinglistarticlesearch") ? json({ documents: [{ name: "mjöl", articleGroupId: 9, expandedArticleGroupId: 91 }] }) : new Response("", { status: 200 })));
+    await icaAddRows(session, "L1", [
+      { name: "mjöl", qty: 1, item: "2 kg mjöl" },
+      { name: "Chokladkaka", qty: 1, offerId: "2005318097" },
+    ]);
+    const rows = JSON.parse(bodyOf(calls.find((c) => c.url.endsWith("/sync"))!)).createdRows;
+    expect(rows[0]).toMatchObject({ productName: "mjöl", quantity: 2, unit: "kg", articleGroupId: 9, articleGroupIdExtended: 91 });
+    expect(rows[1]).toMatchObject({ productName: "Chokladkaka", offerId: "2005318097", articleGroupId: 12 });
   });
 });
