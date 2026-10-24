@@ -490,6 +490,7 @@ export function ProviderForm({
           </button>
         )}
         {saved && <span className="badge stable">Sparat ✓</span>}
+        {busy && <small className="faint">Loggar in via en dold webbläsare – kan ta upp till en minut.</small>}
         {meta.status !== "stable" && <span className={`badge ${meta.status}`}>{meta.status === "beta" ? "Beta" : "Experimentell"}</span>}
       </div>
       <Result result={result} error={error} />

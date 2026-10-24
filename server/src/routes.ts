@@ -343,7 +343,10 @@ function isUserSecret(k: string, cfg: Config): boolean {
 function fingerprint(integ: Integration, typed: Record<string, string> = {}): string | null {
   const provider = findProvider(integ.category, integ.provider);
   if (!provider) return null;
-  const values = provider.meta.fields.map((f) => (f.secret ? (typed[f.key] || getSecret(secretKey(integ.id, f.key)) || "") : String(integ.settings[f.key] ?? "").trim()));
+  // Only what the sign-in depends on: changing a display choice (which shop, what Mat shows) keeps the "logged in" mark.
+  const values = provider.meta.fields
+    .filter((f) => f.type !== "toggle" && f.key !== "store" && f.key !== "list")
+    .map((f) => (f.secret ? (typed[f.key] || getSecret(secretKey(integ.id, f.key)) || "") : String(integ.settings[f.key] ?? "").trim()));
   return createHash("sha256").update(JSON.stringify([integ.provider, values])).digest("hex");
 }
 
