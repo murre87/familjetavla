@@ -408,6 +408,12 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
   const { sp, choose: pick } = useSpeaker(m);
   const c = useControls(sp, actions);
   const [source, setSource] = useState<"radio" | "library">("radio");
+  // Tapping the Musik tab again goes back to the first view (the radio) from the library.
+  useEffect(() => {
+    const reset = () => setSource("radio");
+    window.addEventListener("familjetavla:tab-reset", reset);
+    return () => window.removeEventListener("familjetavla:tab-reset", reset);
+  }, []);
   const libName = "Spotify";
   const drag = useVolumeDrag(sp, (pct) => c.volume(pct));
 

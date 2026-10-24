@@ -1027,7 +1027,13 @@ export function Dashboard() {
 
   // Switch tab with a sliding view transition where the browser supports it.
   const goTab = (next: Tab, list: Tab[]) => {
-    if (next === tab) return;
+    const root = next === "home" ? "/" : `/flik/${next}`;
+    if (next === tab && hash === root) {
+      // Already on the tab's first page: tapping it again goes back to the top of it.
+      window.dispatchEvent(new Event("familjetavla:tab-reset"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const dir = list.indexOf(next) > list.indexOf(tab) ? 1 : -1;
     document.documentElement.style.setProperty("--dir", String(dir));
     // The tab lives in the address now (so Android's back button works); the slide comes from CSS.
