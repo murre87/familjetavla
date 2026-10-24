@@ -599,7 +599,8 @@ export interface Dashboard {
   }[];
   /** Lägesväljare för smart styrning (Auto först = följer sitt eget schema), hittade i Home Assistant. */
   smartModes: { entityId: string; name: string; mode: string; options: string[] }[];
-  temps: { name: string; value: string }[];
+  /** Temperatursensorer. `offline` när Home Assistant inte har något värde, och `days` = hur länge sedan sensorn senast ändrade sig (för "offline sedan 50 dagar"). */
+  temps: { name: string; value: string; offline?: boolean; days?: number }[];
   deviceCards: {
     index: number;
     title: string;

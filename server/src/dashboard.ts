@@ -418,7 +418,15 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
       ...buildClimate(c.entityId, c.name, stateMap),
       controls: (c.controls ?? []).map((id) => buildControl(stateMap, id, c.name)),
     })),
-    temps: cfg.entities.temps.map((t) => ({ name: t.name, value: formatTemp(stateMap, t.entityId) })),
+    temps: cfg.entities.temps.map((t) => {
+      const offline = isOffline(stateMap, t.entityId);
+      const since = stateMap.get(t.entityId)?.last_changed;
+      return {
+        name: t.name,
+        value: formatTemp(stateMap, t.entityId),
+        ...(offline ? { offline: true, days: since ? Math.max(0, Math.floor((now.getTime() - new Date(since).getTime()) / 86_400_000)) : undefined } : {}),
+      };
+    }),
     deviceCards: (cfg.entities.deviceCards ?? []).map((c, index) => ({
       index,
       title: c.title,

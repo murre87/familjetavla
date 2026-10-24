@@ -956,6 +956,11 @@ export function Dashboard() {
   // few times and say clearly whether it worked.
   const run: Actions["run"] = async (label, fn, verify) => {
     try {
+      try {
+        navigator.vibrate?.(12); // kort känsla i fingret på telefoner som kan (inte iPhone)
+      } catch {
+        /* ingen vibrator: inget händer */
+      }
       await fn();
       let d = await refresh();
       if (!verify) return;
@@ -1091,7 +1096,15 @@ export function Dashboard() {
             </button>
           </div>
         ) : (
-          <span className="muted">Laddar tavlan…</span>
+          <div className="skeleton-board" role="status" aria-label="Laddar tavlan">
+            <div className="skel skel-head" />
+            <div className="skel skel-hero" />
+            <div className="skel-grid">
+              <div className="skel skel-card" />
+              <div className="skel skel-card" />
+              <div className="skel skel-card" />
+            </div>
+          </div>
         )}
       </div>
     );
@@ -1226,7 +1239,7 @@ export function Dashboard() {
           {tab !== "home" && <PageBar title={TABS.find((t) => t.id === tab)?.label ?? ""} />}
           {tab === "home" && <Home data={data} actions={actions} />}
           {tab !== "home" && (
-            <Fit className="tab-body" deps={[data, tab]}>
+            <Fit className="tab-body view-in" key={tab} deps={[data, tab]}>
               {tab === "cars" && <CarsPage data={data} actions={actions} />}
               {tab === "lights" && <LightsPage data={data} actions={actions} />}
               {tab === "security" && <SecurityPage data={data} actions={actions} />}
