@@ -57,6 +57,10 @@ async function shot(page, name) {
   await page.screenshot({ path: `${shots}/${scenario}-${name}.png`, fullPage: true });
 }
 
+// The custody card says "Ella är här" most days, but "Ella byter hem imorgon" the day before a handover (Sundays in the demo):
+// the check must not depend on which weekday the test happens to run.
+const ELLA = /Ella är här|Ella byter hem/;
+
 async function expectText(page, text, timeout = 20_000) {
   await page.getByText(text, { exact: false }).first().waitFor({ state: "visible", timeout });
 }
@@ -132,7 +136,7 @@ if (scenario === "addon") {
   await firstRun(page, { haCalendar: true });
   await finish(page);
   await expectText(page, "Middag hos mormor");
-  await expectText(page, "Ella är här");
+  await expectText(page, ELLA);
   await shot(page, "6-tavlan");
   await page.getByRole("button", { name: /Planera veckan/ }).first().click();
   await expectText(page, "Vem gör vad");
@@ -141,7 +145,7 @@ if (scenario === "addon") {
   await firstRun(page, { haCalendar: false });
   await page.getByLabel("PIN-kod", { exact: true }).fill("4321");
   await finish(page);
-  await expectText(page, "Ella är här");
+  await expectText(page, ELLA);
   await shot(page, "6-tavlan");
 
   // Every card opens its own page, with Tillbaka and Hem; the browser's back button works too.
@@ -152,7 +156,7 @@ if (scenario === "addon") {
   await page.locator(".card").filter({ hasText: "Inköpslista" }).first().locator("h2").click();
   await expectText(page, "Lägg till vara");
   await page.getByRole("button", { name: "Till startsidan" }).click();
-  await expectText(page, "Ella är här");
+  await expectText(page, ELLA);
   await page.locator(".custody").first().click();
   await page.goBack();
   await expectText(page, "Kommande 7 dagar");
@@ -171,12 +175,12 @@ if (scenario === "addon") {
   await expectText(phone, "Fel PIN-kod");
   await phone.getByLabel("PIN-kod").fill("4321");
   await phone.getByRole("button", { name: "Lås upp" }).click();
-  await expectText(phone, "Ella är här");
+  await expectText(phone, ELLA);
   await shot(phone, "8-telefon");
   } else if (scenario === "restart") {
   await page.goto(base, { waitUntil: "domcontentloaded" });
   await expectText(page, "Kommande 7 dagar");
-  await expectText(page, "Ella är här");
+  await expectText(page, ELLA);
   if (process.env.EXPECT_TEXT) await expectText(page, process.env.EXPECT_TEXT);
   await page.waitForTimeout(3000);
   await shot(page, "tavlan");
