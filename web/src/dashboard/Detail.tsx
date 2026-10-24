@@ -59,7 +59,7 @@ export function DetailPage({ page, data, actions }: { page: PageId; data: Dashbo
   );
 }
 
-function MealsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
+export function MealsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   return (
     <div className="stack">
       <div className="meals-grid">

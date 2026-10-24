@@ -1136,7 +1136,7 @@ function useIntegration(cfg: Config, set: (c: Config) => void, category: Integra
   return [integ, put] as const;
 }
 
-export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk }: StepProps) {
+export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow }: StepProps) {
   const schools = cfg.integrations.filter((i) => i.category === "school");
   const children = cfg.people.filter((p) => p.kind === "child");
   const [discovered, setDiscovered] = useState<Record<string, string[]>>({});
@@ -1185,6 +1185,7 @@ export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk }: StepPr
               secrets={secrets}
               setSecrets={setSecrets}
               secretsSet={resp.secretsSet}
+              saveNow={saveNow}
               extra={(r) => {
                 if (r?.discovered && r.discovered.join() !== (discovered[integ.id] ?? []).join()) {
                   const found = r.discovered;
@@ -1318,7 +1319,7 @@ function EdlevoHelp({ hasMenu, hasLink, onMenu, onLink }: { hasMenu: boolean; ha
 /** SRV Återvinning is owned by these five municipalities. */
 const SRV_TOWNS = /botkyrka|haninge|huddinge|nynäshamn|salem/i;
 
-export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode }: StepProps) {
+export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode, saveNow }: StepProps) {
   const [integ, put] = useIntegration(cfg, set, "waste");
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "waste");
   const srvTown = SRV_TOWNS.test(cfg.household.municipality ?? "") && resp.providers.some((p) => p.id === "srv");
@@ -1347,16 +1348,32 @@ export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode 
               {cfg.household.municipality} finns inte i listan. Prova <b>Eget schema</b> eller Waste Collection Schedule i Home Assistant.
             </p>
           )}
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} />
+          <ProviderForm key={`${integ.id}-${integ.provider}`} meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} verified={resp.verified.includes(integ.id)} />
         </section>
       )}
     </div>
   );
 }
 
-export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk }: StepProps) {
-  const [integ, put] = useIntegration(cfg, set, "grocery");
+export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow }: StepProps) {
+  const stores = cfg.integrations.filter((i) => i.category === "grocery");
+  const [activeId, setActive] = useState<string | null>(stores[0]?.id ?? null);
+  const integ = stores.find((i) => i.id === activeId) ?? stores[0];
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "grocery");
+  const put = (i: Integration | null) =>
+    set({ ...cfg, integrations: i ? cfg.integrations.map((x) => (x.id === i.id ? i : x)) : cfg.integrations.filter((x) => x.id !== integ?.id) });
+  const choose = (provider: string) => {
+    // The shop you pick is the one the shopping list goes to (the "Skicka inköpslistan till" list can change that).
+    const have = stores.find((x) => x.provider === provider);
+    if (have) {
+      setActive(have.id);
+      set({ ...cfg, shopping: { ...cfg.shopping, sendTo: have.id } });
+      return;
+    }
+    const id = stores.some((x) => x.id === "grocery") ? `g-${provider}` : "grocery";
+    set({ ...cfg, integrations: [...cfg.integrations, { id, category: "grocery", provider, settings: {} }], shopping: { ...cfg.shopping, sendTo: id } });
+    setActive(id);
+  };
   return (
     <div className="stack">
       <section className="card">
@@ -1379,19 +1396,43 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk }: Step
           <EntityPicker label="Lista" domains={["todo"]} value={cfg.shopping.entityId} onChange={(v) => set({ ...cfg, shopping: { ...cfg.shopping, entityId: v } })} optional={false} />
         )}
       </section>
-      <h2 style={{ fontSize: 18 }}>Skicka listan till en butik</h2>
-      <ProviderTiles
-        providers={resp.providers}
-        category="grocery"
-        selected={integ?.provider}
-        allowNone="Ingen butik"
-        haAvailable={haOk}
-        onSelect={(id) => put(id ? { id: "grocery", category: "grocery", provider: id, settings: {} } : null)}
-      />
+      <h2 style={{ fontSize: 18 }}>Butiker</h2>
+      <p className="muted" style={{ margin: 0 }}>Välj en eller flera. Varje butik får egna erbjudanden, vanliga varor och recept under fliken Mat.</p>
+      <div className="tiles">
+        {resp.providers
+          .filter((p) => p.category === "grocery")
+          .map((p) => {
+            const mine = stores.find((x) => x.provider === p.id);
+            const ok = mine && resp.verified.includes(mine.id);
+            return (
+              <button key={p.id} className={`tile ${integ && mine && integ.id === mine.id ? "selected" : ""} ${ok ? "connected" : ""}`} aria-pressed={Boolean(mine)} onClick={() => choose(p.id)}>
+                <b>{p.name}</b>
+                <small>{p.description}</small>
+                <span className="row gap" style={{ flexWrap: "wrap" }}>
+                  {ok ? <span className="badge stable">✓ Inloggad</span> : mine ? <span className="badge">Inte provad</span> : null}
+                  {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
+                </span>
+              </button>
+            );
+          })}
+      </div>
+      {stores.length > 1 && (
+        <section className="card">
+          <Select
+            label="Skicka inköpslistan till"
+            value={cfg.shopping.sendTo && stores.some((x) => x.id === cfg.shopping.sendTo) ? cfg.shopping.sendTo : stores[0]!.id}
+            onChange={(v) => set({ ...cfg, shopping: { ...cfg.shopping, sendTo: v } })}
+            options={stores.map((x) => ({ value: x.id, label: resp.providers.find((p) => p.id === x.provider)?.name ?? x.provider }))}
+          />
+        </section>
+      )}
       {integ && meta && (
         <section className="card">
           <h2>{meta.name}</h2>
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} />
+          <ProviderForm key={`${integ.id}-${integ.provider}`} meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} verified={resp.verified.includes(integ.id)} />
+          <button className="btn small" style={{ alignSelf: "flex-start", marginTop: 10 }} onClick={() => { put(null); setActive(null); }}>
+            Ta bort {meta.name}
+          </button>
         </section>
       )}
     </div>
@@ -1417,7 +1458,7 @@ function DecimalField({ label, value, help, onChange }: { label: string; value: 
   );
 }
 
-export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode }: StepProps) {
+export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode, saveNow }: StepProps) {
   const [integ, put] = useIntegration(cfg, set, "price");
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "price");
   const e = cfg.electricity;
@@ -1438,7 +1479,7 @@ export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, pos
       {integ && meta && (
         <section className="card">
           <h2>{meta.name}</h2>
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} />
+          <ProviderForm key={`${integ.id}-${integ.provider}`} meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} verified={resp.verified.includes(integ.id)} />
         </section>
       )}
       {integ && (
@@ -1772,7 +1813,7 @@ function PhotoFrame({ cfg, set }: { cfg: Config; set: (c: Config) => void }) {
 
 // ======================= Startskärm =======================
 
-const TAB_LABELS: Record<string, string> = { cars: "Bil", lights: "Ljus", house: "Hus", energy: "Energi", graphs: "Grafer", music: "Musik" };
+const TAB_LABELS: Record<string, string> = { food: "Mat", security: "Säkerhet", household: "Hushåll", cars: "Bil", lights: "Ljus", house: "Hus", energy: "Energi", graphs: "Grafer", music: "Musik" };
 
 const SIZE_OPTIONS = [
   { value: "auto", label: "Auto" },

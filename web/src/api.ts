@@ -1,4 +1,4 @@
-import type { ApplianceEntities, CarEntity, Config, SecurityEntities, ConfigResponse, Dashboard, Integration, NamedEntity, Schedule, TestResult, TravelChoice } from "../../server/src/types";
+import type { ApplianceEntities, CarEntity, Config, SecurityEntities, ConfigResponse, Dashboard, Integration, NamedEntity, Schedule, StoreFood, StoreFoodData, FoodPart, TestResult, TravelChoice } from "../../server/src/types";
 
 /** A station in the Musik tab: every Swedish station from the radio directory. */
 export interface DirStation {
@@ -101,14 +101,22 @@ export class ApiError extends Error {
 
 // Relative paths ("api/…", no leading slash) so the app works under Home Assistant ingress.
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`api/${path}`, {
-    ...init,
-    headers: {
+  let res: Response;
+  try {
+    res = await fetch(`api/${path}`, {
+      ...init,
+      signal: init.signal ?? AbortSignal.timeout(100_000),
+      headers: {
       ...(init.body ? { "content-type": "application/json" } : {}),
       "x-admin-pin": getPin(),
       ...(init.headers as Record<string, string>),
     },
-  });
+    });
+  } catch (e) {
+    // A request that never answers (the server restarted, the shop is slow) must not leave a button spinning.
+    if ((e as Error).name === "TimeoutError" || (e as Error).name === "AbortError") throw new ApiError(0, "Svaret dröjde för länge – försök igen.");
+    throw e;
+  }
   const text = await res.text();
   let data: { error?: string; code?: string } | null = null;
   try {
@@ -179,15 +187,22 @@ const realApi = {
   removeOwnEvent: (id: string) => request<{ ok: true }>(`own-events/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   testProvider: (integration: Integration, secrets: Record<string, string>) => post<TestResult>("providers/test", { integration, secrets }),
+  providerStores: (integration: Integration, secrets: Record<string, string>) => post<{ value: string; label: string }[]>("providers/stores", { integration, secrets }),
   testHa: (url?: string, token?: string) => post<TestResult>("test/ha", { url, token }),
   entities: (domains: string[]) => request<EntityOption[]>(`ha/entities?domains=${domains.join(",")}`),
   testCalendar: (body: { url?: string; entityId?: string; sourceId?: string; include?: string[]; exclude?: string[] }) =>
     post<CalendarTest>("test/calendar", body),
   postcode: (q: string) => request<PostcodeInfo>(`postcode?q=${encodeURIComponent(q)}`),
 
-  groceryPreview: () => post<{ store: string; lines: GroceryLine[] }>("grocery/preview"),
-  grocerySend: (lines: { item: string; code: string; name: string; qty: number }[]) =>
-    post<{ ok: boolean; store: string; items: number | null; total: string | null }>("grocery/send", { lines }),
+  groceryPreview: (store?: string) => post<{ store: string; lines: GroceryLine[] }>("grocery/preview", { store }),
+  grocerySend: (lines: { item: string; code: string; name: string; qty: number }[], store?: string) =>
+    post<{ ok: boolean; store: string; items: number | null; total: string | null }>("grocery/send", { lines, store }),
+
+  foodStores: () => request<StoreFood[]>("food/stores"),
+  foodChoices: (id: string) => request<{ options: { value: string; label: string }[]; value: string }>(`food/stores/${encodeURIComponent(id)}/choices`),
+  foodSetStore: (id: string, value: string) => post(`food/stores/${encodeURIComponent(id)}/store`, { value }),
+  foodPart: (id: string, part: FoodPart) => request<StoreFoodData>(`food/stores/${encodeURIComponent(id)}/${part}`),
+  foodIcaStrike: (id: string, name: string, done: boolean) => post("food/ica/strike", { id, name, done }),
 
   discover: () => request<Discovery>("ha/discover"),
   car: (index: number) => request<CarDetails>(`car/${index}`),
@@ -231,6 +246,7 @@ const realApi = {
   playConnect: (t: Tile, device: string, shuffle?: boolean) => post("music/play-connect", { uri: t.uri, type: t.type, title: t.title, device, ...(shuffle !== undefined ? { shuffle } : {}) }),
   playMedia: (t: Tile, speaker: string, start?: string, shuffle?: boolean) => post("music/play-media", { uri: t.uri, type: t.type, title: t.title, speaker, ...(start ? { start } : {}), ...(shuffle !== undefined ? { shuffle } : {}) }),
   musicItems: (uri: string) => request<{ title: string; tracks: Track[] }>(`music/items?uri=${encodeURIComponent(uri)}`),
+  musicTransport: (speaker: string, action: "play_pause" | "next" | "previous") => post("music/transport", { speaker, action }),
   volume: (speaker: string, pct: number) => post("music/volume", { speaker, pct }),
   searchStations: (q: string) => request<{ stations: StationHit[] }>(`radio/search?q=${encodeURIComponent(q)}`),
   addItem: (name: string) => post("shopping/add", { name }),

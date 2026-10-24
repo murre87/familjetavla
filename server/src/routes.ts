@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { cached, invalidate } from "./cache.js";
+import { fetchWithTimeout } from "./http.js";
 import { lookupPostcode } from "./connectors/geo.js";
 import { detectGroups, fetchIcs, filterEvents } from "./connectors/ics.js";
 import { ha, haConnection } from "./connectors/ha.js";
@@ -18,7 +19,9 @@ import { haSocket } from "./connectors/haws.js";
 import { energyLive, liveEnergyIds } from "./energy.js";
 import { publishToHa } from "./publisher.js";
 import { MULTIPLE, allMeta, findProvider, makeCtx, secretKey } from "./providers/registry.js";
-import { calendarEvents, groceryIntegration, newsFiles } from "./sources.js";
+import { calendarEvents, groceryIntegration, groceryIntegrations, newsFiles } from "./sources.js";
+import { icaListId, icaStrike } from "./connectors/ica.js";
+import { ICA_LIST, SHOW, icaRun } from "./providers/grocery.js";
 import { addOwnEvent, markNewsSeen, removeOwnEvent } from "./news.js";
 import { vklassFile, vklassLogin } from "./connectors/vklass.js";
 import { saveTravel } from "./travel.js";
@@ -47,7 +50,7 @@ import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
 import { alarmCall, robotCall } from "./security.js";
 import { MEDIA_TYPES, SHELVES, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
-import { HOME_WIDGETS, TAB_IDS, type Config, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
+import { HOME_WIDGETS, TAB_IDS, type Config, type FoodPart, type StoreFood, type StoreFoodData, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
 
 export { VERSION } from "./version.js";
 import { VERSION } from "./version.js";
@@ -225,6 +228,7 @@ export const configSchema = z
     shopping: z.object({
       source: z.enum(["local", "ha"]),
       entityId: entity.optional(),
+      sendTo: z.string().regex(ID).optional(),
       mappings: z.record(z.record(z.object({ code: z.string(), name: z.string() }))),
     }),
     electricity: z.object({
@@ -314,9 +318,12 @@ export const configSchema = z
     for (const i of c.integrations) {
       if (!findProvider(i.category as IntegrationCategory, i.provider)) ctx.addIssue({ code: "custom", message: `okänd leverantör ${i.provider}`, path: ["integrations"] });
     }
-    for (const cat of ["grocery", "waste", "price"] as const) {
+    for (const cat of ["waste", "price"] as const) {
       if (c.integrations.filter((i) => i.category === cat).length > 1) ctx.addIssue({ code: "custom", message: `bara en ${cat} åt gången`, path: ["integrations"] });
     }
+    // Several stores are fine, but each only once.
+    const stores = c.integrations.filter((i) => i.category === "grocery").map((i) => i.provider);
+    if (new Set(stores).size !== stores.length) ctx.addIssue({ code: "custom", message: "samma butik två gånger", path: ["integrations"] });
   });
 
 function allowedSecret(k: string): k is SecretKey {
@@ -332,10 +339,26 @@ function isUserSecret(k: string, cfg: Config): boolean {
   return Boolean(provider?.meta.fields.some((f) => f.key === m[2] && f.secret));
 }
 
+/** What a test vouches for: the provider and every field (secrets from `typed` or the stored ones). Any edit changes it. */
+function fingerprint(integ: Integration, typed: Record<string, string> = {}): string | null {
+  const provider = findProvider(integ.category, integ.provider);
+  if (!provider) return null;
+  // Only what the sign-in depends on: changing a display choice (which shop, what Mat shows) keeps the "logged in" mark.
+  const values = provider.meta.fields
+    .filter((f) => f.type !== "toggle" && f.key !== "store" && f.key !== "list")
+    .map((f) => (f.secret ? (typed[f.key] || getSecret(secretKey(integ.id, f.key)) || "") : String(integ.settings[f.key] ?? "").trim()));
+  return createHash("sha256").update(JSON.stringify([integ.provider, values])).digest("hex");
+}
+
 function configResponse(): ConfigResponse {
+  const config = loadConfig();
   return {
-    config: loadConfig(),
-    secretsSet: listSecretKeys().filter((k) => !k.endsWith(".session")),
+    config,
+    verified: config.integrations.filter((i) => {
+      const fp = fingerprint(i);
+      return fp !== null && getSecret(secretKey(i.id, "ok")) === fp;
+    }).map((i) => i.id),
+    secretsSet: listSecretKeys().filter((k) => !k.endsWith(".session") && !k.endsWith(".ok")),
     providers: allMeta(),
     runtime: { supervisor: Boolean(process.env.SUPERVISOR_TOKEN), version: VERSION, pinRequired: Boolean(getSecret("admin.pin")) },
   };
@@ -399,6 +422,11 @@ export async function registerRoutes(app: FastifyInstance) {
     for (const [k, v] of Object.entries(body.secrets ?? {})) {
       if (!isUserSecret(k, next)) return fail(reply, new Error(`Okänd hemlighet ${k}`));
       if (k === "admin.pin" && v && !/^\d{4,8}$/.test(String(v))) return fail(reply, new Error("PIN-koden ska vara 4–8 siffror."));
+    }
+    // Another provider in the same slot must not inherit the old one's password or session.
+    for (const i of next.integrations) {
+      const was = prev.integrations.find((x) => x.id === i.id);
+      if (was && was.provider !== i.provider) for (const k of listSecretKeys()) if (k.startsWith(`int.${i.id}.`)) setSecret(k as SecretKey, null);
     }
     for (const [k, v] of Object.entries(body.secrets ?? {})) setSecret(k as SecretKey, v);
     // Setting a PIN here must not lock out the screen doing it.
@@ -563,7 +591,31 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!provider) return fail(reply, new Error("Okänd leverantör"));
     if (provider.meta.needsHa && !haConnection()) return fail(reply, new Error("Anslut Home Assistant först."));
     try {
-      return await provider.test(makeCtx(integ, secrets ?? {}));
+      // A shop that never answers must not leave the screen waiting.
+      const result = await Promise.race([
+        provider.test(makeCtx(integ, secrets ?? {})),
+        new Promise<never>((_, no) => setTimeout(() => no(new Error("Testet tog för lång tid – butikens sida svarar inte. Försök igen om en stund.")), 85_000).unref()),
+      ]);
+      // A test that went through (and does not ask for more) is remembered for exactly these values.
+      const fp = fingerprint(integ, secrets ?? {});
+      setSecret(secretKey(integ.id, "ok"), result.ok && !result.choices && fp ? fp : null);
+      return result;
+    } catch (e) {
+      setSecret(secretKey(integ.id, "ok"), null);
+      return fail(reply, e);
+    }
+  });
+
+  /** The shops to pick from, for a provider that has a list (the sign-in typed in the wizard is used when it is needed). */
+  app.post("/api/providers/stores", { preHandler: guard }, async (req, reply) => {
+    const { integration, secrets } = (req.body ?? {}) as { integration?: Integration; secrets?: Record<string, string> };
+    const parsed = integrationSchema.safeParse(integration);
+    if (!parsed.success) return fail(reply, new Error("Ogiltig koppling"));
+    const integ = parsed.data as Integration;
+    const provider = findProvider(integ.category, integ.provider);
+    if (!provider || !("stores" in provider) || !provider.stores) return [];
+    try {
+      return await provider.stores(makeCtx(integ, secrets ?? {}));
     } catch (e) {
       return fail(reply, e);
     }
@@ -664,9 +716,14 @@ export async function registerRoutes(app: FastifyInstance) {
   });
 
   // ---------- Grocery: send the shopping list to a store ----------
-  app.post("/api/grocery/preview", async (_req, reply) => {
+  /** The store named in the request (its integration id), else the one the list is set to go to. */
+  const storeFor = (cfg: Config, body: unknown) => {
+    const id = (body as { store?: string } | null)?.store;
+    return (id ? groceryIntegrations(cfg).find((x) => x.integ.id === id) : undefined) ?? groceryIntegration(cfg);
+  };
+  app.post("/api/grocery/preview", async (req, reply) => {
     const cfg = loadConfig();
-    const g = groceryIntegration(cfg);
+    const g = storeFor(cfg, req.body);
     if (!g) return fail(reply, new Error("Ingen butik vald."));
     const dash = await buildDashboard();
     const remembered = cfg.shopping.mappings[g.provider.meta.id] ?? {};
@@ -683,11 +740,68 @@ export async function registerRoutes(app: FastifyInstance) {
     return { store: g.provider.meta.name, lines };
   });
 
+  // ---------- Mat: every chosen store; the content of a part is fetched when it is opened ----------
+  const partOnFor = (settings: Record<string, unknown>, part: FoodPart) => settings[SHOW[part]] !== "false" && settings[SHOW[part]] !== false;
+  app.get("/api/food/stores", async (): Promise<StoreFood[]> =>
+    groceryIntegrations(loadConfig()).flatMap((g) =>
+      g.provider.food ? [{ id: g.integ.id, provider: g.provider.meta.id, name: g.provider.meta.name, parts: g.provider.food.parts.filter((p) => partOnFor(g.integ.settings, p)) }] : [],
+    ),
+  );
+  /** The shops to switch between on the Mat tab (the board's own, from what is saved). */
+  app.get("/api/food/stores/:id/choices", async (req, reply) => {
+    const id = String((req.params as { id?: string }).id ?? "");
+    const g = groceryIntegrations(loadConfig()).find((x) => x.integ.id === id);
+    if (!g?.provider.stores) return { options: [], value: "" };
+    try {
+      return { options: await g.provider.stores(makeCtx(g.integ)), value: String(g.integ.settings.store ?? "") };
+    } catch (e) {
+      return fail(reply, e, 502);
+    }
+  });
+  app.post("/api/food/stores/:id/store", { preHandler: guard }, async (req, reply) => {
+    const id = String((req.params as { id?: string }).id ?? "");
+    const body = z.object({ value: z.string().max(80) }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Ogiltig butik"));
+    const cfg = loadConfig();
+    const integ = cfg.integrations.find((i) => i.id === id && i.category === "grocery");
+    if (!integ) return fail(reply, new Error("Okänd butik"));
+    integ.settings = { ...integ.settings, store: body.data.value };
+    saveConfig(cfg);
+    invalidate();
+    return { ok: true };
+  });
+
+  app.get("/api/food/stores/:id/:part", async (req, reply): Promise<StoreFoodData | void> => {
+    const q = z.object({ id: z.string().regex(ID), part: z.enum(["list", "common", "offers", "recipes"]) }).safeParse(req.params);
+    if (!q.success) return fail(reply, new Error("Okänd del"));
+    const g = groceryIntegrations(loadConfig()).find((x) => x.integ.id === q.data.id);
+    if (!g?.provider.food || !g.provider.food.parts.includes(q.data.part) || !partOnFor(g.integ.settings, q.data.part)) return fail(reply, new Error("Den delen visas inte."));
+    try {
+      return await g.provider.food.load(makeCtx(g.integ), q.data.part);
+    } catch (e) {
+      return { errors: { [q.data.part]: (e as Error).message } };
+    }
+  });
+
+  app.post("/api/food/ica/strike", async (req, reply) => {
+    const body = z.object({ id: z.string().min(1).max(80), name: z.string().min(1).max(120), done: z.boolean() }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Ogiltig rad"));
+    const g = groceryIntegrations(loadConfig()).find((x) => x.provider.meta.id === "ica");
+    if (!g) return fail(reply, new Error("ICA är inte vald."));
+    const ctx = makeCtx(g.integ);
+    try {
+      await icaRun(ctx, async (s) => icaStrike(s, await icaListId(s, ctx.str("list") || ICA_LIST), body.data, body.data.done));
+      return { ok: true };
+    } catch (e) {
+      return fail(reply, e, 502);
+    }
+  });
+
   app.post("/api/grocery/send", async (req, reply) => {
     const { lines } = (req.body ?? {}) as { lines?: { item: string; code: string; name: string; qty?: number }[] };
     if (!lines?.length) return fail(reply, new Error("Inget att skicka."));
     const cfg = loadConfig();
-    const g = groceryIntegration(cfg);
+    const g = storeFor(cfg, req.body);
     if (!g) return fail(reply, new Error("Ingen butik vald."));
     try {
       const result = await g.provider.addToCart(
@@ -794,6 +908,36 @@ export async function registerRoutes(app: FastifyInstance) {
       await ha.service(conn, "media_player", "media_stop", { entity_id: speaker });
     } catch {
       await ha.service(conn, "media_player", "media_pause", { entity_id: speaker });
+    }
+    invalidate("ha:states");
+    return { ok: true };
+  });
+
+  // Omslaget till det som spelas, via tavlans server (token når aldrig webbläsaren).
+  app.get("/api/music/cover/:entityId", async (req, reply) => {
+    const id = (req.params as { entityId: string }).entityId;
+    const conn = haConnection();
+    if (!speakerOf(id) || !conn) return fail(reply, new Error("Okänd högtalare"));
+    try {
+      const res = await fetchWithTimeout(`${conn.base}/media_player_proxy/${encodeURIComponent(id)}`, { timeoutMs: 8000, headers: { authorization: `Bearer ${conn.token}` } });
+      if (!res.ok) throw new Error(`Omslaget svarade ${res.status}`);
+      return reply.header("cache-control", "private, max-age=300").type(res.headers.get("content-type") ?? "image/jpeg").send(Buffer.from(await res.arrayBuffer()));
+    } catch (e) {
+      return fail(reply, e, 404);
+    }
+  });
+
+  // Spela/paus, nästa och föregående på en högtalare.
+  app.post("/api/music/transport", async (req, reply) => {
+    const body = z.object({ speaker: entity, action: z.enum(["play_pause", "next", "previous"]) }).safeParse(req.body);
+    if (!body.success || !speakerOf(body.data.speaker)) return fail(reply, new Error("Okänd högtalare"));
+    const conn = haConnection();
+    if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
+    const svc = { play_pause: "media_play_pause", next: "media_next_track", previous: "media_previous_track" }[body.data.action];
+    try {
+      await ha.service(conn, "media_player", svc, { entity_id: body.data.speaker });
+    } catch (e) {
+      return fail(reply, e);
     }
     invalidate("ha:states");
     return { ok: true };

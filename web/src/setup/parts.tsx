@@ -372,6 +372,8 @@ export function ProviderForm({
   setSecrets,
   secretsSet,
   extra,
+  saveNow,
+  verified,
 }: {
   meta: ProviderMeta;
   integ: Integration;
@@ -380,7 +382,12 @@ export function ProviderForm({
   setSecrets: (s: SecretDraft) => void;
   secretsSet: string[];
   extra?: (result: TestResult | null) => React.ReactNode;
+  /** Saves the settings: a successful test saves by itself, and "Spara" next to Testa does it by hand. */
+  saveNow?: () => Promise<void>;
+  /** The saved details passed the last test. */
+  verified?: boolean;
 }) {
+  const [saved, setSaved] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -396,6 +403,11 @@ export function ProviderForm({
     try {
       const r = await api.testProvider(integ, typed);
       setResult(r);
+      // A test that went well saves the settings at once (not while it still asks which building).
+      if (r.ok && !r.choices && saveNow) {
+        await saveNow();
+        setSaved(true);
+      }
       if (r.choices) {
         setChoices((c) => ({ ...c, [r.choices!.field]: r.choices!.options }));
         if (r.choices.options[0]) onChange({ ...integ, settings: { ...integ.settings, [r.choices.field]: r.choices.options[0].value } });
@@ -409,6 +421,11 @@ export function ProviderForm({
 
   return (
     <div className="stack">
+      {verified && (
+        <div className="result connected-note" role="status">
+          <b>✓ Inloggad hos {meta.name}.</b> Uppgifterna är sparade och fungerade vid senaste testet – ändra bara om du vill byta konto.
+        </div>
+      )}
       {meta.guide && (
         <ol className="guide">
           {meta.guide.map((g, i) => (
@@ -420,6 +437,18 @@ export function ProviderForm({
         // EDP: the API URL field only matters for "Annan".
         if (f.key === "apiUrl" && integ.settings.municipality !== "custom") return null;
         if (f.key === "building" && !choices.building && !integ.settings.building) return null;
+        if (meta.storePicker?.field === f.key)
+          return (
+            <StorePicker
+              key={f.key}
+              f={f}
+              integ={integ}
+              ready={!meta.storePicker.needsLogin || Boolean(verified)}
+              typed={meta.fields.filter((x) => x.secret && secrets[sk(x.key)]).reduce<Record<string, string>>((o, x) => ({ ...o, [x.key]: secrets[sk(x.key)]! }), {})}
+              value={String(integ.settings[f.key] ?? "")}
+              onPick={(v) => onChange({ ...integ, settings: { ...integ.settings, [f.key]: v } })}
+            />
+          );
         return (
           <FieldInput
             key={f.key}
@@ -443,6 +472,25 @@ export function ProviderForm({
         <button className="btn" onClick={test} disabled={busy}>
           {busy ? "Testar…" : "Testa"}
         </button>
+        {saveNow && (
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={async () => {
+              setError("");
+              try {
+                await saveNow();
+                setSaved(true);
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          >
+            Spara
+          </button>
+        )}
+        {saved && <span className="badge stable">Sparat ✓</span>}
+        {busy && <small className="faint">Loggar in via en dold webbläsare – kan ta upp till en minut.</small>}
         {meta.status !== "stable" && <span className={`badge ${meta.status}`}>{meta.status === "beta" ? "Beta" : "Experimentell"}</span>}
       </div>
       <Result result={result} error={error} />
@@ -459,10 +507,13 @@ export function ProviderTiles({
   onSelect,
   allowNone,
   haAvailable,
+  connected,
 }: {
   providers: ProviderMeta[];
   category: IntegrationCategory;
   selected?: string;
+  /** The provider whose sign-in details are saved: its tile says so. */
+  connected?: string;
   onSelect: (id: string | null) => void;
   allowNone?: string;
   haAvailable: boolean;
@@ -480,16 +531,49 @@ export function ProviderTiles({
         .map((p) => (
           <button
             key={p.id}
-            className={`tile ${selected === p.id ? "selected" : ""}`}
+            className={`tile ${selected === p.id ? "selected" : ""} ${connected === p.id ? "connected" : ""}`}
             aria-pressed={selected === p.id}
             disabled={p.needsHa && !haAvailable}
             onClick={() => onSelect(p.id)}
           >
             <b>{p.name}</b>
             <small>{p.needsHa && !haAvailable ? "Kräver Home Assistant" : p.description}</small>
-            {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
+            <span className="row gap" style={{ flexWrap: "wrap" }}>
+              {connected === p.id && <span className="badge stable">✓ Inloggad</span>}
+              {p.status !== "stable" && <span className={`badge ${p.status}`}>{p.status === "beta" ? "Beta" : "Experimentell"}</span>}
+            </span>
           </button>
         ))}
     </div>
+  );
+}
+
+/** Pick a shop from the ones the provider lists (several in every town). The list is fetched once the sign-in works. */
+function StorePicker({ f, integ, ready, typed, value, onPick }: { f: ProviderField; integ: Integration; ready: boolean; typed: Record<string, string>; value: string; onPick: (v: string) => void }) {
+  const [options, setOptions] = useState<{ value: string; label: string }[] | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    api
+      .providerStores(integ, typed)
+      .then((o) => alive && setOptions(o))
+      .catch((e) => alive && setError((e as Error).message));
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, integ.id, integ.provider]);
+  if (!ready) return <p className="faint">{f.label}: logga in först (tryck Testa) – då kan du välja butik i en lista.</p>;
+  if (error || !options) return error ? <Text label={f.label} value={value} placeholder={f.placeholder} help={`${error} – skriv orten i stället.`} onChange={onPick} /> : <p className="faint" role="status">Hämtar butiker…</p>;
+  const known = options.some((o) => o.value === value);
+  return (
+    <Select
+      label={f.label}
+      value={value}
+      onChange={onPick}
+      help={f.help}
+      options={[{ value: "", label: "Automatiskt – orten där ni bor" }, ...(value && !known ? [{ value, label: value }] : []), ...options]}
+    />
   );
 }

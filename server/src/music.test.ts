@@ -15,6 +15,19 @@ describe("buildMusic", () => {
     expect(buildMusic({ entities: { stations } } as unknown as Config, new Map())).toBeUndefined();
   });
 
+  it("passes on the station's rolling text (artist – title) but not the station name itself", () => {
+    const url = "http://sverigesradio.se/topsy/direkt/srapi/203.mp3";
+    const withText = buildMusic(cfg, new Map([st("media_player.kok", "playing", { media_content_id: url, media_artist: "Avicii", media_title: "Waiting For Love" })]))!;
+    expect(withText.speakers[0]!.radioText).toBe("Avicii – Waiting For Love");
+    const nameOnly = buildMusic(cfg, new Map([st("media_player.kok", "playing", { media_content_id: url, media_title: "P4 Jönköping" })]))!;
+    expect(nameOnly.speakers[0]!.radioText).toBeUndefined();
+  });
+
+  it("keeps the song, artist and transport buttons for a track, also while paused", () => {
+    const m = buildMusic(cfg, new Map([st("media_player.kok", "paused", { media_title: "Dancing Queen", media_artist: "ABBA", media_album_name: "Arrival", media_duration: 231, media_position: 40, supported_features: 1 | 16 | 32 })]))!;
+    expect(m.speakers[0]).toMatchObject({ playing: false, paused: true, track: "Dancing Queen", artist: "ABBA", album: "Arrival", duration: 231, canPause: true, canNext: true, canPrev: true });
+  });
+
   it("knows which favourite plays where, and the volume", () => {
     const m = buildMusic(
       cfg,

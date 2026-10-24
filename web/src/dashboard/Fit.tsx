@@ -38,7 +38,7 @@ export function Fit({
       const kids = [...i.children] as HTMLElement[];
       kids.forEach((k) => (k.style.display = ""));
       i.style.zoom = "1";
-      o.classList.remove("fit-overflow");
+      o.classList.remove("fit-overflow", "fit-tight");
       let cut = 0;
       if (getComputedStyle(o).overflowY === "auto") {
         const avail = o.clientHeight;
@@ -57,6 +57,11 @@ export function Fit({
             while (cut < kids.length - 1 && height() > avail - HINT) {
               kids[kids.length - 1 - cut].style.display = "none";
               cut++;
+            }
+            // The last card is still too tall to leave room for the button: let it drop its extras (".fit-tight").
+            if (height() > avail - HINT) {
+              o.classList.add("fit-tight");
+              height();
             }
           } else if (h > avail + 1) o.classList.add("fit-overflow");
         }

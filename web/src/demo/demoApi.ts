@@ -33,6 +33,7 @@ if (firstRun) {
     entities: { cars: [], energy: {}, lights: [], temps: [], lightGroups: [], buttons: [], climates: [], deviceCards: [], graphs: [] },
   };
   fx.config.secretsSet = [];
+  fx.config.verified = [];
   history.replaceState(null, "", location.pathname);
 }
 
@@ -461,7 +462,9 @@ const providerTest = (i: Integration): TestResult => {
       return { ok: true, preview: ["Tis 20 okt · Matavfall", "Tis 3 nov · Matavfall"] };
     case "willys":
     case "hemkop":
-      return { ok: true, message: `Inloggad hos ${i.provider === "willys" ? "Willys" : "Hemköp"} (demo).` };
+    case "ica":
+    case "citygross":
+      return { ok: true, message: `Inloggad hos ${{ willys: "Willys", hemkop: "Hemköp", ica: "ICA", citygross: "City Gross" }[i.provider]} (demo).` };
     case "spot":
       return { ok: true, preview: [`24 timmar · lägst 0,10 kr · högst 1,35 kr (spot) · ${i.settings.area ?? "SE3"}`] };
     default:
@@ -492,6 +495,8 @@ const DEMO_STATIONS: { id: string; name: string; url: string; group: "sr" | "oth
   })),
 ];
 
+const demoTested = new Set<string>();
+
 export const demoApi = {
   config: () => wait(fx.config),
   saveConfig: (config: Config, _secrets: Record<string, string | null> = {}) => {
@@ -499,8 +504,16 @@ export const demoApi = {
     d.home = config.dashboard.home;
     d.tabs = config.dashboard.tabs;
     d.theme = config.dashboard.theme;
+    // In the demo every kept connection counts as signed in once it has been tested.
+    fx.config.verified = config.integrations.filter((i) => demoTested.has(i.id + i.provider)).map((i) => i.id);
     return wait(fx.config, 300);
   },
+  providerStores: () => wait([{ value: "1", label: "Demobutiken Centrum" }, { value: "2", label: "Demobutiken Norr" }]),
+  foodStores: () => wait([] as never[]),
+  foodPart: () => wait({}),
+  foodChoices: () => wait({ options: [], value: "" }),
+  foodSetStore: () => wait({ ok: true }),
+  foodIcaStrike: () => wait({ ok: true }),
   checkPin: () => wait({ ok: true }),
   authStatus: () => wait({ paired: true, pinRequired: false, supervisor: false }),
   backup: (_password?: string) => wait({ app: "familjetavla", version: "demo", created: new Date().toISOString(), config: fx.config.config, local: {} } as unknown, 200),
@@ -547,7 +560,11 @@ export const demoApi = {
     return wait(d, 120);
   },
 
-  testProvider: (integration: Integration, _secrets: Record<string, string>) => wait(providerTest(integration), 700),
+  testProvider: (integration: Integration, _secrets: Record<string, string>) => {
+    const r = providerTest(integration);
+    if (r.ok && !r.choices) demoTested.add(integration.id + integration.provider);
+    return wait(r, 700);
+  },
   testHa: (_url?: string, _token?: string) => wait<TestResult>({ ok: true, message: "Ansluten – 40 entiteter (demo)." }, 500),
   entities: (domains: string[]) => wait(fx.entities.filter((e) => !domains.length || domains.includes(e.entityId.split(".")[0]))),
   testCalendar: (body: { include?: string[]; exclude?: string[] }) => {

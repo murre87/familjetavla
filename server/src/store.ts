@@ -128,7 +128,7 @@ export function loadConfig(): Config {
     d.home.splice(at >= 0 ? at + 1 : d.home.length, 0, { id: "schoolday", on: true });
   }
   for (const id of HOME_WIDGETS) if (!d.home.some((w) => w.id === id)) d.home.push({ id, on: false });
-  for (const id of TAB_IDS) if (!d.tabs.some((t) => t.id === id)) d.tabs.push({ id, on: true });
+  for (const id of TAB_IDS) if (!d.tabs.some((t) => t.id === id)) (id === "food" ? d.tabs.unshift.bind(d.tabs) : d.tabs.push.bind(d.tabs))({ id, on: true });
   return cached;
 }
 

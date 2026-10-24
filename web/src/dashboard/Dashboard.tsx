@@ -14,15 +14,17 @@ import { navigate, useHash } from "../route";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { canPrompt, inIngress, isInstalled, onInstallChange, platform, promptInstall, useSecureUrl } from "../install";
 import { CarsPage, EnergyPage, GraphsPage, HousePage, LightsPage } from "./Pages";
+import { FoodPage } from "./Food";
 import { MusicPage } from "../widgets/music";
 import { HouseholdPage, SecurityPage } from "../widgets/security";
 
-export type Tab = "home" | "cars" | "lights" | "house" | "energy" | "graphs" | "music" | "security" | "household";
-const TAB_IDS: Tab[] = ["home", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"];
+export type Tab = "home" | "food" | "cars" | "lights" | "house" | "energy" | "graphs" | "music" | "security" | "household";
+const TAB_IDS: Tab[] = ["home", "food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"];
 const PAGE_IDS = Object.keys(PAGE_TITLES) as PageId[];
 
 const TABS: { id: Tab; label: string; icon: IconName; show: (d: Dash) => boolean }[] = [
   { id: "home", label: "Hem", icon: "calendar", show: () => true },
+  { id: "food", label: "Mat", icon: "food", show: (d) => d.meals.length > 0 || Boolean(d.grocery) || d.shopping.items.length > 0 },
   { id: "cars", label: "Bil", icon: "car", show: (d) => d.cars.length > 0 },
   { id: "lights", label: "Ljus", icon: "bulb", show: (d) => d.lightGroups.length + d.buttons.length + d.lights.length > 0 },
   { id: "house", label: "Hus", icon: "home", show: (d) => d.climates.length + d.temps.length > 0 },
@@ -104,7 +106,7 @@ export interface Actions {
   run: (label: string, fn: () => Promise<unknown>, verify?: Verify) => Promise<void>;
   /** Like run, but asks "Är du säker?" first – for heating, locks and similar. */
   confirm: (question: string, label: string, fn: () => Promise<unknown>) => void;
-  openGrocery: () => void;
+  openGrocery: (store?: string) => void;
   /** Tap on an event: show its details in a sheet. */
   openEvent: (e: DashEvent & { dayLabel?: string }) => void;
   /** "Planera veckan": set who drops off / picks up / drives for the whole week (or plan the food). */
@@ -860,7 +862,7 @@ export function Dashboard() {
   const [installOpen, setInstallOpen] = useState(false);
   const [now, setNow] = useState(new Date());
   const [toast, setToast] = useState("");
-  const [grocery, setGrocery] = useState(false);
+  const [grocery, setGrocery] = useState<{ store?: string } | null>(null);
   const [awakeUntil, setAwakeUntil] = useState(0);
   const [themeOverride, setThemeOverride] = useState(readThemeOverride);
   const [asking, setAsking] = useState<{ question: string; label: string; fn: () => Promise<unknown> } | null>(null);
@@ -956,6 +958,11 @@ export function Dashboard() {
   // few times and say clearly whether it worked.
   const run: Actions["run"] = async (label, fn, verify) => {
     try {
+      try {
+        navigator.vibrate?.(12); // kort känsla i fingret på telefoner som kan (inte iPhone)
+      } catch {
+        /* ingen vibrator: inget händer */
+      }
       await fn();
       let d = await refresh();
       if (!verify) return;
@@ -970,7 +977,7 @@ export function Dashboard() {
   };
   const actions: Actions = {
     refresh,
-    openGrocery: () => setGrocery(true),
+    openGrocery: (store) => setGrocery({ store }),
     run,
     confirm: (question, label, fn) => setAsking({ question, label, fn }),
     openEvent: setEventOpen,
@@ -1022,7 +1029,13 @@ export function Dashboard() {
 
   // Switch tab with a sliding view transition where the browser supports it.
   const goTab = (next: Tab, list: Tab[]) => {
-    if (next === tab) return;
+    const root = next === "home" ? "/" : `/flik/${next}`;
+    if (next === tab && hash === root) {
+      // Already on the tab's first page: tapping it again goes back to the top of it.
+      window.dispatchEvent(new Event("familjetavla:tab-reset"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     const dir = list.indexOf(next) > list.indexOf(tab) ? 1 : -1;
     document.documentElement.style.setProperty("--dir", String(dir));
     // The tab lives in the address now (so Android's back button works); the slide comes from CSS.
@@ -1036,7 +1049,7 @@ export function Dashboard() {
     if (e.pointerType === "mouse") return;
     const target = e.target as HTMLElement;
     if (target.closest("input, select, textarea, .bars, .chart")) return;
-    gesture.current = { x: e.clientX, y: e.clientY, t: Date.now(), pulling: window.scrollY <= 0 };
+    gesture.current = { x: e.clientX, y: e.clientY, t: Date.now(), pulling: false };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const g = gesture.current;
@@ -1057,17 +1070,57 @@ export function Dashboard() {
     if (!g) return;
     const dx = e.clientX - g.x;
     const dy = e.clientY - g.y;
-    if (pull >= 80) {
-      setRefreshing(true);
-      await refresh();
-      setRefreshing(false);
-    }
-    setPull(0);
     if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 1.8 && Date.now() - g.t < 600) {
       const i = list.indexOf(tab) + (dx < 0 ? 1 : -1);
       if (i >= 0 && i < list.length) goTab(list[i], list);
     }
   };
+
+  // Pull down at the top to reload. Touch events (not pointer events): the browser takes over a
+  // vertical pan and cancels the pointer ones. A volume swipe in Musik (only while music plays) wins.
+  useEffect(() => {
+    let y0: number | null = null;
+    let dist = 0;
+    const start = (e: TouchEvent) => {
+      const t = e.target as HTMLElement;
+      y0 = window.scrollY <= 0 && e.touches.length === 1 && !t.closest("input, select, textarea, .bars, .chart, .overlay, .vol-overlay") ? e.touches[0]!.clientY : null;
+      dist = 0;
+    };
+    const move = (e: TouchEvent) => {
+      if (y0 === null) return;
+      if (document.documentElement.dataset.volDrag || window.scrollY > 0) {
+        y0 = null;
+        setPull(0);
+        return;
+      }
+      const dy = e.touches[0]!.clientY - y0;
+      if (dy > 8) {
+        dist = Math.min(110, (dy - 8) * 0.6);
+        if (e.cancelable) e.preventDefault();
+        setPull(dist);
+      }
+    };
+    const end = async () => {
+      const go = y0 !== null && dist >= 80;
+      y0 = null;
+      setPull(0);
+      if (go) {
+        setRefreshing(true);
+        await refresh();
+        setRefreshing(false);
+      }
+    };
+    window.addEventListener("touchstart", start, { passive: true });
+    window.addEventListener("touchmove", move, { passive: false });
+    window.addEventListener("touchend", end);
+    window.addEventListener("touchcancel", end);
+    return () => {
+      window.removeEventListener("touchstart", start);
+      window.removeEventListener("touchmove", move);
+      window.removeEventListener("touchend", end);
+      window.removeEventListener("touchcancel", end);
+    };
+  }, [refresh]);
 
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -1091,7 +1144,15 @@ export function Dashboard() {
             </button>
           </div>
         ) : (
-          <span className="muted">Laddar tavlan…</span>
+          <div className="skeleton-board" role="status" aria-label="Laddar tavlan">
+            <div className="skel skel-head" />
+            <div className="skel skel-hero" />
+            <div className="skel-grid">
+              <div className="skel skel-card" />
+              <div className="skel skel-card" />
+              <div className="skel skel-card" />
+            </div>
+          </div>
         )}
       </div>
     );
@@ -1226,11 +1287,12 @@ export function Dashboard() {
           {tab !== "home" && <PageBar title={TABS.find((t) => t.id === tab)?.label ?? ""} />}
           {tab === "home" && <Home data={data} actions={actions} />}
           {tab !== "home" && (
-            <Fit className="tab-body" deps={[data, tab]}>
+            <Fit className="tab-body view-in" key={tab} deps={[data, tab]}>
               {tab === "cars" && <CarsPage data={data} actions={actions} />}
               {tab === "lights" && <LightsPage data={data} actions={actions} />}
               {tab === "security" && <SecurityPage data={data} actions={actions} />}
               {tab === "household" && <HouseholdPage data={data} actions={actions} />}
+              {tab === "food" && <FoodPage data={data} actions={actions} />}
               {tab === "house" && <HousePage data={data} actions={actions} />}
               {tab === "energy" && <EnergyPage data={data} />}
               {tab === "graphs" && <GraphsPage data={data} />}
@@ -1245,9 +1307,10 @@ export function Dashboard() {
 
       {grocery && (
         <GroceryModal
-          onClose={() => setGrocery(false)}
+          storeId={grocery.store}
+          onClose={() => setGrocery(null)}
           onDone={(msg) => {
-            setGrocery(false);
+            setGrocery(null);
             showToast(msg);
             refresh();
           }}

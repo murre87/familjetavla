@@ -1,6 +1,6 @@
-import { getSecret, setSecret } from "../store.js";
+import { getSecret, loadConfig, setSecret } from "../store.js";
 import type { Integration, IntegrationCategory, ProviderMeta, SettingValue } from "../types.js";
-import { hemkop, willys } from "./grocery.js";
+import { citygross, hemkop, ica, willys } from "./grocery.js";
 import { haPrice, spotPrice } from "./price.js";
 import { schoolIcs, schoolsoft, skolmatHa, skolmaten, vklass } from "./school.js";
 import type { AnyProvider, GroceryProvider, PriceProvider, ProviderCtx, SchoolProvider, WasteProvider } from "./types.js";
@@ -12,13 +12,13 @@ import { wasteEdp, wasteHa, wasteIcs, wasteManual, wasteSrv, wasteStockholm } fr
  */
 export const PROVIDERS = {
   school: [schoolIcs, skolmaten, skolmatHa, vklass, schoolsoft] as SchoolProvider[],
-  grocery: [willys, hemkop] as GroceryProvider[],
+  grocery: [willys, ica, citygross, hemkop] as GroceryProvider[],
   waste: [wasteEdp, wasteSrv, wasteStockholm, wasteManual, wasteIcs, wasteHa] as WasteProvider[],
   price: [spotPrice, haPrice] as PriceProvider[],
 } satisfies Record<IntegrationCategory, AnyProvider[]>;
 
 /** Which categories allow several integrations at once (one school calendar per child). */
-export const MULTIPLE: Record<IntegrationCategory, boolean> = { school: true, grocery: false, waste: false, price: false };
+export const MULTIPLE: Record<IntegrationCategory, boolean> = { school: true, grocery: true, waste: false, price: false };
 
 export function allMeta(): ProviderMeta[] {
   return Object.values(PROVIDERS).flat().map((p) => p.meta);
@@ -36,6 +36,8 @@ export const secretKey = (integrationId: string, field: string) => `int.${integr
  */
 export function makeCtx(integration: Integration, overrides: Record<string, string> = {}): ProviderCtx {
   const settings: Record<string, SettingValue> = { ...integration.settings };
+  // Providers that need a place (a store near you) fall back to where the household lives.
+  if (!settings.__place) settings.__place = loadConfig().household.place ?? "";
   return {
     integration,
     settings,

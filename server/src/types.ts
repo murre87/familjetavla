@@ -126,7 +126,7 @@ export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders",
 export type HomeWidget = (typeof HOME_WIDGETS)[number];
 /** Startskärmens rutor: "auto" följer hur många rutor som visas, annars liten/normal/stor. */
 export type WidgetSize = "auto" | "s" | "m" | "l";
-export const TAB_IDS = ["cars", "lights", "house", "energy", "graphs", "music", "security", "household"] as const;
+export const TAB_IDS = ["food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
 // ---------- Leverantörsmoduler (skola, mataffär, sopor, elpris) ----------
@@ -174,6 +174,8 @@ export interface ProviderMeta {
   guide?: string[];
   /** Skola: leverantören hittar själv barnen (t.ex. Vklass) i stället för en kalender per barn. */
   discoversChildren?: boolean;
+  /** Butiker: fältet (nyckeln) där man väljer butik ur en lista, och om listan kräver inloggning. */
+  storePicker?: { field: string; needsLogin?: boolean };
 }
 
 export type SettingValue = string | number | boolean;
@@ -281,6 +283,8 @@ export interface Config {
   shopping: {
     source: "local" | "ha";
     entityId?: string; // todo.* i Home Assistant
+    /** Vilken butik (kopplingens id) listan skickas till när flera är valda. */
+    sendTo?: string;
     /** Inköpsrad (gemener) → vald produkt per butik: mappings[provider][rad] */
     mappings: Record<string, Record<string, { code: string; name: string }>>;
   };
@@ -357,6 +361,8 @@ export interface ConfigResponse {
   config: Config;
   /** Vilka hemligheter som är satta (aldrig deras värden). */
   secretsSet: string[];
+  /** Kopplingar (id) vars sparade uppgifter klarade senaste testet. */
+  verified: string[];
   providers: ProviderMeta[];
   runtime: {
     supervisor: boolean;
@@ -510,6 +516,8 @@ export interface Dashboard {
   shopping: { source: "local" | "ha"; items: { id: string; name: string; done: boolean }[] };
   /** Butik att skicka inköpslistan till, om en är vald. */
   grocery?: { provider: string; name: string };
+  /** Alla valda butiker (listan skickas till `grocery`). */
+  groceries?: { id: string; provider: string; name: string }[];
   prices?: {
     now: number;
     level: "billigt" | "normalt" | "dyrt";
@@ -599,7 +607,8 @@ export interface Dashboard {
   }[];
   /** Lägesväljare för smart styrning (Auto först = följer sitt eget schema), hittade i Home Assistant. */
   smartModes: { entityId: string; name: string; mode: string; options: string[] }[];
-  temps: { name: string; value: string }[];
+  /** Temperatursensorer. `offline` när Home Assistant inte har något värde, och `days` = hur länge sedan sensorn senast ändrade sig (för "offline sedan 50 dagar"). */
+  temps: { name: string; value: string; offline?: boolean; days?: number }[];
   deviceCards: {
     index: number;
     title: string;
@@ -662,6 +671,21 @@ export interface Music {
     volume?: number;
     /** The stream playing now, to mark it in the Musik tab's list of all stations. */
     playingUrl?: string;
+    /** Låt, artist och album separat (när högtalaren säger det), omslag via /api/music/cover och hur långt låten har kommit. */
+    paused?: boolean;
+    /** Radio: texten som kanalen skickar med strömmen (artist – låt, "rullande texten"/RDS), om den skiljer sig från kanalens namn. */
+    radioText?: string;
+    track?: string;
+    artist?: string;
+    album?: string;
+    cover?: boolean;
+    position?: number;
+    duration?: number;
+    /** När `position` gällde (ISO), så att tavlan kan räkna fram var låten är nu. */
+    positionAt?: string;
+    canPause?: boolean;
+    canNext?: boolean;
+    canPrev?: boolean;
   }[];
   stations: { index: number; name: string; logo?: string; url: string }[];
   /** Home Assistant's Spotify integration: null when it is not installed (the tab then says how). */
@@ -759,4 +783,27 @@ export interface ApplianceView {
   /** "11:20". */
   endsAt?: string;
   progress?: number;
+}
+
+/** Delar av en butik under fliken Mat. */
+export type FoodPart = "list" | "common" | "offers" | "recipes";
+
+/** Fliken Mat, en butik: vilka delar som finns och är påslagna (innehållet hämtas först när delen öppnas). */
+export interface StoreFood {
+  id: string;
+  provider: string;
+  name: string;
+  parts: FoodPart[];
+}
+
+/** Innehållet i en del, hämtat på begäran. */
+export interface StoreFoodData {
+  /** Butiken erbjudandena gäller (orten eller butiksnamnet). */
+  store?: string;
+  offers?: { id: string; name: string; brand?: string; size?: string; price?: string; note?: string; image?: string; validTo?: string }[];
+  /** "Mina vanligaste varor". */
+  common?: { name: string }[];
+  recipes?: { id: number; title: string; time?: string; ingredients?: number; image?: string; url: string }[];
+  list?: { name: string; rows: { id: string; name: string; done: boolean }[] };
+  errors?: Record<string, string>;
 }

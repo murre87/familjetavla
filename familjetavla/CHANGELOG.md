@@ -2,6 +2,15 @@
 
 ## 0.14.0
 
+- **Ny flik Mat:** veckans mat på ett ställe – barnens skollunch per dag, familjens middagar (med Planera), inköpslistan och, om ni valt ICA, **ICA-erbjudanden** från er favoritbutik (med "På listan"), **recept** och själva **ICA-listan** att bocka av. Fliken ligger först efter Hem och kan flyttas eller döljas under Startskärm.
+- **Dra ned för att ladda om fungerar nu** även på riktiga telefoner och plattor (Chrome tog över svepet förut). Volymsvepet i Musik gäller bara när musik spelar. Ladda om-knappen finns alltid kvar.
+- **Installationen visar vad som är anslutet:** en butik med sparad inloggning får märket "Ansluten ✓" och formuläret säger "Inloggad". Det finns också en **Ladda om**-knapp överst på inställningssidorna.
+- **Spara-knapp bredvid Testa** i installationen, och ett lyckat test sparar av sig självt. Förut sparades inget förrän man tryckt Nästa hela vägen.
+- **Menyn längst ner tar dig alltid till flikens första sida:** även när du är inne på en sida (Veckan, Maten …) går **Hem** till startsidan och en flik till sin början. Trycker du på fliken du redan är på går den till toppen (Musik tillbaka till radion).
+- **Fler butiker för inköpslistan:** **ICA** (listan läggs i en inköpslista i ICA-appen, med personnummer och PIN som i appen – tack till [ha-ica-todo](https://github.com/lazytarget/ha-ica-todo) för kartläggningen) och **City Gross** (sök med pris och bild per butik, och varukorgen på citygross.se). Willys och Hemköp fanns redan. Alla tre är inofficiella och märkta experimentella.
+- **Nu spelas:** stort omslag, förloppsrad och, för radio, rullande RDS-text med låt och artist.
+- **Temperaturer** med tydligare siffror och färg per rum.
+- **Grafer, Hushåll och Säkerhet i ny design:** mjukare linjer med rena axlar och chips för period, Husgeråd med ikon, status och förloppsrad per maskin, och Säkerhet med chips för öppna dörrar och fönster samt larmstatus. Större tryckytor och bättre läsbarhet.
 - **Nytt volymreglage:** en riktig skjutreglage (fylld bana, stor tumme, ljudikon som stänger av ljudet) i musikkortet och i Musik, och ett glas-reglage när man sveper för volym. Det klipps inte längre av kortet.
 - **Notis när det finns en ny version** av Familjetavlan, till de vuxna som har notiser på (en gång per version; kan stängas av under Notiser).
 - **Ladda om-knapp** uppe till höger (pilarna), bredvid temat och inställningarna. Den laddar om tavlan och hämtar senaste versionen. Att dra ner för att ladda om sidan finns kvar, men händer inte längre när du sveper ner för att sänka volymen.

@@ -114,7 +114,7 @@ function Chores({ data, actions }: { data: Dashboard; actions: Actions }) {
                   <button
                     key={i.id}
                     className={`btn ${i.done ? "selected" : ""}`}
-                    style={{ minHeight: 44, textDecoration: i.done ? "line-through" : "none" }}
+                    style={{ minHeight: "calc(48px / var(--wzoom, 1))", textDecoration: i.done ? "line-through" : "none" }}
                     aria-pressed={i.done}
                     onClick={() => actions.run(`${p.name}: ${i.title}`, () => api.choreToggle(i.id, !i.done))}
                   >

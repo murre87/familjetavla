@@ -75,7 +75,8 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
       {!big && s.alarms.map((a) => (
         <section key={a.entityId} className={`card alarm ${a.triggered ? "triggered" : a.armed ? "armed" : ""}`}>
           <h2>
-            <Icon name="shield" size={22} /> {a.name}: {a.label}
+            <Icon name="shield" size={22} /> {a.name}
+            <span className={`chip ${a.triggered ? "warn" : a.armed ? "good" : ""}`}>{a.label}</span>
           </h2>
           {a.needsCode && <CodeField value={codes[a.entityId] ?? ""} onChange={setCode(a.entityId)} />}
           <div className="big-buttons">
@@ -141,16 +142,17 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
 
       {!big && s.openings.length > 0 && (
         <section className="card">
-          <h2>Dörrar och fönster</h2>
-          {openNow.length === 0 ? (
-            <p className="ok-text" style={{ margin: 0 }}>
-              Allt är stängt.
-            </p>
-          ) : (
-            <p className="warn-text" style={{ margin: 0 }}>
-              Öppet: {openNow.map((o) => o.name).join(", ")}
-            </p>
-          )}
+          <div className="card-head">
+            <h2>Dörrar och fönster</h2>
+            <span className={`chip ${openNow.length === 0 ? "good" : "warn"}`}>{openNow.length === 0 ? "Allt stängt" : `${openNow.length} öppet`}</span>
+          </div>
+          <div className="open-chips">
+            {s.openings.map((o) => (
+              <span key={o.name} className={`open-chip ${o.open ? "open" : ""}`}>
+                <Icon name={o.open ? "unlock" : "lock"} size={16} /> {o.name}
+              </span>
+            ))}
+          </div>
         </section>
       )}
     </main>
@@ -174,11 +176,20 @@ export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Act
           <div className="stack" style={{ gap: 12 }}>
             {machines.map((m) => (
               <div key={m.name} className={`machine m-${m.phase}`}>
-                <div className="sec-row">
-                  <span className="sec-name">
-                    <b>{m.name}</b> <span className={m.phase === "done" ? "ok-text" : m.phase === "error" ? "warn-text" : m.phase === "running" ? "" : "muted"}>{m.label}</span>
+                <div className="sec-row machine-row">
+                  <span className="machine-ico" aria-hidden="true">
+                    <Icon name={(({ washer: "washer", dryer: "dryer", dishwasher: "dishwasher", oven: "oven" }) as Record<string, "washer" | "dryer" | "dishwasher" | "oven">)[m.kind] ?? "washer"} size={26} />
                   </span>
-                  {m.endsAt && <span className="muted">klar {m.endsAt}</span>}
+                  <span className="sec-name">
+                    <b>{m.name}</b>
+                    <span className={`machine-label ph-${m.phase}`}>{m.label}</span>
+                  </span>
+                  {m.endsAt && (
+                    <span className="machine-end">
+                      <small>klar</small>
+                      <b>{m.endsAt}</b>
+                    </span>
+                  )}
                 </div>
                 {m.phase === "running" && m.progress !== undefined && (
                   <div className="machine-bar" role="progressbar" aria-valuenow={m.progress} aria-valuemin={0} aria-valuemax={100} aria-label={`${KIND_NAME[m.kind]} ${m.progress} %`}>
