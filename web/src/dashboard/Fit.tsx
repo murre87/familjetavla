@@ -47,8 +47,9 @@ export function Fit({
           let h = height();
           let scale = 1;
           // Scaling changes line breaks, so measure again and adjust once more.
-          for (let pass = 0; pass < 3 && h > avail + 1 && scale > min; pass++) {
-            scale = Math.max(min, scale * (avail / h));
+          // (A few more passes and a hair of margin: text re-wraps as it shrinks, so one step rarely lands exactly.)
+          for (let pass = 0; pass < 6 && h > avail + 1 && scale > min; pass++) {
+            scale = Math.max(min, scale * (avail / h) * 0.99);
             i.style.zoom = String(scale);
             h = height();
           }
