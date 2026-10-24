@@ -1,5 +1,5 @@
 import { cached } from "../cache.js";
-import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodLogin, axfoodOffers, axfoodSearch } from "../connectors/axfood.js";
+import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodCommon, axfoodLogin, axfoodOffers, axfoodSearch } from "../connectors/axfood.js";
 import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossCommon, cityGrossLogin, cityGrossSearch, cityGrossStore, cityGrossSummary } from "../connectors/citygross.js";
 import { IcaAuthExpired, icaAddRows, icaCommon, icaFresh, icaListId, icaLogin, icaOffers, icaRecipes, icaRefresh, icaRows, icaSearch, type IcaSession } from "../connectors/ica.js";
 import type { FoodPart } from "../types.js";
@@ -36,6 +36,7 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
         { key: "username", label: "Personnummer eller kundkortsnummer", type: "text", placeholder: "ÅÅMMDDXXXX", help: "10 eller 12 siffror, eller 16 siffror för kundkort. E-post fungerar inte." },
         { key: "password", label: "Lösenord", type: "password", secret: true, help: "Kontot behöver ett lösenord – BankID går inte att automatisera." },
         { key: "store", label: "Butik (ort)", type: "text", optional: true, placeholder: "t.ex. Jönköping", help: "Veckans erbjudanden hämtas för en butik på orten. Tomt = orten där ni bor." },
+        showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
         showField(SHOW.offers, "Visa veckans erbjudanden under Mat"),
       ],
       guide: [
@@ -53,11 +54,29 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
       return axfoodSearch(site, ctx.secret("session") ?? "", query);
     },
     food: {
-      parts: ["offers"],
-      // Offers are open: they work before (and without) a login.
-      async load(ctx) {
-        const r = await cached(`food:${id}:${ctx.str("store") || ctx.str("__place")}`, 30 * 60_000, () => axfoodOffers(site, ctx.str("store") || ctx.str("__place")));
-        return { store: r.store, offers: r.offers };
+      parts: ["common", "offers"],
+      async load(ctx, part) {
+        try {
+          if (part === "common") {
+            // Needs the login (the hidden browser), so it is kept for hours.
+            const run = async (force: boolean) => axfoodCommon(site, await session(ctx, force));
+            return {
+              common: await cached(`food:${id}:common:${ctx.integration.id}`, 6 * 3600_000, async () => {
+                try {
+                  return await run(false);
+                } catch (e) {
+                  if (e instanceof AuthExpired) return run(true);
+                  throw e;
+                }
+              }),
+            };
+          }
+          // Offers are open: they work before (and without) a login.
+          const r = await cached(`food:${id}:${ctx.str("store") || ctx.str("__place")}`, 30 * 60_000, () => axfoodOffers(site, ctx.str("store") || ctx.str("__place")));
+          return { store: r.store, offers: r.offers };
+        } catch (e) {
+          return { errors: { [part]: (e as Error).message } };
+        }
       },
     },
     async addToCart(ctx, lines) {

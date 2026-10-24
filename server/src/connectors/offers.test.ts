@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AXFOOD_SITES, axfoodOffers } from "./axfood.js";
+import { AXFOOD_SITES, axfoodCommon, axfoodOffers } from "./axfood.js";
 import { groceryIntegration, groceryIntegrations } from "../sources.js";
 import type { Config } from "../types.js";
 
@@ -33,6 +33,17 @@ describe("Axfood offers", () => {
     vi.stubGlobal("fetch", async () => json([{ storeId: "1", name: "Willys Boden", address: { town: "Boden" } }]));
     await expect(axfoodOffers(AXFOOD_SITES.willys!, "")).rejects.toThrow(/Ange en ort/);
     await expect(axfoodOffers(AXFOOD_SITES.willys!, "Atlantis")).rejects.toThrow(/ingen butik/);
+  });
+});
+
+describe("Axfood most bought", () => {
+  it("counts products over the latest orders, once per order", async () => {
+    vi.stubGlobal("fetch", async (url: string) => {
+      if (url.endsWith("/axfood/rest/account/orders")) return json([{ code: "A" }, { code: "B" }]);
+      if (url.includes("q=A")) return json({ categories: [{ entries: [{ product: { code: "1_ST", name: "Mjölk" }, quantity: 3 }, { product: { code: "2_ST", name: "Bröd" }, quantity: 1 }, { product: { code: "1_ST", name: "Mjölk" }, quantity: 1 }] }] });
+      return json({ entries: [{ product: { code: "1_ST", name: "Mjölk" }, quantity: 2 }, { product: { code: "3_ST", name: "Ägg" }, quantity: 1 }] });
+    });
+    expect(await axfoodCommon(AXFOOD_SITES.willys!, "c=1")).toEqual([{ name: "Mjölk" }, { name: "Bröd" }, { name: "Ägg" }]);
   });
 });
 

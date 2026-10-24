@@ -222,3 +222,46 @@ export async function axfoodOffers(site: AxfoodSite, place: string, size = 24): 
   }
   return { store: stores[0]!.name ?? place, offers: [] };
 }
+
+// ---------- "Mina vanligaste varor": derived from the order history (needs a login) ----------
+
+/** Every object in a JSON tree that looks like a product line: a name and a product code. */
+function productLines(node: unknown, out: { code: string; name: string; qty: number }[] = []): { code: string; name: string; qty: number }[] {
+  if (Array.isArray(node)) {
+    for (const n of node) productLines(n, out);
+  } else if (node && typeof node === "object") {
+    const o = node as Record<string, unknown>;
+    const p = (o.product && typeof o.product === "object" ? o.product : o) as Record<string, unknown>;
+    const code = String(p.code ?? p.productCode ?? o.productCode ?? "");
+    const name = String(p.name ?? o.name ?? "");
+    const qty = Number(o.quantity ?? o.qty ?? o.pickedQuantity ?? 1);
+    if (code && name && /_/.test(code)) out.push({ code, name, qty: Number.isFinite(qty) && qty > 0 ? qty : 1 });
+    else for (const v of Object.values(o)) productLines(v, out);
+  }
+  return out;
+}
+
+/** What the account buys most: the products of the latest orders, counted by how many orders they are in. */
+export async function axfoodCommon(site: AxfoodSite, cookies: string, orders = 12, size = 24): Promise<{ name: string }[]> {
+  const list = await api<unknown>(site, "/axfood/rest/account/orders", cookies);
+  const rows = (Array.isArray(list) ? list : ((list as { orders?: unknown[] })?.orders ?? [])) as Record<string, unknown>[];
+  const ids = rows
+    .map((o) => String(o.code ?? o.orderNumber ?? o.id ?? ""))
+    .filter(Boolean)
+    .slice(0, orders);
+  const seen = new Map<string, { name: string; orders: number }>();
+  for (const id of ids) {
+    const data = await api<unknown>(site, `/axfood/rest/orderdata?q=${encodeURIComponent(id)}`, cookies).catch(() => null);
+    const inThisOrder = new Set<string>();
+    for (const l of productLines(data)) {
+      if (inThisOrder.has(l.code)) continue;
+      inThisOrder.add(l.code);
+      const had = seen.get(l.code);
+      seen.set(l.code, { name: l.name, orders: (had?.orders ?? 0) + 1 });
+    }
+  }
+  return [...seen.values()]
+    .sort((a, b) => b.orders - a.orders || a.name.localeCompare(b.name, "sv"))
+    .slice(0, size)
+    .map((x) => ({ name: x.name }));
+}
