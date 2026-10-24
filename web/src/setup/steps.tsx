@@ -1136,7 +1136,7 @@ function useIntegration(cfg: Config, set: (c: Config) => void, category: Integra
   return [integ, put] as const;
 }
 
-export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk }: StepProps) {
+export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow }: StepProps) {
   const schools = cfg.integrations.filter((i) => i.category === "school");
   const children = cfg.people.filter((p) => p.kind === "child");
   const [discovered, setDiscovered] = useState<Record<string, string[]>>({});
@@ -1185,6 +1185,7 @@ export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk }: StepPr
               secrets={secrets}
               setSecrets={setSecrets}
               secretsSet={resp.secretsSet}
+              saveNow={saveNow}
               extra={(r) => {
                 if (r?.discovered && r.discovered.join() !== (discovered[integ.id] ?? []).join()) {
                   const found = r.discovered;
@@ -1318,7 +1319,7 @@ function EdlevoHelp({ hasMenu, hasLink, onMenu, onLink }: { hasMenu: boolean; ha
 /** SRV Återvinning is owned by these five municipalities. */
 const SRV_TOWNS = /botkyrka|haninge|huddinge|nynäshamn|salem/i;
 
-export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode }: StepProps) {
+export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode, saveNow }: StepProps) {
   const [integ, put] = useIntegration(cfg, set, "waste");
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "waste");
   const srvTown = SRV_TOWNS.test(cfg.household.municipality ?? "") && resp.providers.some((p) => p.id === "srv");
@@ -1347,14 +1348,14 @@ export function WasteStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode 
               {cfg.household.municipality} finns inte i listan. Prova <b>Eget schema</b> eller Waste Collection Schedule i Home Assistant.
             </p>
           )}
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} />
+          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} />
         </section>
       )}
     </div>
   );
 }
 
-export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk }: StepProps) {
+export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow }: StepProps) {
   const [integ, put] = useIntegration(cfg, set, "grocery");
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "grocery");
   return (
@@ -1391,7 +1392,7 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk }: Step
       {integ && meta && (
         <section className="card">
           <h2>{meta.name}</h2>
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} />
+          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} />
         </section>
       )}
     </div>
@@ -1417,7 +1418,7 @@ function DecimalField({ label, value, help, onChange }: { label: string; value: 
   );
 }
 
-export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode }: StepProps) {
+export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, postcode, saveNow }: StepProps) {
   const [integ, put] = useIntegration(cfg, set, "price");
   const meta = integ && resp.providers.find((p) => p.id === integ.provider && p.category === "price");
   const e = cfg.electricity;
@@ -1438,7 +1439,7 @@ export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, pos
       {integ && meta && (
         <section className="card">
           <h2>{meta.name}</h2>
-          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} />
+          <ProviderForm meta={meta} integ={integ} onChange={put} secrets={secrets} setSecrets={setSecrets} secretsSet={resp.secretsSet} saveNow={saveNow} />
         </section>
       )}
       {integ && (

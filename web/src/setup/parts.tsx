@@ -372,6 +372,7 @@ export function ProviderForm({
   setSecrets,
   secretsSet,
   extra,
+  saveNow,
 }: {
   meta: ProviderMeta;
   integ: Integration;
@@ -380,7 +381,10 @@ export function ProviderForm({
   setSecrets: (s: SecretDraft) => void;
   secretsSet: string[];
   extra?: (result: TestResult | null) => React.ReactNode;
+  /** Saves the settings: a successful test saves by itself, and "Spara" next to Testa does it by hand. */
+  saveNow?: () => Promise<void>;
 }) {
+  const [saved, setSaved] = useState(false);
   const [result, setResult] = useState<TestResult | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -396,6 +400,11 @@ export function ProviderForm({
     try {
       const r = await api.testProvider(integ, typed);
       setResult(r);
+      // A test that went well saves the settings at once (not while it still asks which building).
+      if (r.ok && !r.choices && saveNow) {
+        await saveNow();
+        setSaved(true);
+      }
       if (r.choices) {
         setChoices((c) => ({ ...c, [r.choices!.field]: r.choices!.options }));
         if (r.choices.options[0]) onChange({ ...integ, settings: { ...integ.settings, [r.choices.field]: r.choices.options[0].value } });
@@ -443,6 +452,24 @@ export function ProviderForm({
         <button className="btn" onClick={test} disabled={busy}>
           {busy ? "Testar…" : "Testa"}
         </button>
+        {saveNow && (
+          <button
+            className="btn"
+            disabled={busy}
+            onClick={async () => {
+              setError("");
+              try {
+                await saveNow();
+                setSaved(true);
+              } catch (e) {
+                setError((e as Error).message);
+              }
+            }}
+          >
+            Spara
+          </button>
+        )}
+        {saved && <span className="badge stable">Sparat ✓</span>}
         {meta.status !== "stable" && <span className={`badge ${meta.status}`}>{meta.status === "beta" ? "Beta" : "Experimentell"}</span>}
       </div>
       <Result result={result} error={error} />

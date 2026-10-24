@@ -104,7 +104,7 @@ export async function cityGrossCart(token: string, store: string, remembered: st
       if (e instanceof CityGrossAuthExpired) throw e;
     }
   }
-  if (!store) throw new Error("City Gross: ange butiksnummer i inställningarna (syns i butikens adress på citygross.se/butiker).");
+  if (!store) throw new Error("City Gross: ingen butik hittades – skriv ortens namn under Butik i inställningarna.");
   const c = await api<Cart>(token, "/carts", { method: "POST", body: JSON.stringify({ storeNumber: Number(store) || store }) });
   if (!c?.id) throw new Error("City Gross skapade ingen varukorg.");
   return c;
@@ -126,4 +126,33 @@ export function cityGrossSummary(cart: Cart): { items: number | null; total: str
   const items = cart.items?.reduce((s, i) => s + (num(i.quantity) ?? 1), 0) ?? null;
   const total = num(cart.totalPrice) ?? num(cart.total);
   return { items, total: total !== undefined ? `${total.toFixed(2).replace(".", ",")} kr` : null };
+}
+
+const stores = new Map<string, { site: number; name: string } | null>();
+
+/**
+ * A store from what a person writes: a number is used as is, a town is looked up on citygross.se
+ * (the store pages) and gives the store's site number. Null when there is no such store.
+ */
+export async function cityGrossStore(input: string): Promise<{ site: number; name: string } | null> {
+  const q = input.trim();
+  if (!q) return null;
+  if (/^\d+$/.test(q)) return { site: Number(q), name: `butik ${q}` };
+  const key = q.toLowerCase();
+  if (stores.has(key)) return stores.get(key)!;
+  let found: { site: number; name: string } | null = null;
+  try {
+    const res = await fetchWithTimeout(`${BASE}/api/v1/Loop54/search?${new URLSearchParams({ SearchQuery: q, take: "1" })}`, { headers: { accept: "application/json", "user-agent": UA }, timeoutMs: 15_000 });
+    const data = (await res.json()) as { searchResults?: { stores?: { id: number; name: string; pagetype?: string }[] } };
+    const hit = data.searchResults?.stores?.find((s) => s.pagetype === "StorePage" && s.name.toLowerCase().includes(key)) ?? data.searchResults?.stores?.find((s) => s.pagetype === "StorePage");
+    if (hit) {
+      const page = await fetchWithTimeout(`${BASE}/api/v1/pagedata/${hit.id}`, { headers: { accept: "application/json", "user-agent": UA }, timeoutMs: 15_000 });
+      const pd = (await page.json()) as { data?: { siteId?: number; storeName?: string } };
+      if (typeof pd.data?.siteId === "number") found = { site: pd.data.siteId, name: pd.data.storeName ?? hit.name };
+    }
+  } catch {
+    found = null;
+  }
+  if (found) stores.set(key, found);
+  return found;
 }

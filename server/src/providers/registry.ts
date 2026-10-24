@@ -1,4 +1,4 @@
-import { getSecret, setSecret } from "../store.js";
+import { getSecret, loadConfig, setSecret } from "../store.js";
 import type { Integration, IntegrationCategory, ProviderMeta, SettingValue } from "../types.js";
 import { citygross, hemkop, ica, willys } from "./grocery.js";
 import { haPrice, spotPrice } from "./price.js";
@@ -36,6 +36,8 @@ export const secretKey = (integrationId: string, field: string) => `int.${integr
  */
 export function makeCtx(integration: Integration, overrides: Record<string, string> = {}): ProviderCtx {
   const settings: Record<string, SettingValue> = { ...integration.settings };
+  // Providers that need a place (a store near you) fall back to where the household lives.
+  if (!settings.__place) settings.__place = loadConfig().household.place ?? "";
   return {
     integration,
     settings,

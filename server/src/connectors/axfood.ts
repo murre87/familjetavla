@@ -87,7 +87,15 @@ export async function axfoodLogin(site: AxfoodSite, username: string, password: 
     }
     const user = page.locator('input[name="j_username"], input[type="text"]').first();
     const pass = page.locator('input[name="j_password"], input[type="password"]').first();
-    await pass.waitFor({ timeout: 10_000 });
+    try {
+      await pass.waitFor({ timeout: 10_000 });
+    } catch {
+      throw new Error(
+        site.label === "Hemköp"
+          ? "Hemköp har bytt inloggning (ny webbplats med BankID/lösenord i en ruta) – kopplingen behöver byggas om och fungerar inte just nu. Använd Willys, ICA eller City Gross."
+          : `${site.label}: hittade inget inloggningsformulär – webbplatsen kan ha ändrats.`,
+      );
+    }
     await user.pressSequentially(username, { delay: 30 });
     await pass.pressSequentially(password, { delay: 30 });
 

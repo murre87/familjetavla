@@ -251,3 +251,110 @@ export async function icaAddRows(s: IcaSession, listId: string, lines: { name: s
   await api(s, `${LISTS}/${encodeURIComponent(listId)}/sync`, { method: "POST", body: JSON.stringify({ createdRows }) });
   return createdRows.length;
 }
+
+// ---------- What the ICA app shows besides the list: offers, recipes and the list itself ----------
+
+export interface IcaOffer {
+  id: string;
+  name: string;
+  brand?: string;
+  size?: string;
+  price?: string;
+  image?: string;
+  validTo?: string;
+  store?: string;
+}
+
+export interface IcaRecipe {
+  id: number;
+  title: string;
+  time?: string;
+  portions?: number;
+  image?: string;
+  url: string;
+}
+
+export interface IcaRow {
+  id: string;
+  name: string;
+  done: boolean;
+}
+
+type Mech = { type?: string; unitSign?: string; value1?: string; value2?: string; value3?: string; value4?: string };
+
+/** "2 för 30 kr"-style text from the offer's mechanics (the app builds the same from these values). */
+export function offerPrice(m: Mech | null | undefined): string | undefined {
+  if (!m) return undefined;
+  if (m.type && m.type !== "Standard") return m.type;
+  const part = (v?: string) => {
+    const t = (v ?? "").trim();
+    return /^\d+$/.test(t) && m.unitSign ? `${t}${m.unitSign}` : t;
+  };
+  const text = [m.value1, m.value2, m.value3, m.value4].map(part).filter(Boolean).join(" ");
+  return text || undefined;
+}
+
+const asArray = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? (v as Record<string, unknown>[]) : []);
+const str = (v: unknown): string | undefined => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+
+/** The offers of the favourite stores in the ICA app (the first store only, to keep it short). */
+export async function icaOffers(s: IcaSession, limit = 24): Promise<{ store?: string; offers: IcaOffer[] }> {
+  const fav = await api<{ favoriteStores?: (number | string)[] }>(s, "mobile/storeservice/v1/favorites");
+  const storeId = fav?.favoriteStores?.[0];
+  if (storeId === undefined) return { offers: [] };
+  const [store, data] = await Promise.all([
+    api<{ marketingName?: string }>(s, `mobile/storeservice/v1/stores/${storeId}`).catch(() => null),
+    api<{ offers?: unknown }>(s, `mobile/offerservice/v1/offersdiscounts/${storeId}`),
+  ]);
+  const offers: IcaOffer[] = [];
+  for (const o of asArray(data?.offers)) {
+    const name = str(o.name);
+    const id = str(o.id) ?? name;
+    if (!name || !id || o.isUsed === true) continue;
+    offers.push({
+      id,
+      name,
+      brand: str(o.brand),
+      size: str(o.packageInformation),
+      price: offerPrice(o.parsedMechanics as Mech | undefined),
+      image: str(o.listImageUrl) ?? str(o.pictureUrl),
+      validTo: str(o.validTo),
+    });
+    if (offers.length >= limit) break;
+  }
+  return { store: str(store?.marketingName), offers };
+}
+
+export async function icaRecipes(s: IcaSession, n = 6): Promise<IcaRecipe[]> {
+  const data = await api<unknown>(s, `mobile/recipeservice/v1/recipes/random?numberofrecipes=${n}`);
+  return asArray(Array.isArray(data) ? data : (data as Record<string, unknown>)?.recipes)
+    .map((r) => {
+      const id = Number(r.Id ?? r.id);
+      const imageId = r.ImageId ?? r.imageId;
+      return {
+        id,
+        title: str(r.Title ?? r.title) ?? "",
+        time: str(r.CookingTime ?? r.cookingTime),
+        portions: typeof (r.Portions ?? r.portions) === "number" ? (r.Portions ?? r.portions) as number : undefined,
+        image: imageId ? `https://assets.icanet.se/e_sharpen:80,q_auto,dpr_1.0,w_480/imagevaultfiles/id_${imageId}/cf_259/recept.jpg` : undefined,
+        url: `https://www.ica.se/recept/-${id}/`,
+      };
+    })
+    .filter((r) => r.title && Number.isFinite(r.id));
+}
+
+export async function icaRows(s: IcaSession, listId: string): Promise<IcaRow[]> {
+  const list = await api<{ rows?: unknown }>(s, `${LISTS}/${encodeURIComponent(listId)}`);
+  return asArray(list?.rows)
+    .map((r) => ({ id: String(r.offlineId ?? r.id ?? ""), name: str(r.productName) ?? "", done: r.isStrikedOver === true }))
+    .filter((r) => r.id && r.name);
+}
+
+/** Strike a row over (or back) in the ICA list. */
+export async function icaStrike(s: IcaSession, listId: string, row: { id: string; name: string }, done: boolean): Promise<void> {
+  const now = new Date().toISOString().replace(/\.\d+Z$/, "Z");
+  await api(s, `${LISTS}/${encodeURIComponent(listId)}/sync`, {
+    method: "POST",
+    body: JSON.stringify({ changedRows: [{ offlineId: row.id, productName: row.name, isStrikedOver: done, latestChange: now }] }),
+  });
+}
