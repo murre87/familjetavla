@@ -129,7 +129,12 @@ function Part({ store, part, actions }: { store: StoreFood; part: FoodPart; acti
                   void actions.run(`${store.name}-listan`, () => api.foodIcaStrike(r.id, r.name, done));
                 }}
               />
-              <span>{r.name}</span>
+              <span className="grow">{r.name}</span>
+              {!r.done && data.list?.webSearch && (
+                <a className="sent-chip" href={data.list?.webSearch?.replace("{q}", encodeURIComponent(r.name))} target="_blank" rel="noreferrer" aria-label={`Sök ${r.name} i webbutiken`}>
+                  Sök i butiken ↗
+                </a>
+              )}
             </label>
           ))}
         </div>

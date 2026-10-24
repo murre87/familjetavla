@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDecipheriv, pbkdf2Sync } from "node:crypto";
-import { AXFOOD_SITES, axfoodCommon, axfoodEncrypt, axfoodLoginHttp, axfoodOffers } from "./axfood.js";
+import { AXFOOD_SITES, axfoodCommon, axfoodEncrypt, axfoodFullPersonalNumber, axfoodLoginHttp, axfoodOffers } from "./axfood.js";
 import { groceryIntegration, groceryIntegrations } from "../sources.js";
 import type { Config } from "../types.js";
 
@@ -55,6 +55,14 @@ describe("Axfood login without a browser", () => {
     const d = createDecipheriv("aes-128-cbc", pbkdf2Sync(key, Buffer.from(salt!, "hex"), 1000, 16, "sha1"), Buffer.from(iv!, "hex"));
     expect(Buffer.concat([d.update(Buffer.from(data!, "base64")), d.final()]).toString("utf8")).toBe("lösen ord 123");
     expect(key).toMatch(/^\d{16}$/);
+  });
+
+  it("gives a ten-digit personal number its century, leaves other numbers alone", () => {
+    const now = new Date(2026, 9, 24);
+    expect(axfoodFullPersonalNumber("8708302479", now)).toBe("198708302479");
+    expect(axfoodFullPersonalNumber("1501011234", now)).toBe("201501011234");
+    expect(axfoodFullPersonalNumber("198708302479", now)).toBe("198708302479");
+    expect(axfoodFullPersonalNumber("9752299038061650", now)).toBe("9752299038061650");
   });
 
   it("posts the encrypted fields and reads login_successful", async () => {

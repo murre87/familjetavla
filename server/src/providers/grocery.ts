@@ -146,13 +146,14 @@ export const ica: GroceryProvider = {
     id: "ica",
     category: "grocery",
     name: "ICA",
-    description: "Lägg inköpslistan i en inköpslista i ICA-appen (och på ica.se) – du handlar sedan med appen i butiken.",
+    description: "Lägg inköpslistan i en lista i ICA-appen (ICA:s webbutiks varukorg kan inte fyllas automatiskt). Du handlar sedan med appen i butiken.",
     status: "experimental",
     storePicker: { field: "store", needsLogin: true },
     fields: [
       { key: "username", label: "Personnummer", type: "text", placeholder: "ÅÅÅÅMMDDXXXX", help: "12 siffror." },
       { key: "password", label: "PIN-kod i ICA-appen", type: "password", secret: true, help: "Den kod du har i ICA-appen – inte BankID." },
       { key: "store", label: "Butik för erbjudanden", type: "text", optional: true, help: "Välj bland butikerna du har som favoriter i ICA-appen. Tomt = din första favorit." },
+      { key: "webStore", label: "ICA Handla: butiksnummer (valfritt)", type: "text", optional: true, placeholder: "t.ex. 1004015", help: "Webbutikens varukorg kan inte fyllas automatiskt (ICA har botskydd och BankID). Med butiksnumret får varorna en länk som öppnar sökningen i just din butik. Numret står i adressen på handlaprivatkund.ica.se/stores/…" },
       { key: "list", label: "Namn på listan i ICA-appen", type: "text", optional: true, default: ICA_LIST, help: "Skapas om den inte finns." },
       showField(SHOW.list, "Visa listan i ICA-appen under Mat"),
       showField(SHOW.common, "Visa mina vanligaste varor under Mat"),
@@ -174,7 +175,10 @@ export const ica: GroceryProvider = {
       const title = ctx.str("list") || ICA_LIST;
       const key = (n: string) => `food:ica:${n}:${ctx.integration.id}:${n === "offers" ? ctx.str("store") : ""}`;
       try {
-        if (part === "list") return { list: { name: title, rows: await icaRun(ctx, async (s) => icaRows(s, await icaListId(s, title))) } };
+        if (part === "list") {
+          const web = ctx.str("webStore").replace(/\D/g, "");
+          return { list: { name: title, rows: await icaRun(ctx, async (s) => icaRows(s, await icaListId(s, title))), webSearch: web ? `https://handlaprivatkund.ica.se/stores/${web}/search?q={q}` : "https://handla.ica.se/" } };
+        }
         if (part === "common") return { common: await cached(key("common"), 30 * 60_000, () => icaRun(ctx, (s) => icaCommon(s, 24))) };
         if (part === "offers") {
           const o = await cached(key("offers"), 30 * 60_000, () => icaRun(ctx, (s) => icaOffers(s, 24, ctx.str("store"))));

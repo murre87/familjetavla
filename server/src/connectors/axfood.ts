@@ -295,11 +295,20 @@ export function axfoodEncrypt(plain: string, key = `${String(randomInt(1e8)).pad
   return { key, encrypted: Buffer.from(inner).toString("base64") };
 }
 
+/** A ten-digit personal number gets its century: born later than this year's two digits means 19xx. */
+export function axfoodFullPersonalNumber(u: string, now = new Date()): string {
+  if (!/^\d{10}$/.test(u)) return u;
+  const yy = Number(u.slice(0, 2));
+  return `${yy > now.getFullYear() % 100 ? 19 : 20}${u}`;
+}
+
 /** Sign in with a plain request: POST /login with the encrypted fields. Returns the cookies, or throws with the shop's own answer. */
 export async function axfoodLoginHttp(site: AxfoodSite, username: string, password: string): Promise<string> {
   if (!AXFOOD_USERNAME.test(username)) {
     throw new Error(`${site.label}: användarnamnet ska vara personnummer (10 eller 12 siffror) eller kundkortsnummer (16 siffror), inte e-post.`);
   }
+  // The shops' own login call wants twelve digits (the form adds the century itself).
+  username = axfoodFullPersonalNumber(username);
   const jar = new Map<string, string>();
   const take = (res: Response) => {
     for (const sc of res.headers.getSetCookie?.() ?? []) {

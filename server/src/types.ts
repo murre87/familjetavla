@@ -804,6 +804,6 @@ export interface StoreFoodData {
   /** "Mina vanligaste varor". */
   common?: { name: string }[];
   recipes?: { id: number; title: string; time?: string; ingredients?: number; image?: string; url: string }[];
-  list?: { name: string; rows: { id: string; name: string; done: boolean }[] };
+  list?: { name: string; rows: { id: string; name: string; done: boolean }[]; /** Webbutikens sök-adress med {q} där varan ska stå (när man valt butik). */ webSearch?: string };
   errors?: Record<string, string>;
 }
