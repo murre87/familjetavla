@@ -12,7 +12,8 @@ import { fetchPrices } from "../server/dist/connectors/elpris.js";
 import { forecast } from "../server/dist/connectors/weather.js";
 import { lookupPostcode } from "../server/dist/connectors/geo.js";
 import { detectGroups, fetchIcs } from "../server/dist/connectors/ics.js";
-import { AXFOOD_SITES, axfoodSearch } from "../server/dist/connectors/axfood.js";
+import { AXFOOD_SITES, axfoodLoginHttp, axfoodOffers, axfoodSearch } from "../server/dist/connectors/axfood.js";
+import { cityGrossSearch, cityGrossStore } from "../server/dist/connectors/citygross.js";
 import { vklassLogin, vklassWelcome } from "../server/dist/connectors/vklass.js";
 import { skolmaten, vklass } from "../server/dist/providers/school.js";
 import { findStations, swedishStations } from "../server/dist/music.js";
@@ -216,6 +217,32 @@ for (const site of Object.values(AXFOOD_SITES)) {
     return `"mjölk" → ${hits.length} varor, t.ex. ${hits[0].name}`;
   });
 }
+
+// ---- Store offers, the store lists and the login call (all open: they need no account) ----
+for (const site of Object.values(AXFOOD_SITES)) {
+  await check(`${site.label} veckans erbjudanden (butik på orten)`, async () => {
+    const r = await axfoodOffers(site, "Jönköping", 6);
+    if (!r.offers.length) throw new Error(`inga erbjudanden för någon butik i Jönköping (${r.store})`);
+    if (!r.offers.every((o) => o.id && o.name)) throw new Error("erbjudandena saknar kod eller namn – svaret har ändrat format");
+    return `${r.store}: ${r.offers.length} erbjudanden, t.ex. ${r.offers[0].name} ${r.offers[0].price ?? ""}`;
+  });
+  await check(`${site.label} inloggningsanropet (fel lösenord ska avvisas)`, async () => {
+    try {
+      await axfoodLoginHttp(site, "199001011234", "fel-losenord-kontroll");
+    } catch (e) {
+      if (/avvisade inloggningen/.test(e.message)) return "avvisar fel lösenord som väntat";
+      throw e;
+    }
+    throw new Error("loggade in med ett påhittat lösenord?!");
+  });
+}
+await check("City Gross sökning och butiksuppslag", async () => {
+  const hits = await cityGrossSearch("mjölk", "");
+  if (!hits.length || !hits.every((h) => h.code && h.name)) throw new Error("sökningen gav inga varor, eller varorna saknar kod/namn");
+  const st = await cityGrossStore("Jönköping");
+  if (!st?.no) throw new Error("hittade ingen butik för Jönköping (butiksnumret kommer från webbplatsens GraphQL)");
+  return `${hits.length} varor, butik ${st.name} (nr ${st.no})`;
+});
 
 // ---- Real sport calendars (secrets SPORTADMIN_ICS / LAGET_ICS); counts only ----
 for (const [name, key] of [["SportAdmin", "SPORTADMIN_ICS"], ["laget.se", "LAGET_ICS"]]) {

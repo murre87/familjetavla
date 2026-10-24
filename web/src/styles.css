@@ -1130,8 +1130,11 @@ a.btn {
     border-radius: 20px;
   }
   .event .title {
-    flex: 1 1 7em;
-    display: block;
+    /* Wide enough to read a long name ("Match: IF Hallby HK Blå – IK Sävehof 1 …"): the extras wrap to their own line instead of squeezing it. */
+    flex: 1 1 13em;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
   /* Extras that wrap go to the right on their own line. */
   .event > :not(.title):last-child {
@@ -4626,4 +4629,8 @@ marker.pf-buy path {
 }
 .fd-part[open] > summary {
   margin-bottom: 8px;
+}
+
+.fd-shops {
+  flex-wrap: wrap;
 }

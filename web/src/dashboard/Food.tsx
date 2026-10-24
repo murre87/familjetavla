@@ -29,9 +29,19 @@ const until = (iso?: string) => {
   return Number.isNaN(d.getTime()) ? "" : `till ${d.getDate()}/${d.getMonth() + 1}`;
 };
 
+const PICK_KEY = "familjetavla.mat.store";
+
+/** One shop at a time: a row of chips picks it, and only that shop's offers, usual items and so on are shown (and fetched). */
 function Stores({ actions }: { actions: Actions }) {
   const [stores, setStores] = useState<StoreFood[] | null>(null);
   const [error, setError] = useState("");
+  const [pick, setPick] = useState(() => {
+    try {
+      return localStorage.getItem(PICK_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
   useEffect(() => {
     api
       .foodStores()
@@ -40,19 +50,38 @@ function Stores({ actions }: { actions: Actions }) {
   }, []);
   if (error) return <p className="faint">Butikerna gick inte att hämta: {error}</p>;
   if (!stores) return null;
+  const shops = stores.filter((s) => s.parts.length > 0);
+  if (shops.length === 0) return null;
+  const s = shops.find((x) => x.id === pick) ?? shops[0]!;
   return (
-    <>
-      {stores
-        .filter((s) => s.parts.length > 0)
-        .map((s) => (
-          <section key={s.id} className="stack">
-            <h2 className="fd-h">{s.name}</h2>
-            {s.parts.map((part) => (
-              <Part key={part} store={s} part={part} actions={actions} />
-            ))}
-          </section>
-        ))}
-    </>
+    <section className="stack">
+      {shops.length > 1 && (
+        <div className="seg fd-shops" role="radiogroup" aria-label="Butik">
+          {shops.map((x) => (
+            <button
+              key={x.id}
+              role="radio"
+              aria-checked={x.id === s.id}
+              className={`seg-btn ${x.id === s.id ? "on" : ""}`}
+              onClick={() => {
+                setPick(x.id);
+                try {
+                  localStorage.setItem(PICK_KEY, x.id);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              {x.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {shops.length === 1 && <h2 className="fd-h">{s.name}</h2>}
+      {s.parts.map((part) => (
+        <Part key={`${s.id}-${part}`} store={s} part={part} actions={actions} />
+      ))}
+    </section>
   );
 }
 
