@@ -662,6 +662,21 @@ export interface Music {
     volume?: number;
     /** The stream playing now, to mark it in the Musik tab's list of all stations. */
     playingUrl?: string;
+    /** Låt, artist och album separat (när högtalaren säger det), omslag via /api/music/cover och hur långt låten har kommit. */
+    paused?: boolean;
+    /** Radio: texten som kanalen skickar med strömmen (artist – låt, "rullande texten"/RDS), om den skiljer sig från kanalens namn. */
+    radioText?: string;
+    track?: string;
+    artist?: string;
+    album?: string;
+    cover?: boolean;
+    position?: number;
+    duration?: number;
+    /** När `position` gällde (ISO), så att tavlan kan räkna fram var låten är nu. */
+    positionAt?: string;
+    canPause?: boolean;
+    canNext?: boolean;
+    canPrev?: boolean;
   }[];
   stations: { index: number; name: string; logo?: string; url: string }[];
   /** Home Assistant's Spotify integration: null when it is not installed (the tab then says how). */

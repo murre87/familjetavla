@@ -16,9 +16,12 @@ export function buildMusic(cfg: Config, states: Map<string, HaState>): Music | u
   return {
     speakers: speakers.map((s) => {
       const st = states.get(s.entityId);
-      const a = (st?.attributes ?? {}) as { media_content_id?: string; media_title?: string; media_artist?: string; app_name?: string; volume_level?: number };
+      const a = (st?.attributes ?? {}) as { media_content_id?: string; media_title?: string; media_artist?: string; media_album_name?: string; app_name?: string; volume_level?: number; entity_picture?: string; media_position?: number; media_duration?: number; media_position_updated_at?: string; supported_features?: number };
+      const feat = Number(a.supported_features ?? 0);
       const offline = !st || st.state === "unavailable" || st.state === "unknown";
       const playing = st?.state === "playing" || st?.state === "buffering";
+      const paused = st?.state === "paused";
+      const live = playing || paused; // låtinfo och omslag finns kvar när den pausats, så att man kan trycka Spela igen
       const station = playing ? stationIndex(stations, a.media_content_id) : -1;
       const title = playing ? (station >= 0 ? stations[station]!.name : [a.media_artist, a.media_title].filter(Boolean).join(" – ") || a.app_name) : undefined;
       return {
@@ -30,6 +33,23 @@ export function buildMusic(cfg: Config, states: Map<string, HaState>): Music | u
         station: station >= 0 ? station : undefined,
         volume: typeof a.volume_level === "number" ? Math.round(a.volume_level * 100) : undefined,
         playingUrl: playing && a.media_content_id && /^https?:\/\//.test(a.media_content_id) ? a.media_content_id : undefined,
+        track: live && station < 0 ? a.media_title || undefined : undefined,
+        artist: live && station < 0 ? a.media_artist || undefined : undefined,
+        album: live && station < 0 ? a.media_album_name || undefined : undefined,
+        cover: live && station < 0 && Boolean(a.entity_picture),
+        position: live && station < 0 && typeof a.media_position === "number" && typeof a.media_duration === "number" && a.media_duration > 0 ? a.media_position : undefined,
+        duration: live && station < 0 && typeof a.media_duration === "number" && a.media_duration > 0 ? a.media_duration : undefined,
+        positionAt: a.media_position_updated_at,
+        radioText: (() => {
+          if (!playing || station < 0) return undefined;
+          const t = [a.media_artist, a.media_title].filter(Boolean).join(" – ").trim();
+          const name = stations[station]!.name.toLowerCase();
+          return t && t.toLowerCase() !== name && !t.toLowerCase().includes(name) ? t : undefined;
+        })(),
+        paused,
+        canPause: live ? (feat & 1) === 1 : undefined,
+        canNext: live ? (feat & 32) === 32 : undefined,
+        canPrev: live ? (feat & 16) === 16 : undefined,
       };
     }),
     stations: stations.map((s, index) => ({ index, name: s.name, logo: s.logo, url: s.url })),

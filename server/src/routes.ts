@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { cached, invalidate } from "./cache.js";
+import { fetchWithTimeout } from "./http.js";
 import { lookupPostcode } from "./connectors/geo.js";
 import { detectGroups, fetchIcs, filterEvents } from "./connectors/ics.js";
 import { ha, haConnection } from "./connectors/ha.js";
@@ -794,6 +795,36 @@ export async function registerRoutes(app: FastifyInstance) {
       await ha.service(conn, "media_player", "media_stop", { entity_id: speaker });
     } catch {
       await ha.service(conn, "media_player", "media_pause", { entity_id: speaker });
+    }
+    invalidate("ha:states");
+    return { ok: true };
+  });
+
+  // Omslaget till det som spelas, via tavlans server (token når aldrig webbläsaren).
+  app.get("/api/music/cover/:entityId", async (req, reply) => {
+    const id = (req.params as { entityId: string }).entityId;
+    const conn = haConnection();
+    if (!speakerOf(id) || !conn) return fail(reply, new Error("Okänd högtalare"));
+    try {
+      const res = await fetchWithTimeout(`${conn.base}/media_player_proxy/${encodeURIComponent(id)}`, { timeoutMs: 8000, headers: { authorization: `Bearer ${conn.token}` } });
+      if (!res.ok) throw new Error(`Omslaget svarade ${res.status}`);
+      return reply.header("cache-control", "private, max-age=300").type(res.headers.get("content-type") ?? "image/jpeg").send(Buffer.from(await res.arrayBuffer()));
+    } catch (e) {
+      return fail(reply, e, 404);
+    }
+  });
+
+  // Spela/paus, nästa och föregående på en högtalare.
+  app.post("/api/music/transport", async (req, reply) => {
+    const body = z.object({ speaker: entity, action: z.enum(["play_pause", "next", "previous"]) }).safeParse(req.body);
+    if (!body.success || !speakerOf(body.data.speaker)) return fail(reply, new Error("Okänd högtalare"));
+    const conn = haConnection();
+    if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
+    const svc = { play_pause: "media_play_pause", next: "media_next_track", previous: "media_previous_track" }[body.data.action];
+    try {
+      await ha.service(conn, "media_player", svc, { entity_id: body.data.speaker });
+    } catch (e) {
+      return fail(reply, e);
     }
     invalidate("ha:states");
     return { ok: true };

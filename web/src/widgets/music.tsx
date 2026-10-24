@@ -120,10 +120,104 @@ function VolumeSlider({ value, onCommit, label }: { value: number; onCommit: (v:
   );
 }
 
-function NowPlaying({ sp, actions, showName }: { sp: Speaker; actions: Actions; showName: boolean }) {
+/** Omslag (eller kanalens logga). Faller tillbaka på en färgad ruta med not om bilden saknas. */
+function NowCover({ sp, logo }: { sp: Speaker; logo?: string }) {
+  const [bad, setBad] = useState(false);
+  const key = `${sp.track ?? ""}|${sp.artist ?? ""}|${sp.album ?? ""}`;
+  useEffect(() => setBad(false), [key, logo]);
+  const src = logo ?? (sp.cover ? `api/music/cover/${encodeURIComponent(sp.entityId)}?k=${encodeURIComponent(key)}` : undefined);
+  return (
+    <div className="now-cover" aria-hidden="true">
+      {src && !bad ? <img src={src} alt="" onError={() => setBad(true)} /> : <Icon name="music" size={30} />}
+    </div>
+  );
+}
+
+/** Förloppsfält som räknar fram var låten är nu mellan svaren från Home Assistant. */
+function NowProgress({ sp }: { sp: Speaker }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (sp.duration === undefined || sp.paused) return;
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [sp.duration, sp.paused]);
+  if (sp.duration === undefined || sp.position === undefined) return null;
+  const since = sp.paused || !sp.positionAt ? 0 : Math.max(0, (Date.now() - Date.parse(sp.positionAt)) / 1000);
+  const pos = Math.min(sp.duration, sp.position + since);
+  const mmss = (n: number) => `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, "0")}`;
+  return (
+    <div className="now-prog" role="progressbar" aria-valuemin={0} aria-valuemax={Math.round(sp.duration)} aria-valuenow={Math.round(pos)}>
+      <span>{mmss(pos)}</span>
+      <i>
+        <b style={{ width: `${(pos / sp.duration) * 100}%` }} />
+      </i>
+      <span>{mmss(sp.duration)}</span>
+    </div>
+  );
+}
+
+/** En rad text som rullar fram och tillbaka när den inte får plats (kanalens "rullande text"). */
+function Ticker({ text, className }: { text: string; className?: string }) {
+  const box = useRef<HTMLSpanElement>(null);
+  const inner = useRef<HTMLSpanElement>(null);
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    const b = box.current;
+    const i = inner.current;
+    if (b && i) setShift(Math.min(0, b.clientWidth - i.scrollWidth));
+  }, [text]);
+  return (
+    <span ref={box} className={`ticker ${className ?? ""}`} title={text}>
+      <span ref={inner} className={shift < 0 ? "moving" : ""} style={{ ["--shift" as string]: `${shift}px` }}>
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function NowPlaying({ sp, actions, showName, logo }: { sp: Speaker; actions: Actions; showName: boolean; logo?: string }) {
   const c = useControls(sp, actions);
   const vol = sp.volume ?? null;
   const canDrag = sp.playing && !sp.offline && vol !== null;
+  const rich = !sp.offline && (Boolean(sp.track) || (sp.playing && (Boolean(logo) || Boolean(sp.radioText))));
+  const transport = (action: "play_pause" | "next" | "previous", label: string) => actions.run(label, () => api.musicTransport(sp.entityId, action), { done: label, check: () => true });
+  if (rich) {
+    return (
+      <div className={`music-now now-rich ${canDrag ? "can-drag" : ""}`}>
+        <NowCover sp={sp} logo={logo} />
+        <div className="now-main">
+          <b className="now-title">{sp.track ?? sp.title}</b>
+          <Ticker className="now-sub" text={sp.radioText ?? ([sp.artist, sp.album].filter(Boolean).join(" · ") || (showName ? "" : sp.name) || sp.name)} />
+          <NowProgress sp={sp} />
+        </div>
+        <div className="now-ctl">
+          {sp.canPrev && (
+            <button className="now-btn" aria-label="Föregående" onClick={() => void transport("previous", "Föregående")}>
+              <Icon name="prev" size={22} />
+            </button>
+          )}
+          {(sp.canPause || sp.paused) && (
+            <button className="now-btn big" aria-label={sp.paused ? "Spela" : "Pausa"} onClick={() => void transport("play_pause", sp.paused ? "Spela" : "Paus")}>
+              <Icon name={sp.paused ? "play" : "pause"} size={26} />
+            </button>
+          )}
+          {sp.canNext && (
+            <button className="now-btn" aria-label="Nästa" onClick={() => void transport("next", "Nästa")}>
+              <Icon name="next" size={22} />
+            </button>
+          )}
+          <button className="now-btn" aria-label="Stopp" onClick={() => void c.stop()}>
+            <Icon name="stop" size={20} />
+          </button>
+        </div>
+        {!sp.offline && vol !== null && (
+          <div className="now-vol">
+            <VolumeSlider value={vol} label={`Volym i ${sp.name}`} onCommit={(v) => void c.volume(v)} />
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <div className={`music-now ${canDrag ? "can-drag" : ""}`}>
       <Icon name="speaker" size={20} />
@@ -250,7 +344,7 @@ function MusicCard({ m, actions }: { m: MusicData; actions: Actions }) {
       <div className="card-head">
         <h2>Musik</h2>
       </div>
-      <NowPlaying sp={sp} actions={actions} showName={false} />
+      <NowPlaying sp={sp} actions={actions} showName={false} logo={sp.station !== undefined ? m.stations[sp.station]?.logo : undefined} />
       {m.stations.length > 0 ? (
         <div className="grid-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 160px), 1fr))" }}>
           {m.stations.map((s) => (
@@ -328,7 +422,7 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
             ))}
           </div>
         )}
-        <NowPlaying sp={sp} actions={actions} showName={m.speakers.length < 2} />
+        <NowPlaying sp={sp} actions={actions} showName={m.speakers.length < 2} logo={sp.station !== undefined ? m.stations[sp.station]?.logo : undefined} />
         {m.stations.length > 0 && (
           <div className="music-favs">
             {m.stations.map((s) => (
