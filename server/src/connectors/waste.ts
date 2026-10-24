@@ -1,5 +1,5 @@
 import { fetchWithTimeout } from "../http.js";
-import { isoWeek, startOfDay } from "../time.js";
+import { addDays, isoWeek, startOfDay } from "../time.js";
 
 /**
  * Swedish waste pickup schedules.
@@ -239,7 +239,7 @@ export function parseSthlmSchedule(data: unknown, now = new Date(), weeksAhead =
       ? Object.entries(data as Record<string, unknown>).map(([group, v]) => ({ group, ...((Array.isArray(v) ? v[0] : v) as object) }))
       : null;
   if (!list) throw new Error("Stockholm Vatten och Avfall svarade i ett okänt format.");
-  const until = new Date(today.getTime() + weeksAhead * 7 * 86_400_000);
+  const until = addDays(today, weeksAhead * 7);
   const out: Pickup[] = [];
   const seen = new Set<string>();
   for (const e of list as Record<string, unknown>[]) {

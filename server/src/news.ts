@@ -1,5 +1,6 @@
 import type { SchoolData, SourcedEvent } from "./sources.js";
 import { loadLocal, saveLocal, type OwnEvent } from "./store.js";
+import { addDays } from "./time.js";
 import type { Person, Reminder, SchoolNews } from "./types.js";
 
 const SHORT_MONTHS = ["jan", "feb", "mars", "apr", "maj", "juni", "juli", "aug", "sep", "okt", "nov", "dec"];
@@ -90,7 +91,7 @@ export function datesIn(text: string, from: Date): Date[] {
  */
 export function newsTripReminders(news: SchoolNews[], now: Date): Reminder[] {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(today.getTime() + 86_400_000);
+  const tomorrow = addDays(today, 1); // not +24 h: the day the clock goes back is 25 hours long
   const out: Reminder[] = [];
   const recent = now.getTime() - 21 * 86_400_000;
   for (const n of news) {

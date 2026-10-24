@@ -28,4 +28,11 @@ describe("utflykt och matsäck från skolans nyheter", () => {
     expect(newsTripReminders([n], new Date(2026, 9, 22, 7)).map((r) => r.title)).toEqual(["Ella · friluftsdag idag – ta med matsäck, vattenflaska"]);
     expect(newsTripReminders([n], new Date(2026, 9, 20, 9))).toEqual([]);
   });
+
+  it("finds tomorrow on the day the clock goes back (a 25-hour day)", async () => {
+    const { newsTripReminders } = await import("./news.js");
+    const n = { id: "2", who: "Ella", title: "Friluftsdag", text: "På måndag är det friluftsdag. Ta med matsäck.", published: "2026-10-23T08:00:00", files: [], seen: true };
+    // Sunday 25 October 2026 is the day Sweden goes back to winter time: midnight + 24 h is still the same date.
+    expect(newsTripReminders([n], new Date(2026, 9, 25, 18)).map((r) => r.title)).toEqual(["Ella · friluftsdag imorgon – ta med matsäck"]);
+  });
 });

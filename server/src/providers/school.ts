@@ -4,7 +4,7 @@ import { getJson } from "../http.js";
 import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connectors/schoolsoft.js";
 import { skola24Classes, skola24Host, skola24Lessons, skola24Units } from "../connectors/skola24.js";
 import { isGymLesson, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
-import { hhmm, shortDate, shortWeekday } from "../time.js";
+import { addDays, hhmm, shortDate, shortWeekday } from "../time.js";
 import type { ProviderCtx, SchoolEvent, SchoolProvider } from "./types.js";
 
 const preview = (e: { start: Date; allDay: boolean; title: string }) =>
@@ -158,7 +158,7 @@ export const skolmaten: SchoolProvider = {
     type Day = { date: string; Meals?: { name: string }[] };
     const weeks: Day[] = [];
     for (const offset of [0, 7]) {
-      const d = new Date(from.getTime() + offset * 86_400_000);
+      const d = addDays(from, offset);
       const url = `https://skolmaten.se/api/4/menu/school/${encodeURIComponent(slug)}?year=${isoYear(d)}&week=${isoWeekNo(d)}`;
       const data = await getJson<{ WeekState?: { Days?: Day[] } }>(url, { headers });
       weeks.push(...(data.WeekState?.Days ?? []));
