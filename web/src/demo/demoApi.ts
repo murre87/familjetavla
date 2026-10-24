@@ -461,7 +461,9 @@ const providerTest = (i: Integration): TestResult => {
       return { ok: true, preview: ["Tis 20 okt · Matavfall", "Tis 3 nov · Matavfall"] };
     case "willys":
     case "hemkop":
-      return { ok: true, message: `Inloggad hos ${i.provider === "willys" ? "Willys" : "Hemköp"} (demo).` };
+    case "ica":
+    case "citygross":
+      return { ok: true, message: `Inloggad hos ${{ willys: "Willys", hemkop: "Hemköp", ica: "ICA", citygross: "City Gross" }[i.provider]} (demo).` };
     case "spot":
       return { ok: true, preview: [`24 timmar · lägst 0,10 kr · högst 1,35 kr (spot) · ${i.settings.area ?? "SE3"}`] };
     default:

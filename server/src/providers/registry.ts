@@ -1,6 +1,6 @@
 import { getSecret, setSecret } from "../store.js";
 import type { Integration, IntegrationCategory, ProviderMeta, SettingValue } from "../types.js";
-import { hemkop, willys } from "./grocery.js";
+import { citygross, hemkop, ica, willys } from "./grocery.js";
 import { haPrice, spotPrice } from "./price.js";
 import { schoolIcs, schoolsoft, skolmatHa, skolmaten, vklass } from "./school.js";
 import type { AnyProvider, GroceryProvider, PriceProvider, ProviderCtx, SchoolProvider, WasteProvider } from "./types.js";
@@ -12,7 +12,7 @@ import { wasteEdp, wasteHa, wasteIcs, wasteManual, wasteSrv, wasteStockholm } fr
  */
 export const PROVIDERS = {
   school: [schoolIcs, skolmaten, skolmatHa, vklass, schoolsoft] as SchoolProvider[],
-  grocery: [willys, hemkop] as GroceryProvider[],
+  grocery: [willys, ica, citygross, hemkop] as GroceryProvider[],
   waste: [wasteEdp, wasteSrv, wasteStockholm, wasteManual, wasteIcs, wasteHa] as WasteProvider[],
   price: [spotPrice, haPrice] as PriceProvider[],
 } satisfies Record<IntegrationCategory, AnyProvider[]>;

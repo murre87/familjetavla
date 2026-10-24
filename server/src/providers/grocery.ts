@@ -1,4 +1,6 @@
 import { AXFOOD_SITES, AuthExpired, axfoodAddToCart, axfoodLogin, axfoodSearch } from "../connectors/axfood.js";
+import { CityGrossAuthExpired, cityGrossAdd, cityGrossCart, cityGrossLogin, cityGrossSearch, cityGrossSummary } from "../connectors/citygross.js";
+import { IcaAuthExpired, icaAddRows, icaFresh, icaListId, icaLogin, icaRefresh, icaSearch, type IcaSession } from "../connectors/ica.js";
 import type { GroceryProvider, ProviderCtx } from "./types.js";
 
 function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"): GroceryProvider {
@@ -53,3 +55,130 @@ function axfoodProvider(id: "willys" | "hemkop", status: "beta" | "experimental"
 
 export const willys = axfoodProvider("willys", "beta");
 export const hemkop = axfoodProvider("hemkop", "experimental");
+
+const ICA_LIST = "Familjetavlan";
+
+/** ICA has no web shop cart to fill: the list goes into one of the ICA app's own shopping lists. */
+export const ica: GroceryProvider = (() => {
+  // The preview searches every item at once: one sign-in/refresh at a time, the rest reuse it.
+  const pending = new Map<string, Promise<IcaSession>>();
+  function session(ctx: ProviderCtx, force = false): Promise<IcaSession> {
+    const key = `${ctx.integration.id}:${force}`;
+    let p = pending.get(key);
+    if (!p) {
+      p = obtain(ctx, force).finally(() => pending.delete(key));
+      pending.set(key, p);
+    }
+    return p;
+  }
+  async function obtain(ctx: ProviderCtx, force: boolean): Promise<IcaSession> {
+    let s: IcaSession | null = null;
+    const saved = ctx.secret("session");
+    if (saved && !force) {
+      try {
+        s = JSON.parse(saved) as IcaSession;
+      } catch {
+        s = null;
+      }
+      if (s && !icaFresh(s)) s = await icaRefresh(s);
+    }
+    if (!s) {
+      const id = ctx.str("username");
+      const pin = ctx.secret("password");
+      if (!id || !pin) throw new Error("ICA är inte inställt.");
+      s = await icaLogin(id, pin);
+    }
+    ctx.remember("session", JSON.stringify(s));
+    return s;
+  }
+  const once = async <T>(ctx: ProviderCtx, run: (s: IcaSession) => Promise<T>): Promise<T> => {
+    try {
+      return await run(await session(ctx));
+    } catch (e) {
+      if (e instanceof IcaAuthExpired) return run(await session(ctx, true));
+      throw e;
+    }
+  };
+  return {
+    meta: {
+      id: "ica",
+      category: "grocery",
+      name: "ICA",
+      description: "Lägg inköpslistan i en inköpslista i ICA-appen (och på ica.se) – du handlar sedan med appen i butiken.",
+      status: "experimental",
+      fields: [
+        { key: "username", label: "Personnummer", type: "text", placeholder: "ÅÅÅÅMMDDXXXX", help: "12 siffror." },
+        { key: "password", label: "PIN-kod i ICA-appen", type: "password", secret: true, help: "Den kod du har i ICA-appen – inte BankID." },
+        { key: "list", label: "Namn på listan i ICA-appen", type: "text", optional: true, default: ICA_LIST, help: "Skapas om den inte finns." },
+      ],
+      guide: [
+        "Varorna hamnar i en lista i ICA-appen som heter som du valt. Där får du dem sorterade efter butikens gång.",
+        "Inofficiell koppling som använder ICA-appens egna anrop – den kan sluta fungera när ICA ändrar något.",
+      ],
+    },
+    async test(ctx) {
+      await session(ctx, true);
+      return { ok: true, message: "Inloggad hos ICA." };
+    },
+    search: (ctx, query) => once(ctx, (s) => icaSearch(s, query)),
+    async addToCart(ctx, lines) {
+      const title = ctx.str("list") || ICA_LIST;
+      const n = await once(ctx, async (s) => icaAddRows(s, await icaListId(s, title), lines.map((l) => ({ name: l.code, qty: l.qty }))));
+      return { items: n, total: null };
+    },
+  };
+})();
+
+export const citygross: GroceryProvider = (() => {
+  async function token(ctx: ProviderCtx, force = false): Promise<string> {
+    const saved = ctx.secret("session");
+    if (saved && !force) {
+      const [t, exp] = saved.split("|");
+      if (t && Number(exp) - 60_000 > Date.now()) return t;
+    }
+    const email = ctx.str("username");
+    const password = ctx.secret("password");
+    if (!email || !password) throw new Error("City Gross är inte inställt.");
+    const t = await cityGrossLogin(email, password);
+    ctx.remember("session", `${t.token}|${t.expiresAt}`);
+    return t.token;
+  }
+  return {
+    meta: {
+      id: "citygross",
+      category: "grocery",
+      name: "City Gross",
+      description: "Skicka inköpslistan till varukorgen på citygross.se. Du väljer produkt första gången, sedan kommer den ihåg.",
+      status: "experimental",
+      fields: [
+        { key: "username", label: "E-postadress", type: "text", placeholder: "namn@exempel.se" },
+        { key: "password", label: "Lösenord", type: "password", secret: true, help: "Kontot behöver ett lösenord – BankID går inte att automatisera." },
+        { key: "store", label: "Butiksnummer", type: "text", optional: true, placeholder: "t.ex. 0141", help: "Priserna och varukorgen hör till en butik. Numret finns i butikens adress under citygross.se/butiker." },
+      ],
+      guide: [
+        "Varorna läggs i varukorgen – du väljer tid och betalar själv på citygross.se eller i appen.",
+        "Inofficiell koppling som följer webbplatsens egna anrop: kan sluta fungera om City Gross ändrar den.",
+      ],
+    },
+    async test(ctx) {
+      await token(ctx, true);
+      return { ok: true, message: "Inloggad hos City Gross." };
+    },
+    // Search is open; with a store number the prices are that store's.
+    search: async (ctx, query) => cityGrossSearch(query, ctx.str("store")),
+    async addToCart(ctx, lines) {
+      const run = async (force: boolean) => {
+        const t = await token(ctx, force);
+        const cart = await cityGrossCart(t, ctx.str("store"), ctx.secret("cart"));
+        if (cart.id) ctx.remember("cart", cart.id);
+        return cityGrossSummary(await cityGrossAdd(t, cart, lines));
+      };
+      try {
+        return await run(false);
+      } catch (e) {
+        if (e instanceof CityGrossAuthExpired) return run(true);
+        throw e;
+      }
+    },
+  };
+})();

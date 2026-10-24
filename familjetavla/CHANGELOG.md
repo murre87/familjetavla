@@ -2,6 +2,7 @@
 
 ## 0.14.0
 
+- **Fler butiker för inköpslistan:** **ICA** (listan läggs i en inköpslista i ICA-appen, med personnummer och PIN som i appen – tack till [ha-ica-todo](https://github.com/lazytarget/ha-ica-todo) för kartläggningen) och **City Gross** (sök med pris och bild per butik, och varukorgen på citygross.se). Willys och Hemköp fanns redan. Alla tre är inofficiella och märkta experimentella.
 - **Nu spelas:** stort omslag, förloppsrad och, för radio, rullande RDS-text med låt och artist.
 - **Temperaturer** med tydligare siffror och färg per rum.
 - **Grafer, Hushåll och Säkerhet i ny design:** mjukare linjer med rena axlar och chips för period, Husgeråd med ikon, status och förloppsrad per maskin, och Säkerhet med chips för öppna dörrar och fönster samt larmstatus. Större tryckytor och bättre läsbarhet.

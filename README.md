@@ -87,11 +87,13 @@ Det som inte finns i HA sköts av **leverantörsmoduler**:
 | Sopor | Eget schema | Kärl, en hämtdag, intervall, ev. vissa månader | stabil |
 | Sopor | ICS eller HA-kalender | t.ex. Waste Collection Schedule (~50 svenska renhållare) | stabil |
 | Mataffär | **Willys** | Inloggning via dold webbläsare, sedan varukorgen | beta |
+| Mataffär | **ICA** | Personnummer + PIN som i ICA-appen; listan läggs i en inköpslista i appen (ingen varukorg) | experimentell |
+| Mataffär | **City Gross** | E-post + lösenord; sök (öppen, per butik) och varukorg | experimentell |
 | Mataffär | Hemköp | Samma plattform som Willys | experimentell |
 | Elpris | Spotpris SE1–SE4 | elprisetjustnu.se + ditt påslag, nät, skatt, moms | stabil |
 | Elpris | HA-sensor | Nordpool, Tibber m.fl. | beta |
 
-> Vklass, SchoolSoft, Willys/Hemköp, EDP och SRV är **inofficiella** kopplingar och kan sluta fungera när sajterna ändras. BankID går inte att automatisera – kontona behöver ett lösenord.
+> Vklass, SchoolSoft, Willys/Hemköp/ICA/City Gross, EDP och SRV är **inofficiella** kopplingar och kan sluta fungera när sajterna ändras. BankID går inte att automatisera – kontona behöver ett lösenord.
 
 ## Installera
 
@@ -181,7 +183,7 @@ Har du ingen kod men en plattform eller pryl som saknas? [Berätta här](../../i
 
 ## Tack
 
-Kopplingarna bygger på kartläggning från andra öppna projekt: [willys-mcp](https://github.com/oscarthroedsson/willys-mcp) (Willys/Axfood), [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule) (EDP Future-renhållare och SRV Återvinning – en veckovis koll larmar om deras kod eller tjänsten ändras), [Vklass scrape sensor](https://community.home-assistant.io/t/vklass-scrape-sensor/939402), [node-schoolsoft](https://github.com/CarelessInternet/node-schoolsoft) (SchoolSoft) och [Skolmat](https://github.com/Kaptensanders/skolmat) (skolmaten.se). Elpris från [elprisetjustnu.se](https://www.elprisetjustnu.se), väder från [Open-Meteo](https://open-meteo.com), postnummer från [OpenStreetMap Nominatim](https://nominatim.org).
+Kopplingarna bygger på kartläggning från andra öppna projekt: [ha-ica-todo](https://github.com/lazytarget/ha-ica-todo) (ICA), [willys-mcp](https://github.com/oscarthroedsson/willys-mcp) (Willys/Axfood), [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule) (EDP Future-renhållare och SRV Återvinning – en veckovis koll larmar om deras kod eller tjänsten ändras), [Vklass scrape sensor](https://community.home-assistant.io/t/vklass-scrape-sensor/939402), [node-schoolsoft](https://github.com/CarelessInternet/node-schoolsoft) (SchoolSoft) och [Skolmat](https://github.com/Kaptensanders/skolmat) (skolmaten.se). Elpris från [elprisetjustnu.se](https://www.elprisetjustnu.se), väder från [Open-Meteo](https://open-meteo.com), postnummer från [OpenStreetMap Nominatim](https://nominatim.org).
 
 ## Licens
 
