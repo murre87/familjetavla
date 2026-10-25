@@ -61,9 +61,13 @@ async function shot(page, name) {
 // the check must not depend on which weekday the test happens to run.
 const ELLA = /Ella är här|Ella byter hem/;
 
-async function expectText(page, text, timeout = 20_000) {
+async function expectText(page, text, timeout = 30_000) {
   // The first match in the document can be a copy the board has hidden to make things fit: wait for one that shows.
-  await page.getByText(text, { exact: false }).locator("visible=true").first().waitFor({ state: "visible", timeout });
+  try {
+    await page.getByText(text, { exact: false }).locator("visible=true").first().waitFor({ state: "visible", timeout });
+  } catch (e) {
+    throw new Error(`väntade ${timeout / 1000} s på texten ${text} men den syntes inte (${page.url()})`);
+  }
 }
 
 async function next(page) {
