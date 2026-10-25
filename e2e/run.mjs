@@ -62,7 +62,8 @@ async function shot(page, name) {
 const ELLA = /Ella är här|Ella byter hem/;
 
 async function expectText(page, text, timeout = 20_000) {
-  await page.getByText(text, { exact: false }).first().waitFor({ state: "visible", timeout });
+  // The first match in the document can be a copy the board has hidden to make things fit: wait for one that shows.
+  await page.getByText(text, { exact: false }).locator("visible=true").first().waitFor({ state: "visible", timeout });
 }
 
 async function next(page) {
