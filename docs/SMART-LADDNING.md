@@ -15,6 +15,8 @@ slots:
 ```
 
   `start` och `end` är ISO 8601 (helst med tidszon), `kw` är valfri.
+- **Valfritt per block:** `soc_start` och `soc_end` (batteri i % före och efter blocket) – då visar tavlan "32 → 46 %" i stället för kWh.
+- **Valfritt:** `morning_check` = `{ time: "06:00", soc: 50, min: 50 }` (batteriet planen ger vid ett morgonmål och golvet) – tavlan visar "✓ 50 % kl 06:00" eller en varning.
 - **Valfria attribut:** `soc_after_plan` (batteri i % när planen är klar), `planned_kwh`, `source` (vem som planerat).
 
 - **Valfritt: veckoschema.** Attributet `schedule` = sju rader `{ day: 0–6 (0 = måndag), time: "07:00", soc: 80, enabled: true }` (klar kl `time` med batteri `soc` %), och `schedule_car` = ett id som smartstyrningen vill ha tillbaka. Då visar tavlan schemat under **Laddschema** i Bil-fliken.

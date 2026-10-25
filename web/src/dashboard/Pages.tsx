@@ -316,7 +316,8 @@ function SmartScheduleEditor({ index, s, actions }: { index: number; s: Smart; a
 function SmartChargingCard({ index, car, actions }: { index: number; car: Dashboard["cars"][number]; actions: Actions }) {
   const s = car.smart;
   if (!s) return null;
-  const upcoming = s.slots.filter((x) => Date.parse(x.end) > Date.now()).slice(0, 6);
+  const upcoming = s.slots.filter((x) => Date.parse(x.end) > Date.now()).slice(0, 10);
+  const maxKwh = Math.max(0.1, ...upcoming.map((x) => ((x.kw ?? 0) * (Date.parse(x.end) - Date.parse(x.start))) / 3_600_000));
   const now = s.nowOption && s.mode === s.nowOption;
   const choose = (option: string, label: string) =>
     actions.run(label, () => api.carMode(index, option), { done: `${label}: klart`, check: (d) => d.cars[index]?.smart?.mode === option, slow: "Skickat – smartstyrningen kan ta en halv minut på sig." });
@@ -344,14 +345,29 @@ function SmartChargingCard({ index, car, actions }: { index: number; car: Dashbo
       <PlanBar slots={s.slots} />
       {upcoming.length > 0 ? (
         <div className="stack" style={{ gap: 0 }}>
-          {upcoming.map((x) => (
-            <div key={x.start} className="row gap" style={{ padding: "8px 0", borderBottom: "1px solid var(--card-border)" }}>
-              <span className="grow">
-                {dayName(x.start)} {hhmm(x.start)}–{hhmm(x.end)}
-              </span>
-              <b>{x.kw !== null ? `${x.kw.toLocaleString("sv-SE")} kW` : ""}</b>
-            </div>
-          ))}
+          {upcoming.map((x, i) => {
+            const kwh = ((x.kw ?? 0) * (Date.parse(x.end) - Date.parse(x.start))) / 3_600_000;
+            const showDay = i === 0 || dayName(x.start) !== dayName(upcoming[i - 1].start);
+            return (
+              <div key={x.start} className="plan-row">
+                <span className="plan-time">
+                  <b>{hhmm(x.start)}–{hhmm(x.end)}</b>
+                  <small className="muted">{showDay ? dayName(x.start) : "\u00a0"}</small>
+                </span>
+                <span className="plan-bar" aria-hidden="true"><i style={{ width: `${Math.max(6, Math.round((kwh / maxKwh) * 100))}%` }} /></span>
+                <span className="plan-num">
+                  <b>{x.socStart !== undefined ? `${x.socStart} → ${x.socEnd} %` : kwh > 0 ? `${kwh.toLocaleString("sv-SE", { maximumFractionDigits: 1 })} kWh` : ""}</b>
+                  <small className="muted">{x.kw !== null ? `${x.kw.toLocaleString("sv-SE")} kW` : ""}</small>
+                </span>
+              </div>
+            );
+          })}
+          {s.morning && (
+            <p className={`plan-floor ${s.morning.ok ? "ok" : "warn"}`}>
+              {s.morning.ok ? "✓" : "⚠"} {s.morning.soc} % kl {s.morning.time}
+              {s.morning.ok ? ` (golv ${s.morning.min} %)` : ` – under golvet ${s.morning.min} %`}
+            </p>
+          )}
           <p className="muted" style={{ marginTop: 8 }}>
             {s.plannedKwh !== null ? `${s.plannedKwh.toLocaleString("sv-SE")} kWh planerat` : ""}
             {s.socAfter !== null ? ` · ${s.socAfter} % efter planen` : ""}

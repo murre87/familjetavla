@@ -13,6 +13,17 @@ export interface Slot {
   start: string;
   end: string;
   kw: number | null;
+  /** Batteri i % före och efter blocket, om smartstyrningen publicerar det (attributen `soc_start` / `soc_end` per block). */
+  socStart?: number;
+  socEnd?: number;
+}
+
+/** Kontroll av ett morgonmål, t.ex. "minst 50 % kl 06:00" (attributet `morning_check` = { time, soc, min }). */
+export interface MorningCheck {
+  time: string;
+  soc: number;
+  min: number;
+  ok: boolean;
 }
 
 export interface SmartCharging {
@@ -28,6 +39,8 @@ export interface SmartCharging {
   slots: Slot[];
   socAfter: number | null;
   plannedKwh: number | null;
+  /** Valfritt: vad batteriet beräknas ha vid ett morgonmål (golvet) enligt planen. */
+  morning?: MorningCheck;
   source?: string;
   /** Veckoschema (klar kl T med mål %) som smartstyrningen följer, om den publicerar det (attributet `schedule`). */
   schedule?: ScheduleRow[];
@@ -71,9 +84,26 @@ export function parseSlots(raw: unknown): Slot[] {
     const end = String(r.end ?? r.to ?? "");
     if (Number.isNaN(Date.parse(start)) || Number.isNaN(Date.parse(end)) || Date.parse(end) <= Date.parse(start)) continue;
     const kw = Number(r.kw ?? r.power_kw);
-    out.push({ start, end, kw: Number.isFinite(kw) ? kw : null });
+    const slot: Slot = { start, end, kw: Number.isFinite(kw) ? kw : null };
+    const s0 = r.soc_start === undefined || r.soc_start === null || r.soc_start === "" ? NaN : Number(r.soc_start);
+    const s1 = r.soc_end === undefined || r.soc_end === null || r.soc_end === "" ? NaN : Number(r.soc_end);
+    if (Number.isFinite(s0) && Number.isFinite(s1)) {
+      slot.socStart = Math.round(s0);
+      slot.socEnd = Math.round(s1);
+    }
+    out.push(slot);
   }
   return out.sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+}
+
+export function parseMorning(raw: unknown): MorningCheck | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const soc = Number(r.soc);
+  const min = Number(r.min);
+  const time = String(r.time ?? "");
+  if (!Number.isFinite(soc) || !Number.isFinite(min) || !/^\d{2}:\d{2}$/.test(time)) return undefined;
+  return { time, soc: Math.round(soc), min: Math.round(min), ok: soc >= min - 0.5 };
 }
 
 const slug = (n: string) => n.toLowerCase().replace(/[^a-z0-9åäö]+/g, "_").replace(/^_+|_+$/g, "");
@@ -113,6 +143,7 @@ export function findSmartCharging(states: Map<string, HaState>, carName: string,
     slots: parseSlots(a.slots),
     socAfter: num(a.soc_after_plan),
     plannedKwh: num(a.planned_kwh),
+    morning: parseMorning(a.morning_check),
     source: a.source ? String(a.source) : undefined,
     schedule,
     scheduleCar: a.schedule_car ? String(a.schedule_car) : undefined,

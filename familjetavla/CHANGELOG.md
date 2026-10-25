@@ -1,5 +1,10 @@
 # Ändringar
 
+## Kommande
+
+- **Laddplanen visar varje block snyggt:** tid, en stapel efter hur mycket el blocket ger, batteri före och efter ("32 → 46 %") och effekt. Dagen står bara på första raden för varje dag, och upp till tio block syns.
+- **Morgonmål:** publicerar smartstyrningen `morning_check` ("minst 50 % kl 06:00") visar tavlan "✓ 50 % kl 06:00 (golv 50 %)", eller en varning om planen inte räcker. Nya valfria fält i avtalet, se docs/SMART-LADDNING.md.
+
 ## 0.14.0
 
 - **Willys och Hemköp loggar in utan webbläsare:** tavlan använder samma krypterade inloggningsanrop som butikernas egna sidor (kartlagt av hemkop-cli och willys-mcp, båda MIT). Det går på någon sekund i stället för en halv minut, och Hemköp fungerar igen.

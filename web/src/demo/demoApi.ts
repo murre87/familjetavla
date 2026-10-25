@@ -250,6 +250,34 @@ fx.cars.forEach((c, i) => {
     ],
   };
 });
+// Smart laddning: planen med batterinivå per block och golvkontrollen (50 % kl 06:00), som EnergyWizard publicerar.
+if (d.cars[0]) {
+  const at = (h: number, m: number) => {
+    const t = new Date();
+    t.setDate(t.getDate() + (t.getHours() >= 6 ? 1 : 0));
+    t.setHours(h, m, 0, 0);
+    return t.toISOString();
+  };
+  d.cars[0].smart = {
+    planEntity: "sensor.tesla_model_y_laddplan",
+    modeEntity: "input_select.tesla_model_y_laddlage",
+    state: "Planerad 00:15",
+    mode: "Auto",
+    options: ["Auto", "Ladda nu", "Pausa"],
+    nowOption: "Ladda nu",
+    pauseOption: "Pausa",
+    autoOption: "Auto",
+    slots: [
+      { start: at(0, 15), end: at(0, 30), kw: 6.4, socStart: 30, socEnd: 32 },
+      { start: at(1, 0), end: at(2, 30), kw: 8, socStart: 32, socEnd: 46 },
+      { start: at(5, 30), end: at(6, 0), kw: 6.4, socStart: 46, socEnd: 50 },
+    ],
+    socAfter: 50,
+    plannedKwh: 16.8,
+    morning: { time: "06:00", soc: 50, min: 50, ok: true },
+    source: "EnergyWizard",
+  };
+}
 // ---- Energy today in the demo (a sunny October day with solar and a grid meter) ----
 if (d.energy) {
   d.energy.selfUseKw = Math.min(d.energy.solarKw ?? 0, d.energy.houseKw ?? 0);

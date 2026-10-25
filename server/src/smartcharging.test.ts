@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HaState } from "./connectors/ha.js";
-import { findAutoModes, findSmartCharging, parseSchedule, parseSlots } from "./smartcharging.js";
+import { findAutoModes, findSmartCharging, parseMorning, parseSchedule, parseSlots } from "./smartcharging.js";
 
 const st = (id: string, state: string, attributes: Record<string, unknown> = {}): HaState => ({ entity_id: id, state, attributes, last_changed: "2026-10-23T10:00:00Z" });
 const slots = [
@@ -86,5 +86,28 @@ describe("smart charging", () => {
     expect(c.scheduleCar).toBe("tesla");
     expect(c.scheduleEntity).toBe("input_text.energywizard_laddschema_kommando");
     expect(parseSchedule([{ day: 9, time: "07:00" }, { day: 1, time: "bad" }])).toBeUndefined();
+  });
+});
+
+describe("laddplan med batterinivå per block och morgonkontroll", () => {
+  it("läser soc_start/soc_end per block och ignorerar dem när bara det ena finns", () => {
+    const r = parseSlots([
+      { start: "2026-10-26T01:00+01:00", end: "2026-10-26T02:30+01:00", kw: 8, soc_start: 32, soc_end: 46.4 },
+      { start: "2026-10-26T05:30+01:00", end: "2026-10-26T06:00+01:00", kw: 6.4, soc_start: 46 },
+    ]);
+    expect(r[0]).toMatchObject({ socStart: 32, socEnd: 46 });
+    expect(r[1].socStart).toBeUndefined();
+  });
+  it("morning_check: ok när batteriet når golvet, annars inte", () => {
+    expect(parseMorning({ time: "06:00", soc: 50, min: 50 })).toEqual({ time: "06:00", soc: 50, min: 50, ok: true });
+    expect(parseMorning({ time: "06:00", soc: 44, min: 50 })?.ok).toBe(false);
+    expect(parseMorning({ time: "6", soc: 44, min: 50 })).toBeUndefined();
+    expect(parseMorning("x")).toBeUndefined();
+  });
+  it("hittas på laddplanen", () => {
+    const w = new Map<string, HaState>([
+      ["sensor.tesla_model_y_laddplan", st("sensor.tesla_model_y_laddplan", "Planerad 00:15", { slots, morning_check: { time: "06:00", soc: 50, min: 50 } })],
+    ]);
+    expect(findSmartCharging(w, "Tesla Model Y")?.morning?.ok).toBe(true);
   });
 });
