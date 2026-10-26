@@ -6,6 +6,7 @@ import { api, isDemo } from "../api";
 import { Icon, type IconName } from "../Icon";
 import { INNER_NAME } from "../IpadFrame";
 import { Avatar, EventIcon } from "./bits";
+import { PersonPage } from "./Person";
 import { GroceryModal } from "./GroceryModal";
 import { Home } from "./Home";
 import { Fit } from "./Fit";
@@ -848,6 +849,14 @@ function UpdateBanner({ update }: { update: NonNullable<Dash["update"]> }) {
   );
 }
 
+function personHintUsed() {
+  try {
+    return localStorage.getItem("ft_person_used") === "1";
+  } catch {
+    return false;
+  }
+}
+
 export function Dashboard() {
   const [data, setData] = useState<Dash | null>(null);
   const [error, setError] = useState("");
@@ -856,6 +865,7 @@ export function Dashboard() {
   const hash = useHash();
   const [, kind, id] = hash.split("/");
   const page = kind === "sida" && PAGE_IDS.includes(id as PageId) ? (id as PageId) : null;
+  const personId = kind === "person" && id ? decodeURIComponent(id) : null;
   const tab: Tab = kind === "flik" && TAB_IDS.includes(id as Tab) ? (id as Tab) : "home";
   const setTab = (t: Tab) => navigate(t === "home" ? "/" : `/flik/${t}`);
   const [planTab, setPlanTab] = useState<"who" | "food">("who");
@@ -1253,8 +1263,24 @@ export function Dashboard() {
           {data.people.length > 0 && (
             <div className="people" aria-label="Vem är hemma">
               {data.people.map((p) => (
-                <Avatar key={p.name} initial={p.initial} color={p.color} name={p.name} away={!p.home} size="lg" />
+                <button
+                  key={p.name}
+                  className={`avatar-btn ${personId === p.id ? "on" : ""}`}
+                  aria-label={`Visa ${p.name}s vecka`}
+                  title={`Visa ${p.name}s vecka: skola, läxor, träningar och mat`}
+                  onClick={() => {
+                    try {
+                      localStorage.setItem("ft_person_used", "1");
+                    } catch {
+                      /* ingen lagring: tipset visas bara igen */
+                    }
+                    navigate(`/person/${p.id}`);
+                  }}
+                >
+                  <Avatar initial={p.initial} color={p.color} name={p.name} away={!p.home} size="lg" />
+                </button>
               ))}
+              {!personId && !personHintUsed() && <span className="people-hint">Tryck på en person</span>}
             </div>
           )}
           <div className="clock" aria-label={`Klockan är ${clock}`}>
@@ -1301,7 +1327,9 @@ export function Dashboard() {
         {data.update && <UpdateBanner update={data.update} />}
         {!isDemo && <InstallNudge onHelp={() => setInstallOpen(true)} />}
 
-        {page ? (
+        {personId ? (
+          <PersonPage data={data} personId={personId} />
+        ) : page ? (
           <DetailPage page={page} data={data} actions={actions} />
         ) : (
         <div className="tab-page">

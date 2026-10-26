@@ -1,7 +1,8 @@
 # Ändringar
 
-## Kommande
+## 0.14.1
 
+- **Tryck på ett namn i toppen och se personens vecka:** namnen (Em, A, El …) är nu knappar med ring och tipset "Tryck på en person". Personvyn visar de kommande sju dagarna per person: skolans start och sluttid, **gympadagar** ("ta med gymkläder"), **läxor och prov**, **träningar och matcher** med tider, plats och skjuts samt **skollunch och middag**. Längst ner finns läxor och prov som ligger längre fram. En rad med alla personer låter dig hoppa mellan dem.
 - **Laddplanen visar varje block snyggt:** tid, en stapel efter hur mycket el blocket ger, batteri före och efter ("32 → 46 %") och effekt. Dagen står bara på första raden för varje dag, och upp till tio block syns.
 - **Morgonmål:** publicerar smartstyrningen `morning_check` ("minst 50 % kl 06:00") visar tavlan "✓ 50 % kl 06:00 (golv 50 %)", eller en varning om planen inte räcker. Nya valfria fält i avtalet, se docs/SMART-LADDNING.md.
 

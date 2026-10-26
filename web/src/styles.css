@@ -4667,3 +4667,27 @@ marker.pf-buy path {
 .plan-floor { margin: 8px 0 0; font-weight: 700; }
 .plan-floor.ok { color: var(--good, #16a34a); }
 .plan-floor.warn { color: var(--warn, #d97706); }
+
+/* Personvyn: namnen i toppen är knappar. Ring + tips så att det syns att de går att trycka på. */
+.avatar-btn {
+  all: unset;
+  cursor: pointer;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text, #fff) 35%, transparent);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.avatar-btn:hover,
+.avatar-btn.on { box-shadow: 0 0 0 3px color-mix(in srgb, var(--text, #fff) 80%, transparent); transform: translateY(-1px); }
+.avatar-btn:active { transform: scale(0.94); }
+.avatar-btn:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offset: 3px; }
+.people-hint { font-size: 12px; opacity: 0.65; margin-left: 6px; white-space: nowrap; }
+.person-switch { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }
+.person-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.person-day h2 { margin: 0 0 8px; }
+.person-day.today { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #7cf) 70%, transparent); }
+.p-line { display: flex; gap: 10px; align-items: flex-start; padding: 5px 0; }
+.p-line.task.prov { color: var(--warn, #ffb347); }
+.p-badge.gym { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent, #7cf) 25%, transparent); font-size: 13px; }
+.person-later { margin-top: 12px; }
