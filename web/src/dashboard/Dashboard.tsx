@@ -1261,7 +1261,7 @@ export function Dashboard() {
             </p>
           </div>
           {data.people.length > 0 && (
-            <div className="people" aria-label="Vem är hemma">
+            <div className={`people ${!personId && !personHintUsed() ? "fresh" : ""}`} aria-label="Vem är hemma – tryck på en person för hens vecka">
               {data.people.map((p) => (
                 <button
                   key={p.name}
@@ -1280,7 +1280,6 @@ export function Dashboard() {
                   <Avatar initial={p.initial} color={p.color} name={p.name} away={!p.home} size="lg" />
                 </button>
               ))}
-              {!personId && !personHintUsed() && <span className="people-hint">Tryck på en person</span>}
             </div>
           )}
           <div className="clock" aria-label={`Klockan är ${clock}`}>
