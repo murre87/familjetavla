@@ -92,6 +92,8 @@ export interface CalendarSource {
   kind: "ics" | "ha";
   entityId?: string;
   personId?: string;
+  /** Flera personer som kalendern gäller ("Gäller": Emil + Elin). Är det en enda sätts även personId. */
+  personIds?: string[];
   category: CalendarCategory;
   /** Visa bara händelser som matchar något av dessa (lag, grupp eller ord). Tomt = alla. */
   include?: string[];
@@ -398,6 +400,8 @@ export interface DashEvent {
   title: string;
   color: string;
   who: string;
+  /** Alla personer händelsen gäller (kalenderns ägare/"Gäller" och namn som nämns i titeln). Saknas = hela familjen. */
+  whoAll?: string[];
   /** Personens initial för avataren. */
   initial?: string;
   category: CalendarCategory | "waste";

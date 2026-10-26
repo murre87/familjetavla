@@ -1,3 +1,4 @@
+import { audience } from "./audience.js";
 import { buildAppliances } from "./appliances.js";
 import { buildRobots, buildSecurity } from "./security.js";
 import { energyLive, energyToday, todaySeries } from "./energy.js";
@@ -160,6 +161,7 @@ export function activityIcon(title: string, category: DashEvent["category"]): Ac
 
 function toDash(ev: SourcedEvent, people: Map<string, Person>, travel?: TravelCtx): DashEvent {
   const p = ev.personId ? people.get(ev.personId) : undefined;
+  const aud = audience(ev, people);
   return {
     ...(travel && wantsTravel(ev, people) ? { travel: resolveTravel(ev, people, travel.calendars.get(ev.sourceId), travel.saved) } : {}),
     time: ev.allDay ? "" : hhmm(ev.start),
@@ -167,6 +169,7 @@ function toDash(ev: SourcedEvent, people: Map<string, Person>, travel?: TravelCt
     title: ev.title,
     color: p?.color ?? FAMILY_COLOR,
     who: p?.name ?? "",
+    ...(aud.length ? { whoAll: aud } : {}),
     initial: p ? initialsOf(p, people) : undefined,
     category: ev.category,
     icon: ev.gym ? "gym" : activityIcon(`${ev.title} ${ev.sourceName ?? ""}`, ev.category),

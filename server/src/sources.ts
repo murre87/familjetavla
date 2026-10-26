@@ -13,6 +13,8 @@ const MIN = 60_000;
 export interface SourcedEvent extends CalEvent {
   sourceId: string;
   personId?: string;
+  /** Alla personer kalendern gäller (se CalendarSource.personIds). */
+  personIds?: string[];
   category: CalendarCategory;
   gym?: boolean;
   /** Homework, test or hand-in from a school platform. */
@@ -52,6 +54,7 @@ export async function collectCalendars(cfg: Config, from: Date, to: Date, errors
           sourceId: src.id,
           sourceName: src.name,
           personId: src.personId,
+          personIds: src.personIds,
           category: src.category,
           ignoreCustody:
             src.visibility === "always" ||

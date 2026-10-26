@@ -951,12 +951,31 @@ function CalendarEditor({
       )}
       <div className="grid-3">
         <Text label="Namn på tavlan" value={cal.name} onChange={(v) => onChange({ ...cal, name: v })} placeholder={p.category === "sport" ? "Fotboll P14" : "Familjen"} />
-        <Select
-          label="Gäller"
-          value={cal.personId ?? ""}
-          onChange={(v) => onChange({ ...cal, personId: v || undefined })}
-          options={[{ value: "", label: "Hela familjen" }, ...cfg.people.map((x) => ({ value: x.id, label: x.name || "(namnlös)" }))]}
-        />
+        <div className="field">
+          <span className="label">Gäller</span>
+          <div className="chips" role="group" aria-label="Vem kalendern gäller">
+            {(() => {
+              const ids = cal.personIds?.length ? cal.personIds : cal.personId ? [cal.personId] : [];
+              const set = (next: string[]) => onChange({ ...cal, personIds: next.length > 1 ? next : undefined, personId: next.length === 1 ? next[0] : undefined });
+              return (
+                <>
+                  <button type="button" className={`chip ${ids.length === 0 ? "on" : ""}`} aria-pressed={ids.length === 0} onClick={() => set([])}>
+                    Hela familjen
+                  </button>
+                  {cfg.people.map((x) => {
+                    const on = ids.includes(x.id);
+                    return (
+                      <button key={x.id} type="button" className={`chip ${on ? "on" : ""}`} aria-pressed={on} onClick={() => set(on ? ids.filter((i) => i !== x.id) : [...ids, x.id])}>
+                        {x.name || "(namnlös)"}
+                      </button>
+                    );
+                  })}
+                </>
+              );
+            })()}
+          </div>
+          <small className="muted">Välj en eller flera. Delade kalendrar utan val känner också igen namn i rubriken ("Elin tandläkare").</small>
+        </div>
         <Select
           label="Typ"
           value={cal.category}

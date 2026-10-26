@@ -10,8 +10,12 @@ import { PageBar } from "./Detail";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** Händelser som gäller personen (kalenderns "Gäller", ägare eller namn i titeln) – och de som gäller hela familjen. */
 export function personEvents(events: DashEvent[], person: { name: string; initial: string }) {
-  return events.filter((e) => (e.who ? e.who === person.name : e.initial === person.initial) && e.category !== "waste");
+  const own = (e: DashEvent) => (e.whoAll ? e.whoAll.includes(person.name) : e.who ? e.who === person.name : e.initial === person.initial);
+  const family = (e: DashEvent) => !e.whoAll && !e.who && !e.initial && e.category === "family";
+  const mine = events.filter((e) => e.category !== "waste" && own(e));
+  return { mine, family: events.filter((e) => e.category !== "waste" && !own(e) && family(e)) };
 }
 
 /** Skoldagens start och slut ur lektionerna (första start, sista slut). */
@@ -50,14 +54,14 @@ export function PersonPage({ data, personId }: { data: Dashboard; personId: stri
       </div>
       <div className="person-days">
         {days.map((d) => {
-          const events = personEvents(d.events, person);
+          const { mine: events, family: famEvents } = personEvents(d.events, person);
           const sd = kid?.days.find((x) => x.dayKey === d.key);
           const span = sd ? schoolSpan(sd.lessons) : null;
           const gym = sd?.lessons.some((l) => l.gym);
           const tasks = (kid?.tasks ?? []).filter((t) => t.dayKey === d.key);
           const meal = (data.meals ?? []).find((m) => m.dayKey === d.key);
           const lunch = meal?.lunch.filter((l) => !l.child || l.child === person.name) ?? [];
-          const empty = !span && !events.length && !tasks.length && !lunch.length;
+          const empty = !span && !events.length && !famEvents.length && !tasks.length && !lunch.length;
           return (
             <section className={`card person-day ${d.isToday ? "today" : ""}`} key={d.key}>
               <h2>
@@ -93,6 +97,14 @@ export function PersonPage({ data, personId }: { data: Dashboard; personId: stri
                         · {[e.travel.to ? `dit: ${e.travel.to.label}` : "", e.travel.home ? `hem: ${e.travel.home.label}` : ""].filter(Boolean).join(", ")}
                       </small>
                     ) : null}
+                  </span>
+                </div>
+              ))}
+              {famEvents.map((e, i) => (
+                <div className="p-line fam" key={`f${i}`}>
+                  <Icon name={e.icon === "event" ? "calendar" : e.icon} size={20} />
+                  <span>
+                    <small className="muted">Familjen:</small> <b>{e.time ? `${e.time}${e.end ? `–${e.end}` : ""}` : ""}</b> {e.title}
                   </span>
                 </div>
               ))}

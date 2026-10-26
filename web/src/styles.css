@@ -4694,3 +4694,9 @@ marker.pf-buy path {
 .p-line.task.prov { color: var(--warn, #ffb347); }
 .p-badge.gym { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent, #7cf) 25%, transparent); font-size: 13px; }
 .person-later { margin-top: 12px; }
+
+/* Kalenderns "Gäller": flera personer att välja (chips). */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+button.chip { background: transparent; cursor: pointer; font-family: inherit; }
+button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offset: 2px; }
+.p-line.fam { opacity: 0.75; }
