@@ -18,7 +18,7 @@ export interface Tile {
   subtitle?: string;
   image?: string;
 }
-export type Shelf = "recent" | "playlists" | "albums" | "podcasts";
+export type Shelf = "recent" | "playlists" | "albums" | "podcasts" | "radios";
 /** One song in a playlist or album. */
 export interface Track {
   uri: string;

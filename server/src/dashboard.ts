@@ -11,6 +11,7 @@ import { cached } from "./cache.js";
 import { cheapestBlock, priceLevel, type HourPrice } from "./connectors/elpris.js";
 import { ha, haConnection, type HaState } from "./connectors/ha.js";
 import { buildMusic } from "./music.js";
+import { libraryName } from "./musicAssistant.js";
 import { haSocket } from "./connectors/haws.js";
 import { applySick, loadSick } from "./sick.js";
 import { coldestBetween, forecast, rainBetween, skyNow, sunToday, tempNow, weatherSummary, type Forecast } from "./connectors/weather.js";
@@ -406,7 +407,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     }),
     smartModes: findAutoModes(stateMap),
     lights: cfg.entities.lights.map((l) => lamp(stateMap, l.entityId, l.name)),
-    music: buildMusic(cfg, stateMap),
+    music: ((m) => (m?.assistant ? { ...m, libraryName: libraryName(haConnection(), (cfg.entities.speakers ?? []).map((s) => s.entityId)) } : m))(buildMusic(cfg, stateMap)),
     security: buildSecurity(cfg, stateMap),
     robots: buildRobots(cfg, stateMap),
     appliances: buildAppliances(cfg, stateMap, now),

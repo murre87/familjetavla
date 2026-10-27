@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMaPlayer, playerFor, toTile } from "./musicAssistant.js";
+import { isMaPlayer, libraryNameOf, playerFor, providerOf, SHELVES, toTile } from "./musicAssistant.js";
 
 describe("Music Assistant", () => {
   it("turns library items into covers, web images only", () => {
@@ -51,3 +51,28 @@ describe("tracks in a playlist", () => {
     expect(toTrack({ title: "x", media_content_id: "javascript:alert(1)" })).toBeNull();
   });
 });
+
+describe("music service names and radio", () => {
+  it("names the service from the item's URI", () => {
+    expect(providerOf("spotify://playlist/abc")).toBe("Spotify");
+    expect(providerOf("apple_music://playlist/p.1")).toBe("Apple Music");
+    expect(providerOf("ytmusic://album/1")).toBe("YouTube Music");
+    expect(providerOf("tunein://radio/s1")).toBe("TuneIn");
+    expect(providerOf("builtin://playlist/favorites")).toBe("");
+    expect(providerOf("brandnew_service://x/1")).toBe("Brandnew service");
+    expect(providerOf("no scheme")).toBe("");
+  });
+
+  it("calls the library after the services behind it, most common first", () => {
+    const apple = Array.from({ length: 5 }, (_, i) => ({ uri: `apple_music://playlist/${i}` }));
+    expect(libraryNameOf(apple)).toBe("Apple Music");
+    expect(libraryNameOf([...apple, { uri: "spotify://album/1" }])).toBe("Apple Music · Spotify");
+    expect(libraryNameOf([{ uri: "builtin://playlist/1" }])).toBeUndefined();
+    expect(libraryNameOf([])).toBeUndefined();
+  });
+
+  it("has a shelf for Music Assistant's radio stations (TuneIn …)", () => {
+    expect(SHELVES.radios).toEqual({ media_type: "radio", order_by: "name" });
+  });
+});
+

@@ -31,6 +31,7 @@ export const SHELVES = {
   playlists: { media_type: "playlist", order_by: "name" },
   albums: { media_type: "album", order_by: "timestamp_added_desc" },
   podcasts: { media_type: "podcast", order_by: "name" },
+  radios: { media_type: "radio", order_by: "name" },          // Music Assistants egna radiokanaler (TuneIn, Radio Browser …)
 } as const;
 export type Shelf = keyof typeof SHELVES;
 
@@ -115,9 +116,9 @@ export async function library(conn: HaConn, speakers: string[], shelf: Shelf, of
 export async function search(conn: HaConn, speakers: string[], q: string): Promise<Tile[]> {
   const s = await cachedSetup(conn, speakers);
   if (!s) throw new Error("Music Assistant finns inte i Home Assistant.");
-  const r = await respond(conn, "search", { config_entry_id: s.entryId, name: q, media_type: ["playlist", "artist", "album", "track", "podcast"], limit: 8 });
-  // Playlists and artists first – what a family picks from a wall – then albums, songs and podcasts.
-  return ["playlists", "artists", "albums", "tracks", "podcasts"].flatMap((k) => tiles(r[k]));
+  const r = await respond(conn, "search", { config_entry_id: s.entryId, name: q, media_type: ["playlist", "artist", "album", "track", "podcast", "radio"], limit: 8 });
+  // Playlists and artists first – what a family picks from a wall – then albums, songs, podcasts and radio stations (TuneIn …).
+  return ["playlists", "artists", "albums", "tracks", "podcasts", "radio"].flatMap((k) => tiles(r[k] ?? r.radios));
 }
 
 export interface Track {
@@ -178,4 +179,73 @@ export async function playOn(conn: HaConn, states: Map<string, HaState>, speaker
     throw e;
   }
   return player;
+}
+
+
+// ---------- Which music service the family's library comes from ----------
+
+/** Music Assistant's provider domain (the URI scheme of an item) → the name people know it by. */
+const PROVIDER_NAMES: Record<string, string> = {
+  spotify: "Spotify",
+  spotify_connect: "Spotify",
+  apple_music: "Apple Music",
+  tidal: "Tidal",
+  qobuz: "Qobuz",
+  deezer: "Deezer",
+  ytmusic: "YouTube Music",
+  soundcloud: "SoundCloud",
+  audible: "Audible",
+  tunein: "TuneIn",
+  radiobrowser: "Radio Browser",
+  filesystem_local: "Lokala filer",
+  filesystem_smb: "Lokala filer",
+  plex: "Plex",
+  jellyfin: "Jellyfin",
+  subsonic: "Subsonic",
+  opensubsonic: "Subsonic",
+  nugs: "Nugs",
+  podcastfeed: "Poddar",
+  podcastindex: "Poddar",
+  itunes_podcasts: "Poddar",
+  builtin: "",
+  url: "",
+};
+
+/** "apple_music://playlist/abc" → "Apple Music"; an unknown service gets its own domain, tidied. */
+export function providerOf(uri: string): string {
+  const d = uri.match(/^([a-z0-9_-]+):\/\//i)?.[1]?.toLowerCase();
+  if (!d) return "";
+  if (d in PROVIDER_NAMES) return PROVIDER_NAMES[d]!;
+  return d.replace(/[_-]+/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+/** The music services behind a list of tiles, most common first ("Apple Music", or "Apple Music · Tidal"). */
+export function libraryNameOf(list: { uri: string }[]): string | undefined {
+  const count = new Map<string, number>();
+  for (const t of list) {
+    const n = providerOf(t.uri);
+    if (n) count.set(n, (count.get(n) ?? 0) + 1);
+  }
+  const names = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);
+  return names.length ? names.slice(0, 2).join(" · ") : undefined;
+}
+
+let nameCache: { at: number; name: string | undefined; busy: boolean } = { at: 0, name: undefined, busy: false };
+
+/** The library's name for the Musik tab; the answer comes from the cache and a refresh runs in the background (at most every 30 minutes). */
+export function libraryName(conn: HaConn | null, speakers: string[]): string | undefined {
+  if (conn && !nameCache.busy && Date.now() - nameCache.at > 30 * 60_000) {
+    nameCache.busy = true;
+    void (async () => {
+      try {
+        const [a, b] = await Promise.all([library(conn, speakers, "playlists"), library(conn, speakers, "albums")]);
+        nameCache.name = libraryNameOf([...a.slice(0, 30), ...b.slice(0, 30)]) ?? nameCache.name;
+      } catch {
+        /* Music Assistant not ready: try again later */
+      } finally {
+        nameCache = { at: Date.now(), name: nameCache.name, busy: false };
+      }
+    })();
+  }
+  return nameCache.name;
 }

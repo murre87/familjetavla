@@ -414,7 +414,7 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
     window.addEventListener("familjetavla:tab-reset", reset);
     return () => window.removeEventListener("familjetavla:tab-reset", reset);
   }, []);
-  const libName = "Spotify";
+  const libName = m.libraryName ?? "Spotify";          // namnet på tjänsten i Music Assistant: Spotify, Apple Music, Tidal …
   const drag = useVolumeDrag(sp, (pct) => c.volume(pct));
 
   return (
@@ -455,7 +455,7 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
         {source === "radio" ? <AllStations m={m} sp={sp} actions={actions} /> : m.assistant ? <Library sp={sp} connect={m.spotify?.devices ?? []} actions={actions} /> : <AssistantSetup />}
       </section>
 
-      {source === "library" && m.assistant && m.spotify && <SpotifyBox sp={m.spotify} actions={actions} />}
+      {source === "library" && m.assistant && m.spotify && (!m.libraryName || /spotify/i.test(m.libraryName)) && <SpotifyBox sp={m.spotify} actions={actions} />}
     </div>
   );
 }
@@ -565,6 +565,7 @@ const SHELF_NAMES: { id: Shelf | "search" | "home"; name: string }[] = [
   { id: "playlists", name: "Spellistor" },
   { id: "albums", name: "Album" },
   { id: "podcasts", name: "Poddar" },
+  { id: "radios", name: "Radio" },
   { id: "search", name: "Sök" },
 ];
 
@@ -632,7 +633,7 @@ function Library({ sp, connect, actions }: { sp: Speaker; connect: string[]; act
       slow: `${t.title} är skickad till ${sp.name} – det kan ta en stund att starta.`,
     });
   };
-  const empty = shelf === "search" ? (asked.length < 2 ? "Skriv vad du vill lyssna på." : "Inget hittades.") : shelf === "podcasts" ? "Inga poddar i biblioteket än." : "Inget här än – lägg till musiktjänsten i Music Assistant.";
+  const empty = shelf === "search" ? (asked.length < 2 ? "Skriv vad du vill lyssna på." : "Inget hittades.") : shelf === "podcasts" ? "Inga poddar i biblioteket än." : shelf === "radios" ? "Inga radiokanaler i Music Assistant än – lägg till TuneIn under Musikleverantörer och spara kanaler i biblioteket." : "Inget här än – lägg till musiktjänsten i Music Assistant.";
   return (
     <div className="lib">
       {others.length > 0 && (

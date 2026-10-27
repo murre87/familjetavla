@@ -694,6 +694,8 @@ export interface Music {
   stations: { index: number; name: string; logo?: string; url: string }[];
   /** Home Assistant's Spotify integration: null when it is not installed (the tab then says how). */
   spotify: { entityId: string; playing: boolean; title?: string; device?: string; offline: boolean; devices: string[] } | null;
+  /** Namnet på musiktjänsten i Music Assistants bibliotek (Spotify, Apple Music …); saknas tills det är läst. */
+  libraryName?: string;
   /** Music Assistant is in Home Assistant: the Musik tab shows the library (playlists, albums, podcasts) as covers. */
   assistant: boolean;
 }

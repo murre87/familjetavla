@@ -867,9 +867,10 @@ const DEMO_LIBRARY: Record<Shelf, [string, string?][]> = {
   playlists: [["Barnens favoriter"], ["Bilresan"], ["Fredagsmys"], ["Godnattsagor"], ["Julmusik"], ["Lugnt till middagen"], ["Melodifestivalen 2026"], ["Morgonpigg"], ["Städa huset"], ["Sommarhits"], ["Träning"], ["Veckans topplista"]],
   albums: [["Främling", "Carola"], ["Hello Hello", "Laleh"], ["Vapen & ammunition", "Kent"], ["Arrival", "ABBA"], ["Pippi Långstrump", "Astrid Lindgren"], ["Sånger för barn", "Trazan & Banarne"]],
   podcasts: [["Sommar i P1", "Sveriges Radio"], ["Barnens nyheter", "Sveriges Radio"], ["Spöktimmen", "Sveriges Radio"], ["Godnattpodden", "Sveriges Radio"]],
+  radios: [["P3", "TuneIn"], ["Rix FM", "TuneIn"], ["Mix Megapol", "TuneIn"], ["NRJ Sverige", "TuneIn"]],
 };
 function demoTiles(shelf: Shelf): Tile[] {
-  const type = shelf === "albums" ? "album" : shelf === "podcasts" ? "podcast" : "playlist";
+  const type = shelf === "albums" ? "album" : shelf === "podcasts" ? "podcast" : shelf === "radios" ? "radio" : "playlist";
   return DEMO_LIBRARY[shelf].map(([title, subtitle], i) => ({ uri: `demo://${type}/${i}`, type, title, subtitle, image: cover(title, i) }));
 }
 

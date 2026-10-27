@@ -49,7 +49,7 @@ import { makeBackup, restoreBackup } from "./backup.js";
 import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
 import { alarmCall, robotCall } from "./security.js";
-import { MEDIA_TYPES, SHELVES, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
+import { MEDIA_TYPES, SHELVES, isMaPlayer, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
 import { HOME_WIDGETS, TAB_IDS, type Config, type FoodPart, type StoreFood, type StoreFoodData, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
 
 export { VERSION } from "./version.js";
@@ -891,6 +891,29 @@ export async function registerRoutes(app: FastifyInstance) {
   };
   const speakerOf = (id: unknown) => (typeof id === "string" ? (loadConfig().entities.speakers ?? []).find((x) => x.entityId === id) : undefined);
 
+  /**
+   * Starts a station on a speaker. A plain play_media with the stream URL suits Google, Sonos and most others; a Music Assistant player
+   * (AirPlay, HomePod, Sonos through Music Assistant …) takes a stream as a "radio" item, so it goes there first and falls back to the plain call.
+   */
+  const startStation = async (conn: NonNullable<ReturnType<typeof haConnection>>, speaker: string, station: { name: string; url: string; logo?: string }) => {
+    const st = await ha.state(conn, speaker).catch(() => undefined);
+    const plain = playCall(speaker, station);
+    if (isMaPlayer(st)) {
+      try {
+        await ha.service(conn, "music_assistant", "play_media", { entity_id: speaker, media_id: station.url, media_type: "radio", enqueue: "replace" });
+        return;
+      } catch (e1) {
+        try {
+          await ha.service(conn, plain.domain, plain.service, plain.data);
+          return;
+        } catch {
+          throw e1;
+        }
+      }
+    }
+    await ha.service(conn, plain.domain, plain.service, plain.data);
+  };
+
   app.post("/api/music/play", async (req, reply) => {
     const body = z.object({ index: z.number().int().min(0), speaker: entity }).safeParse(req.body);
     const station = body.success ? loadConfig().entities.stations?.[body.data.index] : undefined;
@@ -898,9 +921,8 @@ export async function registerRoutes(app: FastifyInstance) {
     const conn = haConnection();
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
     await wake(conn, body.data.speaker);
-    const c = playCall(body.data.speaker, station);
     try {
-      await ha.service(conn, c.domain, c.service, c.data);
+      await startStation(conn, body.data.speaker, station);
     } catch (e) {
       return fail(reply, new Error(`${speakerOf(body.data.speaker)!.name} kunde inte spela ${station.name}: ${(e as Error).message}`), 502);
     }
@@ -981,9 +1003,8 @@ export async function registerRoutes(app: FastifyInstance) {
     const conn = haConnection();
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
     await wake(conn, body.data.speaker);
-    const c = playCall(body.data.speaker, station);
     try {
-      await ha.service(conn, c.domain, c.service, c.data);
+      await startStation(conn, body.data.speaker, station);
     } catch (e) {
       return fail(reply, new Error(`${speakerOf(body.data.speaker)!.name} kunde inte spela ${station.name}: ${(e as Error).message}`), 502);
     }
@@ -1170,9 +1191,8 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!body.success || !speakerOf(body.data.speaker)) return fail(reply, new Error("Välj en högtalare först"));
     const conn = haConnection();
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
-    const c = playCall(body.data.speaker, { name: body.data.name, url: body.data.url });
     try {
-      await ha.service(conn, c.domain, c.service, c.data);
+      await startStation(conn, body.data.speaker, { name: body.data.name, url: body.data.url });
     } catch (e) {
       return fail(reply, new Error(`${speakerOf(body.data.speaker)!.name} kunde inte spela ${body.data.name}: ${(e as Error).message}`), 502);
     }
