@@ -4,8 +4,6 @@
 
 - **Kalendrar kan gälla flera personer:** under Kalendrar väljer du nu en eller flera personer vid "Gäller" (till exempel Emil och Elin för en gemensam vuxenkalender), eller Hela familjen. Händelserna syns då i personernas veckovy. **Delade kalendrar känner igen namn i rubriken** ("Elin tandläkare", "Alicia och Esther kommer") och kopplar händelsen till dem. Hela familjens händelser visas dämpat i varje persons vy.
 
-## Kommande
-
 - **Musik: rätt namn på tjänsten.** Biblioteksknappen i Musik heter nu det Music Assistant faktiskt har kopplat – Apple Music, Tidal, Deezer, YouTube Music … (inte alltid "Spotify"). Spotify-rutan visas bara när det är Spotify. Tack Oskar Ax.
 - **Musik: radiokanaler från Music Assistant (TuneIn m.fl.).** Ny hylla **Radio** i biblioteket med de kanaler som ligger i Music Assistant, och sökningen hittar radiokanaler också.
 - **Radio på Music Assistant-högtalare:** en kanal startas som en radio-ström i Music Assistant först (HomePod/AirPlay m.fl.), och faller tillbaka på vanlig uppspelning. Kanaler utanför Sveriges Radio gav fel på dessa högtalare.
