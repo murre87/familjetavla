@@ -1,0 +1,32 @@
+name: Familjetavla (test)
+version: "0.14.2-musik1"
+slug: familjetavla_test
+description: TESTVERSION (kan installeras vid sidan av den vanliga) – Musik-ändringar: rätt tjänstenamn, TuneIn-radio, radio på Music Assistant-spelare. Familjetavla för surfplattan – kalendrar, barnvecka, skola, sport, sopor, inköp och elpris, plus bilar, ljus och värme från Home Assistant.
+url: https://github.com/murre87/familjetavla
+arch:
+  - amd64
+  - aarch64
+image: ghcr.io/murre87/familjetavla-{arch}
+startup: application
+boot: auto
+# Home Assistant restarts the add-on if this stops answering.
+watchdog: http://[HOST]:[PORT:8099]/api/health
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:calendar-heart
+panel_title: Familjetavla (test)
+homeassistant_api: true
+# Öppna port 8099 om surfplattan ska nå tavlan direkt (http://homeassistant.local:8099) utan att
+# logga in i Home Assistant. Sätt då en PIN för inställningarna i guiden.
+# Https med Home Assistants certifikat (fullchain.pem/privkey.pem i ssl-mappen): öppna port 8443.
+map:
+  - type: ssl
+    read_only: true
+ports:
+  8099/tcp: 8199
+  8443/tcp: 8543
+ports_description:
+  8099/tcp: Direktåtkomst (testversionen ligger på port 8199 så att den inte krockar med den vanliga)
+  8443/tcp: Https (testversionen ligger på port 8543)
+environment:
+  TZ: Europe/Stockholm

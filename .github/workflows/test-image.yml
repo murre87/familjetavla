@@ -1,0 +1,48 @@
+name: Testbygge (tillägg)
+
+# Bygger en TESTVERSION av tillägget när grenen test-musik uppdateras, så att en tester med Home Assistant OS kan installera den vid sidan av den vanliga:
+#   Inställningar → Tillägg → Tilläggsbutik → ⋮ → Databaser → https://github.com/murre87/familjetavla#test-musik → "Familjetavla (test)".
+# Bara versionstaggen (t.ex. 0.14.2-musik1) skrivs, aldrig :latest, så den vanliga versionen och Watchtower berörs inte. Ingen release och ingen version höjs på main.
+on:
+  push:
+    branches: ["test-musik"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: aarch64
+            platform: linux/arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Version
+        id: v
+        run: echo "version=$(sed -n 's/^version: *"\(.*\)"/\1/p' familjetavla-test/config.yaml)" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/familjetavla-${{ matrix.arch }}:${{ steps.v.outputs.version }}
+          labels: |
+            io.hass.type=addon
+            io.hass.arch=${{ matrix.arch }}
+            io.hass.version=${{ steps.v.outputs.version }}
+          cache-from: type=gha,scope=test-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=test-${{ matrix.arch }}
