@@ -1,7 +1,7 @@
 name: Familjetavla (test)
 version: "0.14.2-musik1"
 slug: familjetavla_test
-description: TESTVERSION (kan installeras vid sidan av den vanliga) – Musik-ändringar: rätt tjänstenamn, TuneIn-radio, radio på Music Assistant-spelare. Familjetavla för surfplattan – kalendrar, barnvecka, skola, sport, sopor, inköp och elpris, plus bilar, ljus och värme från Home Assistant.
+description: "TESTVERSION (kan installeras vid sidan av den vanliga) – Musik-ändringar: rätt tjänstenamn, TuneIn-radio, radio på Music Assistant-spelare. Familjetavla för surfplattan – kalendrar, barnvecka, skola, sport, sopor, inköp och elpris, plus bilar, ljus och värme från Home Assistant."
 url: https://github.com/murre87/familjetavla
 arch:
   - amd64
