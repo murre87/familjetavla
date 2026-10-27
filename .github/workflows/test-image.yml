@@ -33,7 +33,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Version
         id: v
-        run: echo "version=$(sed -n 's/^version: *"\(.*\)"/\1/p' familjetavla-test/config.yaml)" >> "$GITHUB_OUTPUT"
+        run: |
+          V=$(grep -m1 '^version:' familjetavla-test/config.yaml | tr -d '"' | awk '{print $2}')
+          echo "version=$V" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .
