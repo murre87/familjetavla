@@ -124,7 +124,7 @@ export interface TravelChoice {
   home?: TravelLeg;
 }
 
-export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "temps", "energy", "climates", "music"] as const;
+export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "homestatus", "temps", "energy", "climates", "music"] as const;
 export type HomeWidget = (typeof HOME_WIDGETS)[number];
 /** Startskärmens rutor: "auto" följer hur många rutor som visas, annars liten/normal/stor. */
 export type WidgetSize = "auto" | "s" | "m" | "l";
