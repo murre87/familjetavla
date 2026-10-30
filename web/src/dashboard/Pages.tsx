@@ -3,7 +3,7 @@ import type { Control, Dashboard, Lamp } from "../../../server/src/types";
 import { api, type CarDetails, type GraphData } from "../api";
 import { Icon } from "../Icon";
 import type { Actions } from "./Dashboard";
-import { Ring } from "./bits";
+import { AnimatedNumber, Ring } from "./bits";
 import { PriceCard } from "../widgets/prices";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
@@ -444,6 +444,74 @@ function ChargingCard({ index, charging, actions }: { index: number; charging: b
   );
 }
 
+/** Elpris per timme med en rad per bil som visar när den laddar, på samma tidsaxel. */
+function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number }) {
+  const prices = data.prices;
+  if (!prices || prices.bars.length === 0) return null;
+  const H = 3_600_000;
+  const now = new Date();
+  const t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime();
+  const span = prices.bars.length * H;
+  const fmt = (n: number) => n.toFixed(2).replace(".", ",");
+  const max = Math.max(...prices.bars.map((b) => b.price), 0.01);
+  const low = [...prices.bars.map((b) => b.price)].sort((x, y) => x - y)[Math.floor(prices.bars.length / 3)] ?? 0;
+  const colors = ["var(--accent)", "var(--blue)", "var(--warn, #f59e0b)"];
+  const lanes = data.cars
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.smart);
+  return (
+    <section className="card strong plan-chart">
+      <div className="card-head">
+        <h2>Laddplan och elpris</h2>
+        <span className={`chip ${prices.level === "dyrt" ? "danger" : prices.level === "billigt" ? "good" : ""}`}>{prices.level}</span>
+      </div>
+      <div className="row gap" style={{ alignItems: "baseline" }}>
+        <span className="muted">Nu</span>
+        <span className="big-num">
+          <AnimatedNumber value={prices.now} decimals={2} />
+          <small>kr/kWh{prices.kind === "spot" ? " spot" : ""}</small>
+        </span>
+      </div>
+      <div className="pc-grid" role="img" aria-label={`Elpris och laddplan kommande ${prices.bars.length} timmar`}>
+        {prices.bars.map((b, i) => (
+          <span key={i} title={`${b.hour}:00 ${fmt(b.price)} kr`}>
+            <i className={b.current ? "current" : b.price <= low ? "cheap" : ""} style={{ height: `${Math.round((b.price / max) * 96) + 6}px` }} />
+          </span>
+        ))}
+      </div>
+      <div className="pc-lanes">
+        {lanes.map(({ c, i }) => {
+          const slots = (c.smart?.slots ?? []).filter((x) => Date.parse(x.end) > t0 && Date.parse(x.start) < t0 + span);
+          const pct = (t: number) => Math.max(0, Math.min(100, ((t - t0) / span) * 100));
+          const first = slots[0], last = slots[slots.length - 1];
+          const label = !slots.length ? "ingen laddning planerad" : `${hhmm(first.start)}–${hhmm(last.end)}${first.socStart !== undefined && last.socEnd !== undefined ? ` · ${first.socStart} → ${last.socEnd} %` : ""}`;
+          return (
+            <div key={c.name} className={`pc-lane ${i === selected ? "sel" : ""}`}>
+              <b style={{ color: colors[i % colors.length] }}>{c.name.split(" ")[0]}</b>
+              <span className="pc-track" aria-hidden="true">
+                {slots.map((x) => (
+                  <i key={x.start} title={`${hhmm(x.start)}–${hhmm(x.end)}`} style={{ left: `${pct(Date.parse(x.start))}%`, width: `${Math.max(1.2, pct(Date.parse(x.end)) - pct(Date.parse(x.start)))}%`, background: colors[i % colors.length] }} />
+                ))}
+              </span>
+              <small className="muted">{label}</small>
+            </div>
+          );
+        })}
+      </div>
+      <div className="pc-axis">
+        {prices.bars.map((b, i) => (
+          <span key={i}>{i % 4 === 0 ? b.hour : ""}</span>
+        ))}
+      </div>
+      {prices.cheapest && (
+        <b style={{ color: "var(--accent)", fontSize: 15 }}>
+          Billigast {prices.cheapest.from}–{prices.cheapest.to} · {fmt(prices.cheapest.avg)} kr
+        </b>
+      )}
+    </section>
+  );
+}
+
 export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   const [sel, setSel] = useState(0);
   const [details, setDetails] = useState(false);
@@ -486,7 +554,7 @@ export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions 
         </section>
         {car.smart ? <SmartChargingCard index={data.cars.indexOf(car)} car={car} actions={actions} /> : <ChargingCard index={data.cars.indexOf(car)} charging={Boolean(car.charging)} actions={actions} />}
         <ScheduleEditor car={car} actions={actions} />
-        {data.prices && <PriceCard prices={data.prices} />}
+        {data.cars.some((c) => c.smart) ? <PlanPriceChart data={data} selected={Math.min(sel, data.cars.length - 1)} /> : data.prices && <PriceCard prices={data.prices} />}
       </div>
       {details && <CarDetailsSheet index={data.cars.indexOf(car)} onClose={() => setDetails(false)} actions={actions} />}
     </main>

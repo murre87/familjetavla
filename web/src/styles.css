@@ -4700,3 +4700,73 @@ marker.pf-buy path {
 button.chip { background: transparent; cursor: pointer; font-family: inherit; }
 button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offset: 2px; }
 .p-line.fam { opacity: 0.75; }
+
+/* Laddplan och elpris: staplar per timme och en rad per bil på samma tidsaxel */
+.pc-grid {
+  height: 104px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: end;
+}
+.pc-grid span {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+  padding: 0 1.5px;
+}
+.pc-grid i {
+  display: block;
+  width: 100%;
+  border-radius: 4px;
+  background: var(--bar);
+  min-height: 4px;
+  transform-origin: bottom;
+  animation: grow 0.8s var(--ease) both;
+}
+.pc-grid i.cheap {
+  background: var(--accent);
+  opacity: 0.6;
+}
+.pc-grid i.current {
+  background: var(--danger);
+}
+.pc-lanes {
+  display: grid;
+  gap: 8px;
+}
+.pc-lane {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+.pc-lane:not(.sel) b {
+  opacity: 0.8;
+}
+.pc-track {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(120, 130, 150, 0.22);
+  overflow: hidden;
+}
+.pc-track i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 5px;
+  border-radius: 7px;
+}
+.pc-axis {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  font-size: 13px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.pc-axis span {
+  white-space: nowrap;
+}

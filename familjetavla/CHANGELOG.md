@@ -1,5 +1,9 @@
 # Ändringar
 
+## 0.14.5
+
+- **Laddplan och elpris i samma graf (Bil):** timpriset som staplar (billigaste timmarna gröna, nuvarande röd) med en rad per bil under, som visar exakt när varje bil laddar, plus tid och batteri före och efter planen. Ersätter det separata elpriskortet på bilsidan när bilarna har smartstyrd laddning.
+
 ## 0.14.4
 
 - **Familjetavla syns för alla i Home Assistant.** Tillägget i sidomenyn var bara synligt för administratörer. Nu syns det även för användare som inte är admin, till exempel barnen. Tack Christian Hollbjär.
