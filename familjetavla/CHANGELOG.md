@@ -3,6 +3,7 @@
 ## 0.14.5
 
 - **Laddplan och elpris i samma graf (Bil):** timpriset som staplar (billigaste timmarna gröna, nuvarande röd) med en rad per bil under, som visar exakt när varje bil laddar, plus tid och batteri före och efter planen. Ersätter det separata elpriskortet på bilsidan när bilarna har smartstyrd laddning.
+- **Solprognos i grafen:** publicerar smartstyrningen attributet `solar_forecast` (watt per timme) ritas den som en gul yta bakom staplarna, och bilens rad får "sol ca 11–16 (solladdning)" när ingen nätladdning är planerad. Se docs/SMART-LADDNING.md.
 
 ## 0.14.4
 

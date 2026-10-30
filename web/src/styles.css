@@ -4770,3 +4770,20 @@ button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offs
 .pc-axis span {
   white-space: nowrap;
 }
+.pc-wrap {
+  position: relative;
+}
+.pc-sun {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  pointer-events: none;
+}
+.pc-sun i {
+  background: rgba(251, 191, 36, 0.28);
+  border-radius: 6px 6px 0 0;
+  animation: none;
+}
+.pc-wrap > .pc-grid:not(.pc-sun) {
+  position: relative;
+}

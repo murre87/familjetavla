@@ -459,6 +459,16 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
   const lanes = data.cars
     .map((c, i) => ({ c, i }))
     .filter(({ c }) => c.smart);
+  // Solprognos per stapel (W); samma för alla bilar eftersom den gäller huset.
+  const fc = data.cars.find((c) => c.smart?.solarForecast)?.smart?.solarForecast ?? [];
+  const sun = prices.bars.map((_, i) => fc.find((f) => Math.abs(Date.parse(f.start) - (t0 + i * H)) < H / 2)?.w ?? 0);
+  const sunMax = Math.max(...sun, 1);
+  const SUN_MIN = 2500;   // ca 2,5 kW sol ger över 1,4 kW överskott efter husets last
+  let a = -1, b = -1;
+  for (let k = 0; k < sun.length; k++) {
+    if (sun[k] >= SUN_MIN) { if (a < 0) a = k; b = k; } else if (a >= 0) break;
+  }
+  const sunText = a >= 0 ? `sol ca ${prices.bars[a].hour}–${String((Number(prices.bars[b].hour) + 1) % 24).padStart(2, "0")}` : null;
   return (
     <section className="card strong plan-chart">
       <div className="card-head">
@@ -472,6 +482,14 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
           <small>kr/kWh{prices.kind === "spot" ? " spot" : ""}</small>
         </span>
       </div>
+      <div className="pc-wrap">
+      {sun.some((w) => w > 0) && (
+        <div className="pc-grid pc-sun" aria-hidden="true">
+          {sun.map((w, i) => (
+            <span key={i}><i style={{ height: `${Math.round((w / sunMax) * 100)}%` }} /></span>
+          ))}
+        </div>
+      )}
       <div className="pc-grid" role="img" aria-label={`Elpris och laddplan kommande ${prices.bars.length} timmar`}>
         {prices.bars.map((b, i) => (
           <span key={i} title={`${b.hour}:00 ${fmt(b.price)} kr`}>
@@ -479,12 +497,13 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
           </span>
         ))}
       </div>
+      </div>
       <div className="pc-lanes">
         {lanes.map(({ c, i }) => {
           const slots = (c.smart?.slots ?? []).filter((x) => Date.parse(x.end) > t0 && Date.parse(x.start) < t0 + span);
           const pct = (t: number) => Math.max(0, Math.min(100, ((t - t0) / span) * 100));
           const first = slots[0], last = slots[slots.length - 1];
-          const label = !slots.length ? "ingen laddning planerad" : `${hhmm(first.start)}–${hhmm(last.end)}${first.socStart !== undefined && last.socEnd !== undefined ? ` · ${first.socStart} → ${last.socEnd} %` : ""}`;
+          const label = !slots.length ? (c.battery !== null && c.battery >= 98 ? "fulladdad" : sunText ? `☀ ${sunText} (solladdning)` : "ingen laddning planerad") : `${hhmm(first.start)}–${hhmm(last.end)}${first.socStart !== undefined && last.socEnd !== undefined ? ` · ${first.socStart} → ${last.socEnd} %` : ""}`;
           return (
             <div key={c.name} className={`pc-lane ${i === selected ? "sel" : ""}`}>
               <b style={{ color: colors[i % colors.length] }}>{c.name.split(" ")[0]}</b>
