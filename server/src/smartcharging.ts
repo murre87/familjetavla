@@ -37,6 +37,8 @@ export interface SmartCharging {
   pauseOption?: string;
   autoOption?: string;
   slots: Slot[];
+  /** Valfritt: prognosticerad solproduktion per timme (attributet `solar_forecast` = [{ start, w }], W), för grafen över laddplan och elpris. */
+  solarForecast?: { start: string; w: number }[];
   socAfter: number | null;
   plannedKwh: number | null;
   /** Valfritt: vad batteriet beräknas ha vid ett morgonmål (golvet) enligt planen. */
@@ -72,6 +74,17 @@ export function parseSchedule(raw: unknown): ScheduleRow[] | undefined {
     .map((r) => ({ day: Number(r.day), time: String(r.time).slice(0, 5), soc: Math.max(0, Math.min(100, Number(r.soc) || 0)), enabled: r.enabled === true || r.enabled === "true" }))
     .sort((a, b) => a.day - b.day);
   return rows.length ? rows : undefined;
+}
+
+export function parseSolar(raw: unknown): { start: string; w: number }[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out = raw.flatMap((x) => {
+    const r = (x && typeof x === "object" ? x : {}) as Record<string, unknown>;
+    const start = String(r.start ?? "");
+    const w = Number(r.w);
+    return Number.isNaN(Date.parse(start)) || !Number.isFinite(w) ? [] : [{ start, w: Math.max(0, Math.round(w)) }];
+  });
+  return out.length ? out : undefined;
 }
 
 export function parseSlots(raw: unknown): Slot[] {
@@ -141,6 +154,7 @@ export function findSmartCharging(states: Map<string, HaState>, carName: string,
     pauseOption: options.find((o) => PAUSE.test(o) && !AUTO.test(o)),
     autoOption: options.find((o) => AUTO.test(o) && !NOW.test(o)),
     slots: parseSlots(a.slots),
+    solarForecast: parseSolar(a.solar_forecast),
     socAfter: num(a.soc_after_plan),
     plannedKwh: num(a.planned_kwh),
     morning: parseMorning(a.morning_check),

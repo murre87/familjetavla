@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HaState } from "./connectors/ha.js";
-import { findAutoModes, findSmartCharging, parseMorning, parseSchedule, parseSlots } from "./smartcharging.js";
+import { findAutoModes, findSmartCharging, parseMorning, parseSchedule, parseSlots, parseSolar } from "./smartcharging.js";
 
 const st = (id: string, state: string, attributes: Record<string, unknown> = {}): HaState => ({ entity_id: id, state, attributes, last_changed: "2026-10-23T10:00:00Z" });
 const slots = [
@@ -18,6 +18,15 @@ const world = new Map<string, HaState>(
 );
 
 describe("smart charging", () => {
+  it("reads the optional solar forecast and ignores bad rows", () => {
+    expect(parseSolar([{ start: "2026-10-30T11:00+01:00", w: 8187.4 }, { start: "nonsense", w: 5 }, { start: "2026-10-30T12:00+01:00", w: -20 }, { start: "2026-10-30T13:00+01:00" }])).toEqual([
+      { start: "2026-10-30T11:00+01:00", w: 8187 },
+      { start: "2026-10-30T12:00+01:00", w: 0 },
+    ]);
+    expect(parseSolar(undefined)).toBeUndefined();
+    expect(parseSolar([])).toBeUndefined();
+  });
+
   it("matches plan and mode to the right car by name", () => {
     const t = findSmartCharging(world, "Tesla Model Y")!;
     expect(t.planEntity).toBe("sensor.tesla_model_y_laddplan");
