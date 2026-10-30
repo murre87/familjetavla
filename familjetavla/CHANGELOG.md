@@ -1,5 +1,9 @@
 # Ändringar
 
+## 0.14.4
+
+- **Familjetavla syns för alla i Home Assistant.** Tillägget i sidomenyn var bara synligt för administratörer. Nu syns det även för användare som inte är admin, till exempel barnen. Tack Christian Hollbjär.
+
 ## 0.14.3
 
 - **Musik: rätt namn på tjänsten.** Biblioteksknappen i Musik heter nu det Music Assistant faktiskt har kopplat – Apple Music, Tidal, Deezer, YouTube Music … (inte alltid "Spotify"). Spotify-rutan visas bara när det är Spotify. Tack Oskar Ax.
