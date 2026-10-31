@@ -1596,13 +1596,31 @@ export function HouseStep({ cfg, set, saveNow }: StepProps) {
           <EntityPicker label="Husets förbrukning" domains={["sensor"]} units={POWER} value={en.energy.house} onChange={(v) => setEn({ energy: { ...en.energy, house: v } })} help="Behövs bara om du saknar solel eller elmätare. Annars räknar tavlan själv: solel + köpt − såld." />
           <EntityPicker label="Elnät – sålt (om mätaren har det separat)" domains={["sensor"]} units={POWER} value={en.energy.gridExport} onChange={(v) => setEn({ energy: { ...en.energy, gridExport: v } })} help="T.ex. Tibber Pulse Elproduktion. Visar mätaren köp som plus och sälj som minus behövs den inte." />
           <EntityPicker label="Hembatteri (%)" domains={["sensor"]} units={/^%$/} value={en.energy.battery} onChange={(v) => setEn({ energy: { ...en.energy, battery: v } })} />
+          <EntityPicker
+            label="Hembatteri – effekt"
+            domains={["sensor"]}
+            units={POWER}
+            value={en.energy.batteryPower}
+            onChange={(v) => setEn({ energy: { ...en.energy, batteryPower: v } })}
+            help="Med den räknar tavlan in batteriet i husets förbrukning och visar om det laddar eller laddar ur."
+          />
         </div>
+        {en.energy.batteryPower && (
+          <Toggle
+            label="Batteriets effekt är plus när det laddar"
+            help="T.ex. Sigenergy. Home Assistants energipanel räknar urladdning som plus – stämmer det för ditt batteri ska den vara av."
+            checked={Boolean(en.energy.batteryChargePositive)}
+            onChange={(v) => setEn({ energy: { ...en.energy, batteryChargePositive: v } })}
+          />
+        )}
         <h3 style={{ marginTop: 8 }}>Dagens kWh</h3>
         <p className="muted">Mätarställningar (kWh) – tavlan räknar själv hur mycket som gått sedan midnatt: förbrukning, egen solel, självförsörjning och vad den köpta elen kostat.</p>
         <div className="grid-2">
           <EntityPicker label="Solproduktion totalt (kWh)" domains={["sensor"]} units={ENERGY} value={en.energy.solarEnergy} onChange={(v) => setEn({ energy: { ...en.energy, solarEnergy: v } })} />
           <EntityPicker label="Köpt el, mätarställning (kWh)" domains={["sensor"]} units={ENERGY} value={en.energy.importEnergy} onChange={(v) => setEn({ energy: { ...en.energy, importEnergy: v } })} />
           <EntityPicker label="Såld el, mätarställning (kWh)" domains={["sensor"]} units={ENERGY} value={en.energy.exportEnergy} onChange={(v) => setEn({ energy: { ...en.energy, exportEnergy: v } })} />
+          <EntityPicker label="Laddat i hembatteriet (kWh)" domains={["sensor"]} units={ENERGY} value={en.energy.batteryChargeEnergy} onChange={(v) => setEn({ energy: { ...en.energy, batteryChargeEnergy: v } })} />
+          <EntityPicker label="Urladdat ur hembatteriet (kWh)" domains={["sensor"]} units={ENERGY} value={en.energy.batteryDischargeEnergy} onChange={(v) => setEn({ energy: { ...en.energy, batteryDischargeEnergy: v } })} />
         </div>
       </section>
       <section className="card">
