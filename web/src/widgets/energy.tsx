@@ -38,6 +38,12 @@ export function EnergyMini({ e, price }: { e: Dashboard["energy"]; price?: numbe
             <b>{Math.round(e.batteryPct)} %</b>
           </div>
         )}
+        {e.batteryKw !== undefined && Math.abs(e.batteryKw) > 0.005 && (
+          <div>
+            <small>{e.batteryKw > 0 ? "Ur batteriet" : "Till batteriet"}</small>
+            <b>{f(Math.abs(e.batteryKw))}</b>
+          </div>
+        )}
       </div>
     </section>
   );
