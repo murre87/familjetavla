@@ -661,7 +661,11 @@ function kw(states: Map<string, HaState>, id?: string): number | undefined {
 
 function buildEnergy(cfg: Config, states: Map<string, HaState>, series: Record<string, { t: number; v: number }[]>, spot: HourPrice[]): Dashboard["energy"] {
   const e = cfg.entities.energy ?? {};
-  const units = Object.fromEntries([e.solarEnergy, e.importEnergy, e.exportEnergy].filter((x): x is string => Boolean(x)).map((id) => [id, String(states.get(id)?.attributes.unit_of_measurement ?? "kWh")]));
+  const units = Object.fromEntries(
+    [e.solarEnergy, e.importEnergy, e.exportEnergy, e.batteryChargeEnergy, e.batteryDischargeEnergy]
+      .filter((x): x is string => Boolean(x))
+      .map((id) => [id, String(states.get(id)?.attributes.unit_of_measurement ?? "kWh")]),
+  );
   const out = {
     ...energyLive(e, states),
     today: energyToday(e, series, units, spot, (p) => (hasPriceExtras(cfg) ? totalPrice(cfg, p) : p)),

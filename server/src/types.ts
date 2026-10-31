@@ -255,12 +255,19 @@ export interface EnergyEntities {
   house?: string;
   /** Hembatteri, laddnivå i %. */
   battery?: string;
+  /** Hembatteriets effekt (W eller kW). Positiv = laddar ur, som i Home Assistants energipanel. */
+  batteryPower?: string;
+  /** Batterier som visar laddning som plus (t.ex. Sigenergy): vänd tecknet på batteryPower. */
+  batteryChargePositive?: boolean;
   /** Effekt som säljs ut på nätet, när mätaren har den separat (t.ex. Tibber Pulse "Elproduktion"). */
   gridExport?: string;
   /** Mätarställningar (kWh/Wh) för dagens summor: solproduktion, köpt och såld el. */
   solarEnergy?: string;
   importEnergy?: string;
   exportEnergy?: string;
+  /** Mätarställningar (kWh/Wh) för det som laddats in i och ur hembatteriet. */
+  batteryChargeEnergy?: string;
+  batteryDischargeEnergy?: string;
 }
 
 export interface Config {
@@ -534,11 +541,13 @@ export interface Dashboard {
     solarKw?: number;
     /** Positiv = köper från nätet, negativ = säljer. */
     gridKw?: number;
-    /** Husets förbrukning: egen sensor, annars sol + köpt − såld. */
+    /** Husets förbrukning: egen sensor, annars sol + köpt − såld + batteriets urladdning. */
     houseKw?: number;
     /** Solel som används i huset just nu (sol − såld). */
     selfUseKw?: number;
     batteryPct?: number;
+    /** Positiv = batteriet laddar ur till huset, negativ = batteriet laddar. */
+    batteryKw?: number;
     /** Sedan midnatt, ur mätarställningarna i Home Assistant. */
     today?: {
       solarKwh?: number;
@@ -546,7 +555,9 @@ export interface Dashboard {
       exportKwh?: number;
       houseKwh?: number;
       selfUseKwh?: number;
-      /** Andel av förbrukningen som solen täckt, 0–100. */
+      batteryChargeKwh?: number;
+      batteryDischargeKwh?: number;
+      /** Andel av förbrukningen som inte köpts från nätet (sol och batteri), 0–100. */
       selfSufficiencyPct?: number;
       /** Köpt el gånger timpriset (med påslag om sådant är inlagt). */
       costKr?: number;

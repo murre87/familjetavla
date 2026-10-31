@@ -18,20 +18,27 @@ export function kwOf(states: Map<string, HaState>, id?: string): number | undefi
 /**
  * Power right now. The grid meter may give one signed value (+ buy, − sell) or two (buy and sell,
  * like Tibber Pulse "Effekt" and "Elproduktion"). The house is what the sun makes plus what is
- * bought minus what is sold; a house sensor is only used when the sun or the meter is missing.
+ * bought minus what is sold, plus what a home battery gives (or minus what it takes); a house
+ * sensor is only used when the sun and the battery or the meter are missing.
  */
 export function energyNow(e: EnergyEntities, states: Map<string, HaState>): Omit<Energy, "today" | "batteryPct"> {
   const solar = kwOf(states, e.solar);
   const buy = kwOf(states, e.grid);
   const sell = kwOf(states, e.gridExport);
   const grid = buy !== undefined ? round(buy - (sell ?? 0)) : sell !== undefined ? -sell : undefined;
-  // With both sun and meter the board counts the house itself: sun + bought − sold. A home's own
-  // "consumption" sensor often is just the bought power (0 while selling), so it is only used when
-  // one of the two is missing.
-  const house = solar !== undefined && grid !== undefined ? round(Math.max(0, solar + grid)) : kwOf(states, e.house);
+  // Home Assistant's energy panel counts battery discharge as plus; some brands report charging as plus.
+  const rawBattery = kwOf(states, e.batteryPower);
+  const battery = rawBattery === undefined ? undefined : e.batteryChargePositive ? -rawBattery : rawBattery;
+  // With a meter and the sun (or a battery) the board counts the house itself: sun + bought − sold
+  // ± battery. A home's own "consumption" sensor often is just the bought power (0 while selling),
+  // so it is only used when the board cannot count.
+  const house =
+    grid !== undefined && (solar !== undefined || battery !== undefined)
+      ? round(Math.max(0, (solar ?? 0) + grid + (battery ?? 0)))
+      : kwOf(states, e.house);
   const sold = grid !== undefined && grid < 0 ? -grid : 0;
   const selfUse = solar !== undefined ? round(Math.max(0, Math.min(solar - sold, house ?? solar))) : undefined;
-  return { solarKw: solar, gridKw: grid, houseKw: house, selfUseKw: selfUse };
+  return { solarKw: solar, gridKw: grid, houseKw: house, selfUseKw: selfUse, batteryKw: battery };
 }
 
 /** Battery level in %, or undefined. */
@@ -46,7 +53,8 @@ export function energyLive(e: EnergyEntities, states: Map<string, HaState>): Omi
 }
 
 /** Entities whose change moves the live flow (not the kWh meters, which only feed "Idag"). */
-export const liveEnergyIds = (e: EnergyEntities) => [e.solar, e.grid, e.gridExport, e.house, e.battery].filter((x): x is string => Boolean(x));
+export const liveEnergyIds = (e: EnergyEntities) =>
+  [e.solar, e.grid, e.gridExport, e.house, e.battery, e.batteryPower].filter((x): x is string => Boolean(x));
 
 /**
  * What a meter counted between readings. Works for lifetime readings (total_increasing) and for
@@ -115,10 +123,18 @@ export function energyToday(
   const solarKwh = kwh(e.solarEnergy);
   const importKwh = kwh(e.importEnergy);
   const exportKwh = kwh(e.exportEnergy);
+  const batteryChargeKwh = kwh(e.batteryChargeEnergy);
+  const batteryDischargeKwh = kwh(e.batteryDischargeEnergy);
   if (solarKwh === undefined && importKwh === undefined && exportKwh === undefined) return undefined;
-  const houseKwh = importKwh !== undefined ? round((solarKwh ?? 0) + importKwh - (exportKwh ?? 0)) : undefined;
+  const battery = (batteryDischargeKwh ?? 0) - (batteryChargeKwh ?? 0);
+  const houseKwh = importKwh !== undefined ? round(Math.max(0, (solarKwh ?? 0) + importKwh - (exportKwh ?? 0) + battery)) : undefined;
   const selfUseKwh = solarKwh !== undefined ? round(Math.max(0, solarKwh - (exportKwh ?? 0))) : undefined;
-  const selfSufficiencyPct = houseKwh && selfUseKwh !== undefined ? Math.round(Math.min(100, (selfUseKwh / houseKwh) * 100)) : undefined;
+  // What was not bought. Without a battery this is the same as own solar use / consumption; with one
+  // it also counts what the battery gave back (sun stored earlier).
+  const selfSufficiencyPct =
+    houseKwh && importKwh !== undefined && (selfUseKwh !== undefined || batteryDischargeKwh !== undefined)
+      ? Math.round(Math.min(100, Math.max(0, ((houseKwh - importKwh) / houseKwh) * 100)))
+      : undefined;
   let costKr: number | undefined;
   if (e.importEnergy && series[e.importEnergy] && prices.length) {
     const byHour = new Map(prices.map((p) => [p.start.getTime(), priceOf(p.price)]));
@@ -132,12 +148,12 @@ export function energyToday(
     }
     if (priced) costKr = round(sum, 0);
   }
-  return { solarKwh, importKwh, exportKwh, houseKwh, selfUseKwh, selfSufficiencyPct, costKr };
+  return { solarKwh, importKwh, exportKwh, houseKwh, selfUseKwh, batteryChargeKwh, batteryDischargeKwh, selfSufficiencyPct, costKr };
 }
 
 /** Today's meter history from Home Assistant, at most every five minutes. */
 export async function todaySeries(conn: HaConn, e: EnergyEntities, now: Date): Promise<Record<string, { t: number; v: number }[]>> {
-  const ids = [e.solarEnergy, e.importEnergy, e.exportEnergy].filter((x): x is string => Boolean(x));
+  const ids = [e.solarEnergy, e.importEnergy, e.exportEnergy, e.batteryChargeEnergy, e.batteryDischargeEnergy].filter((x): x is string => Boolean(x));
   if (!ids.length) return {};
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return cached(`energy-today:${ids.join(",")}:${midnight.toDateString()}`, 5 * 60_000, () => ha.historyRaw(conn, ids, midnight, now));

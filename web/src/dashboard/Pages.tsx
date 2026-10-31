@@ -843,13 +843,16 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
 
 // ---------- Energy ----------
 
+/** "Batteriet laddar" / "laddar ur" / "vilar" for a battery power where plus is discharge. */
+export const batteryText = (k: number) => (k < -0.005 ? "Batteriet laddar" : k > 0.005 ? "Batteriet laddar ur" : "Batteriet vilar");
+
 export function EnergyPage({ data }: { data: Dashboard }) {
   const e = data.energy;
   const kw = (n?: number) => `${fmtNum(n ?? 0)} kW`;
   return (
     <main className="page-grid">
       {e && (e.solarKw !== undefined || e.gridKw !== undefined) && <PowerFlow e={e} price={data.prices?.now} spot={data.prices?.kind === "spot"} />}
-      {(e?.houseKw !== undefined || e?.batteryPct !== undefined) && (
+      {(e?.houseKw !== undefined || e?.batteryPct !== undefined || e?.batteryKw !== undefined) && (
         <section className="card">
           <div className="stats" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
             {e?.houseKw !== undefined && (
@@ -868,6 +871,12 @@ export function EnergyPage({ data }: { data: Dashboard }) {
               <div>
                 <small>Hembatteri</small>
                 <b className="big-num">{Math.round(e.batteryPct)} %</b>
+              </div>
+            )}
+            {e?.batteryKw !== undefined && (
+              <div>
+                <small>{batteryText(e.batteryKw)}</small>
+                <b className="big-num">{kw(Math.abs(e.batteryKw))}</b>
               </div>
             )}
           </div>
@@ -905,6 +914,18 @@ export function EnergyPage({ data }: { data: Dashboard }) {
               <div>
                 <small>Egen solel</small>
                 <b>{fmtNum(e.today.selfUseKwh)} kWh</b>
+              </div>
+            )}
+            {e.today.batteryChargeKwh !== undefined && (
+              <div>
+                <small>Laddat i batteriet</small>
+                <b>{fmtNum(e.today.batteryChargeKwh)} kWh</b>
+              </div>
+            )}
+            {e.today.batteryDischargeKwh !== undefined && (
+              <div>
+                <small>Ur batteriet</small>
+                <b>{fmtNum(e.today.batteryDischargeKwh)} kWh</b>
               </div>
             )}
             {e.today.selfSufficiencyPct !== undefined && (

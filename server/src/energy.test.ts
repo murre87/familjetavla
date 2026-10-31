@@ -29,6 +29,40 @@ describe("energy now", () => {
   });
 });
 
+describe("home battery", () => {
+  it("a discharging battery is counted in the house (real home: Sigenergy and Tibber Pulse at night)", () => {
+    // Sigenergy reports charging as plus: −2.1 kW is the battery giving 2.1 kW to the house.
+    const states = new Map([st("sensor.pv", "0", "kW"), st("sensor.grid", "1.3", "kW"), st("sensor.bat_p", "-2.1", "kW")].map((s) => [s.entity_id, s]));
+    const e = { solar: "sensor.pv", grid: "sensor.grid", batteryPower: "sensor.bat_p", batteryChargePositive: true };
+    expect(energyNow(e, states)).toEqual({ solarKw: 0, gridKw: 1.3, houseKw: 3.4, selfUseKw: 0, batteryKw: 2.1 });
+  });
+  it("a charging battery takes from the sun, not from the house (Home Assistant sign: plus = discharge)", () => {
+    const states = new Map([st("sensor.pv", "4000", "W"), st("sensor.grid", "0", "W"), st("sensor.bat_p", "-3000", "W")].map((s) => [s.entity_id, s]));
+    expect(energyNow({ solar: "sensor.pv", grid: "sensor.grid", batteryPower: "sensor.bat_p" }, states)).toEqual({ solarKw: 4, gridKw: 0, houseKw: 1, selfUseKw: 1, batteryKw: -3 });
+  });
+  it("a meter and a battery without sun still count the house", () => {
+    const states = new Map([st("sensor.grid", "500", "W"), st("sensor.bat_p", "1.5", "kW"), st("sensor.tpl", "0.5", "kW")].map((s) => [s.entity_id, s]));
+    expect(energyNow({ grid: "sensor.grid", batteryPower: "sensor.bat_p", house: "sensor.tpl" }, states).houseKw).toBe(2);
+  });
+  it("the battery power moves the live flow", () => {
+    expect(liveEnergyIds({ grid: "sensor.grid", battery: "sensor.bat", batteryPower: "sensor.bat_p" })).toEqual(["sensor.grid", "sensor.bat", "sensor.bat_p"]);
+  });
+  it("today: what the battery gave back is consumption that was not bought", () => {
+    const t = (h: number) => new Date(2026, 9, 30, h).getTime();
+    const series = {
+      "sensor.pv_day": [{ t: t(0), v: 0 }, { t: t(23), v: 0.68 }],
+      "sensor.in_day": [{ t: t(0), v: 0 }, { t: t(23), v: 14.82 }],
+      "sensor.out_day": [{ t: t(0), v: 0 }, { t: t(23), v: 0.83 }],
+      "sensor.bat_in": [{ t: t(0), v: 0 }, { t: t(23), v: 3.68 }],
+      "sensor.bat_out": [{ t: t(0), v: 0 }, { t: t(23), v: 7.22 }],
+    };
+    const e = { solarEnergy: "sensor.pv_day", importEnergy: "sensor.in_day", exportEnergy: "sensor.out_day", batteryChargeEnergy: "sensor.bat_in", batteryDischargeEnergy: "sensor.bat_out" };
+    const r = energyToday(e, series, {}, [], (p) => p);
+    // 0.68 + 14.82 − 0.83 + 7.22 − 3.68 = 18.21 kWh, the same as Sigenergy's own "load consumption".
+    expect(r).toMatchObject({ houseKwh: 18.21, batteryChargeKwh: 3.68, batteryDischargeKwh: 7.22, selfSufficiencyPct: 19 });
+  });
+});
+
 describe("energy today", () => {
   const t = (h: number, m = 0) => new Date(2026, 9, 20, h, m).getTime();
   it("counts a lifetime meter and a counter that restarts at midnight the same way", () => {
