@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { custodyStatus, isHome } from "./custody.js";
 import { cheapestBlock, priceLevel, toHourly } from "./connectors/elpris.js";
+import { pricesFromAttributes } from "./providers/price.js";
+import { buildPrices } from "./dashboard.js";
+import { defaultConfig } from "./store.js";
 import { parseIcs } from "./connectors/ics.js";
 import { parseEdpDate } from "./connectors/waste.js";
 import { isoWeek } from "./time.js";
@@ -67,6 +70,32 @@ describe("elpris", () => {
     const hourly = toHourly(rows);
     expect(hourly).toHaveLength(24);
     expect(hourly[0].price).toBeCloseTo(0.1);
+  });
+
+  it("keeps the four quarters of a full hour, and none for a partial one", () => {
+    const quarters = Array.from({ length: 8 }, (_, i) => ({ SEK_per_kWh: 0.1 * (i + 1), time_start: new Date(2026, 9, 18, 0, i * 15).toISOString() }));
+    const hourly = toHourly(quarters.slice(0, 7));
+    expect(hourly[0].quarters).toEqual([0.1, 0.2, 0.3, 0.4]);
+    expect(hourly[1].quarters).toBeUndefined(); // only three quarters of hour 1
+  });
+
+  it("keeps the quarters from a Home Assistant nordpool sensor (raw_today, 15 minutes), like EnergyWizard reads it", () => {
+    const raw_today = Array.from({ length: 96 }, (_, i) => ({ start: new Date(2026, 9, 18, 0, i * 15).toISOString(), end: new Date(2026, 9, 18, 0, i * 15 + 15).toISOString(), value: 1 + i / 100 }));
+    const hourly = pricesFromAttributes({ raw_today }, "SEK/kWh", new Date(2026, 9, 18, 12));
+    expect(hourly).toHaveLength(24);
+    expect(hourly[1].quarters).toEqual([1.04, 1.05, 1.06, 1.07]);
+  });
+
+  it("shows quarters from the current one when asked, otherwise hours", () => {
+    const cfg = defaultConfig();
+    const now = new Date(2026, 9, 18, 10, 20); // second quarter of 10
+    const spot = toHourly(rows).filter((p) => p.start.getHours() >= 10);
+    expect(buildPrices(cfg, spot, now)!.bars[0].minute).toBeUndefined();
+    const q = buildPrices({ ...cfg, electricity: { ...cfg.electricity, resolution: "quarter" } }, spot, now)!;
+    expect(q.resolution).toBe("quarter");
+    expect(q.bars.slice(0, 3).map((b) => `${b.hour}:${b.minute}`)).toEqual(["10:15", "10:30", "10:45"]);
+    expect(q.bars[0].current).toBe(true);
+    expect(q.bars[1].current).toBe(false);
   });
 
   it("finds the cheapest contiguous block", () => {

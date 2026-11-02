@@ -293,6 +293,8 @@ export interface Config {
   electricity: {
     /** Antal billigaste timmar i följd som markeras. */
     cheapHours: number;
+    /** Elprisstaplarna: per timme (standard) eller per kvart (marknaden prissätter i 15 minuter). */
+    resolution?: "hour" | "quarter";
     /** Påslag från elbolaget, öre/kWh exkl. moms. */
     markupOre: number;
     /** Elöverföring/nätavgift, öre/kWh exkl. moms. */
@@ -472,6 +474,8 @@ export interface Reminder {
 
 export interface PriceBar {
   hour: string; // "00"
+  /** "00", "15", "30" or "45" when the bar is a quarter of an hour. */
+  minute?: string;
   price: number;
   cheap: boolean;
   current: boolean;
@@ -527,6 +531,8 @@ export interface Dashboard {
     level: "billigt" | "normalt" | "dyrt";
     /** "spot" = spotpris, "total" = med påslag, nät, skatt och moms. */
     kind: "spot" | "total";
+    /** "quarter" när staplarna är kvartar. */
+    resolution?: "hour" | "quarter";
     bars: PriceBar[];
     cheapest?: { from: string; to: string; avg: number };
   };

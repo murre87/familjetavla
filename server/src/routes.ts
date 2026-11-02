@@ -234,6 +234,7 @@ export const configSchema = z
     }),
     electricity: z.object({
       cheapHours: z.number().int().min(1).max(8),
+      resolution: z.enum(["hour", "quarter"]).optional(),
       markupOre: z.number().min(0).max(500),
       gridOre: z.number().min(0).max(500),
       taxOre: z.number().min(0).max(500),

@@ -47,7 +47,7 @@ import {
   startOfDay,
   isoWeekday,
 } from "./time.js";
-import type { ActivityIcon, CalendarSource, Config, Control, DashDay, DashEvent, Dashboard, Person, Reminder, TravelChoice } from "./types.js";
+import type { ActivityIcon, CalendarSource, Config, Control, DashDay, DashEvent, Dashboard, Person, PriceBar, Reminder, TravelChoice } from "./types.js";
 
 const MIN = 60_000;
 const WASTE_COLOR = "#9aa0bf";
@@ -669,18 +669,41 @@ function buildEnergy(cfg: Config, states: Map<string, HaState>, series: Record<s
   return Object.values(out).some((v) => v !== undefined) ? out : undefined;
 }
 
-function buildPrices(cfg: Config, spot: HourPrice[], now: Date): Dashboard["prices"] {
+export function buildPrices(cfg: Config, spot: HourPrice[], now: Date): Dashboard["prices"] {
   if (spot.length === 0) return undefined;
   const withExtras = hasPriceExtras(cfg);
-  const prices = withExtras ? spot.map((p) => ({ ...p, price: totalPrice(cfg, p.price) })) : spot;
+  const adj = (x: number) => (withExtras ? totalPrice(cfg, x) : x);
+  const prices = withExtras ? spot.map((p) => ({ ...p, price: totalPrice(cfg, p.price), quarters: p.quarters?.map(adj) })) : spot;
   const currentHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours()).getTime();
   const upcoming = prices.filter((p) => p.start.getTime() >= currentHour).slice(0, 24);
-  const nowPrice = upcoming[0]?.price ?? prices[prices.length - 1].price;
   const block = cheapestBlock(upcoming, Math.max(1, Math.min(8, cfg.electricity.cheapHours)), now);
   const cheapSet = new Set(block?.hours ?? []);
+  const cheapest = block ? { from: hhmm(block.start).slice(0, 2), to: hhmm(block.end).slice(0, 2), avg: block.avg } : undefined;
+  const kind = withExtras ? "total" : "spot";
+  // Per quarter: only when asked for and the source has quarters (the remaining quarters of this hour, then the next 23 hours).
+  if (cfg.electricity.resolution === "quarter" && upcoming.some((p) => p.quarters)) {
+    const nowQ = Math.floor(now.getMinutes() / 15);
+    const bars: PriceBar[] = [];
+    for (const [i, p] of upcoming.entries()) {
+      const qs = p.quarters ?? [p.price];
+      qs.forEach((price, q) => {
+        if (i === 0 && qs.length === 4 && q < nowQ) return;
+        bars.push({
+          hour: String(p.start.getHours()).padStart(2, "0"),
+          minute: String(qs.length === 4 ? q * 15 : 0).padStart(2, "0"),
+          price,
+          cheap: cheapSet.has(p.start.getTime()),
+          current: bars.length === 0,
+        });
+      });
+    }
+    const nowPrice = bars[0]?.price ?? upcoming[0]?.price ?? prices[prices.length - 1].price;
+    return { now: nowPrice, kind, resolution: "quarter", level: priceLevel(nowPrice, bars.map((b) => ({ start: now, price: b.price }))), bars, cheapest };
+  }
+  const nowPrice = upcoming[0]?.price ?? prices[prices.length - 1].price;
   return {
     now: nowPrice,
-    kind: withExtras ? "total" : "spot",
+    kind,
     level: priceLevel(nowPrice, upcoming),
     bars: upcoming.map((p, i) => ({
       hour: String(p.start.getHours()).padStart(2, "0"),
@@ -688,7 +711,7 @@ function buildPrices(cfg: Config, spot: HourPrice[], now: Date): Dashboard["pric
       cheap: cheapSet.has(p.start.getTime()),
       current: i === 0,
     })),
-    cheapest: block ? { from: hhmm(block.start).slice(0, 2), to: hhmm(block.end).slice(0, 2), avg: block.avg } : undefined,
+    cheapest,
   };
 }
 

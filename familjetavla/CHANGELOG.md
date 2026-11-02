@@ -1,5 +1,9 @@
 # Ändringar
 
+## 0.14.7
+
+- **Elpris per kvart eller per timme:** under Inställningar → Elpris väljer du om staplarna visar timpris (som förut) eller kvartspris. Elmarknaden prissätter varje 15 minuter, och kvartsvyn visar de kommande 24 timmarna med rätt tid på axeln. Fungerar med spotpriset och med Home Assistants nordpool-sensor. Laddplanen och "Markera billigaste" räknar fortfarande i hela timmar. Önskat av Christian Hollbjär.
+
 ## 0.14.6
 
 - **Skolan visar bara läxor, prov och när skoldagen slutar.** Vklass skickar tider med blanksteg (`2026-11-02 08:10`), och då räknades varje lektion som en heldagsuppgift: lektionerna dök upp som "Uppgift" och i veckolistan. Nu visas bara sluttid (och idrott) samt riktiga läxor, prov och uppgifter, och trycker man på en öppnas lärarens text.
