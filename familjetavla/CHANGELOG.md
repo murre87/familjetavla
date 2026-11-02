@@ -1,5 +1,9 @@
 # Ändringar
 
+## 0.14.8
+
+- **Skola24: välj grupp inom klassen.** Har klassen grupper (till exempel 7:1, 7:2, 7A eller ämnesgrupper som 7MAS) får du efter test med klassen välja grupp och bara gruppens schema, i stället för hela årskursens. Grupperna hör ihop med klassen via namnet. Lämnar du "Hela klassen" blir det som förut. Önskat av Christian Hollbjär.
+
 ## 0.14.7
 
 - **Elpris per kvart eller per timme:** under Inställningar → Elpris väljer du om staplarna visar timpris (som förut) eller kvartspris. Elmarknaden prissätter varje 15 minuter, och kvartsvyn visar de kommande 24 timmarna med rätt tid på axeln. Fungerar med spotpriset och med Home Assistants nordpool-sensor. Laddplanen och "Markera billigaste" räknar fortfarande i hela timmar. Önskat av Christian Hollbjär.

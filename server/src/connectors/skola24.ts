@@ -47,9 +47,33 @@ export async function skola24Units(host: string): Promise<Skola24Unit[]> {
   return d.getTimetableViewerUnitsResponse?.units ?? [];
 }
 
-export async function skola24Classes(host: string, unitGuid: string): Promise<{ groupName: string; groupGuid: string }[]> {
-  const d = await call<{ classes?: { groupName: string; groupGuid: string }[] }>("get/timetable/selection", { hostname: host, unitGuid, filters: { class: "true" } });
-  return d.classes ?? [];
+export interface Skola24Group {
+  groupName: string;
+  groupGuid: string;
+}
+
+/** The classes and the groups of a school ("4" is a class, "4:1" and "4:2" are groups inside it). */
+export async function skola24Selection(host: string, unitGuid: string): Promise<{ classes: Skola24Group[]; groups: Skola24Group[] }> {
+  const d = await call<{ classes?: Skola24Group[]; groups?: Skola24Group[] }>("get/timetable/selection", { hostname: host, unitGuid, filters: { class: "true", group: "true" } });
+  return { classes: d.classes ?? [], groups: d.groups ?? [] };
+}
+
+export async function skola24Classes(host: string, unitGuid: string): Promise<Skola24Group[]> {
+  return (await skola24Selection(host, unitGuid)).classes;
+}
+
+/**
+ * The groups that belong to a class. Skola24 does not say which; the school names them after the class:
+ * class "7" has "7:1", "7:2", "7A", "7MAS" – but not "70", "789STV" (a digit follows) or a group that is a class itself.
+ */
+export function groupsOfClass(className: string, groups: Skola24Group[], classNames: string[] = []): Skola24Group[] {
+  const c = className.trim().toLowerCase();
+  if (!c) return [];
+  const classes = new Set(classNames.map((x) => x.trim().toLowerCase()));
+  return groups.filter((g) => {
+    const n = g.groupName.trim().toLowerCase();
+    return n.length > c.length && n.startsWith(c) && !/[0-9]/.test(n[c.length]!) && !classes.has(n);
+  });
 }
 
 interface Lesson {
@@ -74,15 +98,16 @@ function dateOfIsoWeek(year: number, week: number, isoDay: number): Date {
 }
 
 /** Lessons between `from` and `to` as calendar events (the title is the subject, the room goes in `location`). */
-export async function skola24Lessons(opts: { host: string; unitGuid: string; classGuid?: string; personalNumber?: string }, from: Date, to: Date): Promise<CalEvent[]> {
+export async function skola24Lessons(opts: { host: string; unitGuid: string; classGuid?: string; groupGuid?: string; personalNumber?: string }, from: Date, to: Date): Promise<CalEvent[]> {
   const { host, unitGuid } = opts;
   let selection: string;
   let selectionType: number;
   if (opts.personalNumber) {
     selection = (await call<{ signature: string }>("encrypt/signature", { signature: opts.personalNumber })).signature;
     selectionType = 4;
-  } else if (opts.classGuid) {
-    selection = opts.classGuid;
+  } else if (opts.groupGuid || opts.classGuid) {
+    // A group is picked the same way as a class (selection type 0); it is just the smaller timetable.
+    selection = (opts.groupGuid ?? opts.classGuid)!;
     selectionType = 0;
   } else throw new Error("Skola24: välj klass (eller ange barnets personnummer).");
   const key = (await call<{ key: string }>("get/timetable/render/key")).key;
