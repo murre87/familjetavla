@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { custodyStatus, isHome } from "./custody.js";
 import { cheapestBlock, priceLevel, toHourly } from "./connectors/elpris.js";
+import { buildPrices } from "./dashboard.js";
+import { defaultConfig } from "./store.js";
 import { parseIcs } from "./connectors/ics.js";
 import { parseEdpDate } from "./connectors/waste.js";
 import { isoWeek } from "./time.js";
@@ -76,9 +78,7 @@ describe("elpris", () => {
     expect(hourly[1].quarters).toBeUndefined(); // only three quarters of hour 1
   });
 
-  it("shows quarters from the current one when asked, otherwise hours", async () => {
-    const { buildPrices } = await import("./dashboard.js");
-    const { defaultConfig } = await import("./store.js");
+  it("shows quarters from the current one when asked, otherwise hours", () => {
     const cfg = defaultConfig();
     const now = new Date(2026, 9, 18, 10, 20); // second quarter of 10
     const spot = toHourly(rows).filter((p) => p.start.getHours() >= 10);
