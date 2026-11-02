@@ -485,7 +485,10 @@ export function htmlToText(html: string): string {
  * eventType 1 = lesson, 2 = assignment ("Uppgift": läxa, prov, inlämning), 8 = day off, 16 = teacher's planning.
  */
 export async function vklassEvents(s: VklassSession, studentId: string, from: Date, to: Date): Promise<(CalEvent & { task?: boolean; url?: string })[]> {
-  const list = (await vklassRawEvents(s, studentId, from, to)) as VklassItem[];
+  return mapVklassItems((await vklassRawEvents(s, studentId, from, to)) as VklassItem[]);
+}
+
+export function mapVklassItems(list: VklassItem[]): (CalEvent & { task?: boolean; url?: string })[] {
   return list
     .filter((e) => e.eventType !== 16 && !/plan/.test(e.className ?? ""))
     .map((e) => {
@@ -495,7 +498,8 @@ export async function vklassEvents(s: VklassSession, studentId: string, from: Da
       return {
         start,
         end: e.end ? new Date(e.end) : new Date(start.getTime() + 3_600_000),
-        allDay: Boolean(e.allDay) || !/T\d/.test(e.start),
+        // Vklass sends "2026-11-02 08:10" (space) – earlier "…T08:10". A date without a time is an all-day item.
+        allDay: Boolean(e.allDay) || !/[T ]\d{1,2}:\d{2}/.test(e.start),
         title: task ? raw : cleanLessonTitle(raw),
         location: typeof e.location === "string" && e.location.trim() ? e.location.trim() : undefined,
         description: e.text ? htmlToText(e.text) : undefined,

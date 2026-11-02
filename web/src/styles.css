@@ -4787,3 +4787,27 @@ button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offs
 .pc-wrap > .pc-grid:not(.pc-sun) {
   position: relative;
 }
+
+/* iPad 11" liggande (≈1194×834): tätare Nu-ruta och mindre luft, så att fler kort och veckodagar får plats utan "+N kort till". */
+@media (min-width: 1000px) and (max-width: 1679px) and (min-height: 600px) and (max-height: 900px) {
+  .home-grid > .now {
+    padding: 12px 20px;
+    gap: 6px 20px;
+  }
+  .home-grid {
+    gap: 12px;
+  }
+  .home-grid .area-week .day.big:not(.today) {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+  .home-grid .area-week .week-body > .fit-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    align-content: start;
+  }
+  .home-grid .area-week .week-body .day.big {
+    grid-column: 1 / -1;
+  }
+}

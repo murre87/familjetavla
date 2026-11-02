@@ -4,6 +4,8 @@ import { useLayoutEffect, useRef, useState } from "react";
 const MIN = 0.7;
 /** Room kept free at the bottom for the "+N till" button when items are hidden. */
 const HINT = 40;
+/** Last resort when a single remaining card still collides with the "+N" button. */
+const FLOOR = 0.55;
 
 /**
  * An area that fits its content on a tablet. When CSS puts it in fit mode (fixed height, see `.fit`
@@ -54,15 +56,26 @@ export function Fit({
             h = height();
           }
           if (h > avail + 1 && more) {
-            // Still too tall: hide whole items from the end – never half an item – and offer the rest behind a button.
-            while (cut < kids.length - 1 && height() > avail - HINT) {
-              kids[kids.length - 1 - cut].style.display = "none";
-              cut++;
+            // Still too tall: hide whole items that don't fit – never half an item – and offer the rest behind a button.
+            // First fit: keep the order, but a card that doesn't fit is skipped so a smaller one after it can use the room.
+            kids.forEach((k) => (k.style.display = "none"));
+            let shown = 0;
+            for (const k of kids) {
+              k.style.display = "";
+              if (shown > 0 && height() > avail - HINT) k.style.display = "none";
+              else shown++;
             }
+            cut = kids.length - shown;
             // The last card is still too tall to leave room for the button: let it drop its extras (".fit-tight").
             if (height() > avail - HINT) {
               o.classList.add("fit-tight");
-              height();
+              h = height();
+              // Still in the way of the button (one big card): shrink it a little more rather than let the button cover it.
+              for (let pass = 0; pass < 4 && h > avail - HINT && scale > FLOOR; pass++) {
+                scale = Math.max(FLOOR, scale * ((avail - HINT) / h) * 0.99);
+                i.style.zoom = String(scale);
+                h = height();
+              }
             }
           } else if (h > avail + 1) o.classList.add("fit-overflow");
         }

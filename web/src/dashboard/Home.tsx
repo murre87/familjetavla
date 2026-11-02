@@ -424,7 +424,7 @@ export function Home({ data, actions }: { data: Dashboard; actions: Actions }) {
           ) : (
             <NowZone data={data} actions={actions} edit={arrange.edit("now", false)} />
           ))}
-        <Fit className="col area-left" deps={[data, arrange.order]} min={0.8} more={(n) => <MoreButton n={n} what="kort" onClick={() => actions.openPage("kort")} />}>
+        <Fit className="col area-left" deps={[data, arrange.order]} min={0.7} more={(n) => <MoreButton n={n} what="kort" onClick={() => actions.openPage("kort")} />}>
           {rest.slice(half)}
         </Fit>
         {weekOn ? (
@@ -436,7 +436,7 @@ export function Home({ data, actions }: { data: Dashboard; actions: Actions }) {
         ) : (
           <div className="area-week" />
         )}
-        <Fit className="col area-side" deps={[data, arrange.order]} min={0.8} more={(n) => <MoreButton n={n} what="kort" onClick={() => actions.openPage("kort")} />}>
+        <Fit className="col area-side" deps={[data, arrange.order]} min={0.7} more={(n) => <MoreButton n={n} what="kort" onClick={() => actions.openPage("kort")} />}>
           {rest.slice(0, half)}
         </Fit>
       </main>
