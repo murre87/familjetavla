@@ -4,8 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
-  # The release runs these same checks first and only publishes if they pass.
+  # The release runs the fast checks (test) and requires that the full run already passed on the same commit.
   workflow_call:
+    inputs:
+      fast:
+        type: boolean
+        default: false
+        description: Only the fast unit tests (the release checks the full run on main instead)
 
 jobs:
   test:
@@ -21,10 +26,35 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  # Every screen on every device class, in five parts at the same time (two devices each) instead of one hour in a row.
+  screens:
+    if: ${{ !inputs.fast }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ["1/5", "2/5", "3/5", "4/5", "5/5"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright-core install --with-deps chromium
+      - name: Alla skärmar (iPad, Android-platta, mobil, iPhone) – del ${{ matrix.part }}
+        run: npm run build:demo -w web && PART=${{ matrix.part }} node e2e/devices.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skarmar-${{ strategy.job-index }}
+          path: e2e/shots
+
   # Build the real image and use it like a family would: as a Home Assistant add-on behind
   # ingress (with a stand-in Supervisor at the Supervisor's address) and as a plain Docker
   # container. A real browser goes through the setup guide and the board.
   e2e:
+    if: ${{ !inputs.fast }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,8 +64,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright-core install --with-deps chromium
-      - name: Alla skärmar (iPad, Android-platta, mobil, iPhone)
-        run: npm run build:demo -w web && node e2e/devices.mjs
       # Same build as the release, Chromium included.
       - run: docker build -t familjetavla-test .
       - name: Home Assistant-tillägg via ingress

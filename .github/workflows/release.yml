@@ -11,14 +11,38 @@ on:
 permissions:
   contents: write
   packages: write
+  actions: read
 
 jobs:
-  # Unit tests plus the full end-to-end run of the real image. Nothing is published unless they pass.
+  # The fast unit tests here, and the full end-to-end run (every screen, the real image) is required to have passed
+  # already on this very commit – main runs it on every merge. Nothing is published unless both are green.
   checks:
     uses: ./.github/workflows/ci.yml
+    with:
+      fast: true
+
+  main-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kräv grön CI på samma commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # No run yet (a tag set a second after the merge) is waited for; no run at all within 5 minutes is an error.
+          for i in $(seq 1 180); do
+            r=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&event=push&per_page=1" --jq '.workflow_runs[0] | "\(.status) \(.conclusion)"' 2>/dev/null || echo "")
+            echo "$(date +%H:%M) CI på ${{ github.sha }}: ${r:-ingen körning ännu}"
+            case "$r" in
+              "completed success") exit 0 ;;
+              completed*) echo "CI på den här commiten blev inte grön – släpper inte."; exit 1 ;;
+              "" | null*) [ "$i" -ge 10 ] && { echo "Ingen CI-körning på commiten. Tagga en commit på main som CI har kört på."; exit 1; } ;;
+            esac
+            sleep 30
+          done
+          echo "CI blev inte klar inom 90 minuter."; exit 1
 
   image:
-    needs: checks
+    needs: [checks, main-ci]
     runs-on: ubuntu-latest
     strategy:
       matrix:
