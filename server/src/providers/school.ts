@@ -275,7 +275,7 @@ export const skola24: SchoolProvider = (() => {
       if (!cls && !ssn) {
         return { ok: true, message: `${classes.length} klasser hittades. Välj klass och tryck Testa igen.`, choices: { field: "class", options: classes.map((c) => ({ value: c.groupName, label: c.groupName })) } };
       }
-      const mine = cls ? groupsOfClass(cls.groupName, groups) : [];
+      const mine = cls ? groupsOfClass(cls.groupName, groups, classes.map((c) => c.groupName)) : [];
       const grp = mine.find((g) => g.groupName === ctx.str("group"));
       const now = new Date();
       const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, groupGuid: grp?.groupGuid, personalNumber: ssn || undefined }, now, new Date(now.getTime() + 21 * 86_400_000));
@@ -294,7 +294,7 @@ export const skola24: SchoolProvider = (() => {
       const { classes, groups } = await skola24Selection(host, unit.unitGuid);
       const cls = classes.find((c) => c.groupName === ctx.str("class"));
       if (!cls && !ssn) return { events: [] };
-      const grp = cls ? groupsOfClass(cls.groupName, groups).find((g) => g.groupName === ctx.str("group")) : undefined;
+      const grp = cls ? groupsOfClass(cls.groupName, groups, classes.map((c) => c.groupName)).find((g) => g.groupName === ctx.str("group")) : undefined;
       const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, groupGuid: grp?.groupGuid, personalNumber: ssn || undefined }, from, to);
       return { events: evs.map((e) => ({ ...e, gym: isGymLesson(e) })) };
     },

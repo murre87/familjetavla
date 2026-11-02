@@ -62,13 +62,17 @@ export async function skola24Classes(host: string, unitGuid: string): Promise<Sk
   return (await skola24Selection(host, unitGuid)).classes;
 }
 
-/** The groups that belong to a class: named after it with a separator ("7" → "7:1", "7:2"; never "7A", "70" or "7-9F:1"). */
-export function groupsOfClass(className: string, groups: Skola24Group[]): Skola24Group[] {
+/**
+ * The groups that belong to a class. Skola24 does not say which; the school names them after the class:
+ * class "7" has "7:1", "7:2", "7A", "7MAS" – but not "70", "789STV" (a digit follows) or a group that is a class itself.
+ */
+export function groupsOfClass(className: string, groups: Skola24Group[], classNames: string[] = []): Skola24Group[] {
   const c = className.trim().toLowerCase();
   if (!c) return [];
+  const classes = new Set(classNames.map((x) => x.trim().toLowerCase()));
   return groups.filter((g) => {
     const n = g.groupName.trim().toLowerCase();
-    return n.length > c.length && n.startsWith(c) && /[:._/]/.test(n[c.length]!);
+    return n.length > c.length && n.startsWith(c) && !/[0-9]/.test(n[c.length]!) && !classes.has(n);
   });
 }
 

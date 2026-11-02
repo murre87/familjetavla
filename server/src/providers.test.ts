@@ -508,12 +508,15 @@ describe("middagsfavoriter, hyllan och veckodagar", () => {
     const care = buildCareEvents([leo], [{ personId: "leo", text: "07:15 - 16:00" }], [], sunday, 2);
     expect(care.map((c) => c.start.getDate())).toEqual([2]); // bara måndagen, inte söndagen
   });
-  it("Skola24: grupperna i en klass är de som heter klassen + skiljetecken, aldrig en annan klass", async () => {
+  it("Skola24: grupperna i en klass är de som heter som klassen – ämnesgrupper och 7A–7C ingår, men aldrig en annan årskurs", async () => {
     const { groupsOfClass } = await import("./connectors/skola24.js");
     const g = (n: string) => ({ groupName: n, groupGuid: `guid-${n}` });
-    const all = [g("7:1"), g("7:2"), g("7A"), g("70"), g("17:1"), g("7-9F:1"), g("7 A"), g("8:1")];
-    expect(groupsOfClass("7", all).map((x) => x.groupName)).toEqual(["7:1", "7:2"]);
-    expect(groupsOfClass("7A", all)).toEqual([]);
+    // Gantofta skola (Helsingborg): klasserna heter 0–9, grupperna 7:1, 7:2, 7A, 7B, 7MAS …
+    const all = ["4:1", "4:2", "4MAB", "7:1", "7:2", "7A", "7B", "7MAS", "70", "789STV", "17:1", "8:1"].map(g);
+    expect(groupsOfClass("7", all).map((x) => x.groupName)).toEqual(["7:1", "7:2", "7A", "7B", "7MAS"]);
+    expect(groupsOfClass("4", all).map((x) => x.groupName)).toEqual(["4:1", "4:2", "4MAB"]);
+    // Heter klasserna 7A och 7B räknas inte 7A som grupp i klass 7.
+    expect(groupsOfClass("7", all, ["7", "7A", "7B"]).map((x) => x.groupName)).toEqual(["7:1", "7:2", "7MAS"]);
     expect(groupsOfClass("", all)).toEqual([]);
   });
 });
