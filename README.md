@@ -2,6 +2,8 @@
 
 # Familjetavla
 
+<p align="center"><a href="https://github.com/sponsors/murre87"><img src="https://img.shields.io/badge/Sponsra-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white" alt="Sponsra på GitHub"></a></p>
+
 **En familjetavla för surfplattan i hallen eller köket** – byggd för svenska familjer – med eller utan växelvis boende – som kör Home Assistant (men fungerar även utan).
 
 Kalendrar, **barnvecka**, barnens **sport** (SportAdmin, laget.se) med **dit/hem** (vem skjutsar, buss eller skjuts), **skola** (schema, gympapåse, skolmat), **sophämtning**, **inköpslista** (som kan skickas till Willys), **elpris** med billigaste timmarna – och från Home Assistant: **bilar, ljus, musik, värmepump, spabad, solel och grafer**. Allt sätts upp i en **visuell guide**, utan YAML.
@@ -188,3 +190,10 @@ Kopplingarna bygger på kartläggning från andra öppna projekt: [ha-ica-todo](
 ## Licens
 
 MIT
+
+## ❤️ Stöd projektet
+
+Familjetavla är gratis och utan reklam. Gillar du den får du gärna
+[sponsra på GitHub](https://github.com/sponsors/murre87) - det betalar tid och
+hårdvara att testa nya integrationer mot. En ⭐ på repot hjälper också andra
+familjer att hitta hit.

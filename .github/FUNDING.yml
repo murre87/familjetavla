@@ -1,0 +1,4 @@
+# Visar knappen "♥ Sponsor" överst i repot (Settings -> General -> Features -> Sponsorships måste vara påslaget).
+# Format: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+github: murre87
+# buy_me_a_coffee: DITT-ANVÄNDARNAMN    # avkommentera när kontot finns
