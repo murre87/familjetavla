@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { custodyStatus, isHome } from "./custody.js";
 import { cheapestBlock, priceLevel, toHourly } from "./connectors/elpris.js";
+import { pricesFromAttributes } from "./providers/price.js";
 import { buildPrices } from "./dashboard.js";
 import { defaultConfig } from "./store.js";
 import { parseIcs } from "./connectors/ics.js";
@@ -76,6 +77,13 @@ describe("elpris", () => {
     const hourly = toHourly(quarters.slice(0, 7));
     expect(hourly[0].quarters).toEqual([0.1, 0.2, 0.3, 0.4]);
     expect(hourly[1].quarters).toBeUndefined(); // only three quarters of hour 1
+  });
+
+  it("keeps the quarters from a Home Assistant nordpool sensor (raw_today, 15 minutes), like EnergyWizard reads it", () => {
+    const raw_today = Array.from({ length: 96 }, (_, i) => ({ start: new Date(2026, 9, 18, 0, i * 15).toISOString(), end: new Date(2026, 9, 18, 0, i * 15 + 15).toISOString(), value: 1 + i / 100 }));
+    const hourly = pricesFromAttributes({ raw_today }, "SEK/kWh", new Date(2026, 9, 18, 12));
+    expect(hourly).toHaveLength(24);
+    expect(hourly[1].quarters).toEqual([1.04, 1.05, 1.06, 1.07]);
   });
 
   it("shows quarters from the current one when asked, otherwise hours", () => {
