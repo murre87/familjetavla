@@ -1518,6 +1518,16 @@ export function ElectricityStep({ cfg, set, secrets, setSecrets, resp, haOk, pos
             options={[1, 2, 3, 4, 5, 6, 8].map((n) => ({ value: String(n), label: `${n} ${n === 1 ? "timme" : "timmar"} i följd` }))}
             help="Bra för att ladda bilen eller köra disk/tvätt."
           />
+          <Select
+            label="Elpriset visas"
+            value={e.resolution ?? "hour"}
+            onChange={(v) => setE({ resolution: v === "quarter" ? "quarter" : "hour" })}
+            options={[
+              { value: "hour", label: "Per timme" },
+              { value: "quarter", label: "Per kvart (15 minuter)" },
+            ]}
+            help="Elmarknaden prissätter varje kvart. Per kvart visas kvartspriset, om din prisleverantör har det."
+          />
         </section>
       )}
     </div>

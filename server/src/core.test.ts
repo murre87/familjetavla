@@ -69,6 +69,27 @@ describe("elpris", () => {
     expect(hourly[0].price).toBeCloseTo(0.1);
   });
 
+  it("keeps the four quarters of a full hour, and none for a partial one", () => {
+    const quarters = Array.from({ length: 8 }, (_, i) => ({ SEK_per_kWh: 0.1 * (i + 1), time_start: new Date(2026, 9, 18, 0, i * 15).toISOString() }));
+    const hourly = toHourly(quarters.slice(0, 7));
+    expect(hourly[0].quarters).toEqual([0.1, 0.2, 0.3, 0.4]);
+    expect(hourly[1].quarters).toBeUndefined(); // only three quarters of hour 1
+  });
+
+  it("shows quarters from the current one when asked, otherwise hours", async () => {
+    const { buildPrices } = await import("./dashboard.js");
+    const { defaultConfig } = await import("./store.js");
+    const cfg = defaultConfig();
+    const now = new Date(2026, 9, 18, 10, 20); // second quarter of 10
+    const spot = toHourly(rows).filter((p) => p.start.getHours() >= 10);
+    expect(buildPrices(cfg, spot, now)!.bars[0].minute).toBeUndefined();
+    const q = buildPrices({ ...cfg, electricity: { ...cfg.electricity, resolution: "quarter" } }, spot, now)!;
+    expect(q.resolution).toBe("quarter");
+    expect(q.bars.slice(0, 3).map((b) => `${b.hour}:${b.minute}`)).toEqual(["10:15", "10:30", "10:45"]);
+    expect(q.bars[0].current).toBe(true);
+    expect(q.bars[1].current).toBe(false);
+  });
+
   it("finds the cheapest contiguous block", () => {
     const hourly = toHourly(rows);
     const b = cheapestBlock(hourly, 4, new Date(2026, 9, 18, 0, 10))!;

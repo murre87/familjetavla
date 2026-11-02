@@ -7,7 +7,9 @@ import { addDays, dayKey } from "../time.js";
  */
 export interface HourPrice {
   start: Date;
-  price: number; // SEK/kWh
+  price: number; // SEK/kWh (hour average)
+  /** The four 15-minute prices of the hour (SEK/kWh), when the source has them. */
+  quarters?: number[];
 }
 
 type Row = { SEK_per_kWh: number; time_start: string };
@@ -25,19 +27,27 @@ async function day(date: Date, area: string): Promise<Row[]> {
 }
 
 export function toHourly(rows: Row[]): HourPrice[] {
-  const byHour = new Map<number, { sum: number; n: number; start: Date }>();
+  const byHour = new Map<number, { sum: number; n: number; start: Date; q: { m: number; p: number }[] }>();
   for (const r of rows) {
     const t = new Date(r.time_start);
     const hourStart = new Date(t.getFullYear(), t.getMonth(), t.getDate(), t.getHours());
     const k = hourStart.getTime();
-    const e = byHour.get(k) ?? { sum: 0, n: 0, start: hourStart };
+    const e = byHour.get(k) ?? { sum: 0, n: 0, start: hourStart, q: [] };
     e.sum += r.SEK_per_kWh;
     e.n += 1;
+    e.q.push({ m: t.getMinutes(), p: r.SEK_per_kWh });
     byHour.set(k, e);
   }
   return [...byHour.values()]
     .sort((a, b) => a.start.getTime() - b.start.getTime())
-    .map((e) => ({ start: e.start, price: Math.round((e.sum / e.n) * 1000) / 1000 }));
+    .map((e) => ({
+      start: e.start,
+      price: Math.round((e.sum / e.n) * 1000) / 1000,
+      // Only a full hour of quarters (0, 15, 30, 45) counts – never guess a missing one.
+      ...(e.q.length === 4 && [0, 15, 30, 45].every((m) => e.q.some((x) => x.m === m))
+        ? { quarters: [0, 15, 30, 45].map((m) => Math.round(e.q.find((x) => x.m === m)!.p * 1000) / 1000) }
+        : {}),
+    }));
 }
 
 export async function fetchPrices(area: string, now = new Date()): Promise<HourPrice[]> {

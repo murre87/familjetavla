@@ -1186,6 +1186,21 @@ a.btn {
   transform-origin: bottom;
   animation: grow 0.8s var(--ease) both;
 }
+/* Per kvart: fyra gånger så många staplar, så tätare och med mindre rundning. */
+.bars.quarter {
+  gap: 1px;
+}
+.bars.quarter div {
+  border-radius: 2px;
+}
+.axis.axis-at {
+  position: relative;
+  height: 18px;
+}
+.axis.axis-at span {
+  position: absolute;
+  transform: translateX(-50%);
+}
 .bars .cheap {
   background: var(--accent);
 }
