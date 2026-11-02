@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseVklassWelcome, vklassDayLabel } from "./connectors/vklass.js";
+import { mapVklassItems, parseVklassWelcome, vklassDayLabel } from "./connectors/vklass.js";
 
 // Same structure as the real custodian start page (2026-10-19), made-up names and food.
 const card = (name: string, extra: string, days: [string, string[]][]) => `
@@ -89,5 +89,19 @@ describe("Vklass task text", () => {
     const html = "<p>Inför provet ska du kunna:</p><p><strong>1. Storleksordna tal</strong></p><ul><li>Jämföra tal</li><li>Små decimaltal</li></ul><p><em>Exempel:</em> 19&nbsp;900 000</p>";
     expect(htmlToText(html)).toBe("Inför provet ska du kunna:\n\n1. Storleksordna tal\n\n• Jämföra tal\n• Små decimaltal\n\nExempel: 19 900 000");
     expect(htmlToText("Här kommer veckans läxa.")).toBe("Här kommer veckans läxa.");
+  });
+});
+
+describe("Vklass calendar items", () => {
+  it("a lesson with a space-separated time is a lesson, not an all-day task", () => {
+    const [lesson, hw, day] = mapVklassItems([
+      { title: "Svenska (8B-FLA-26__SV)", start: "2026-11-02 08:50", end: "2026-11-02 09:50", eventType: 1, className: "vk-cl-event-lecture" },
+      { title: "Glosor V.45", start: "2026-11-06 11:10", eventType: 2, className: "vk-cl-event-assignment" },
+      { title: "Studiedag", start: "2026-11-09", eventType: 8 },
+    ]);
+    expect(lesson).toMatchObject({ allDay: false, task: false, title: "Svenska" });
+    expect(hw).toMatchObject({ allDay: false, task: true });
+    expect(day.allDay).toBe(true);
+    expect(mapVklassItems([{ title: "X", start: "2026-11-02T08:50:00", eventType: 1 }])[0].allDay).toBe(false);
   });
 });

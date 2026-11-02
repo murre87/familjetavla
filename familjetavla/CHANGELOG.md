@@ -1,5 +1,11 @@
 # Ändringar
 
+## 0.14.6
+
+- **Skolan visar bara läxor, prov och när skoldagen slutar.** Vklass skickar tider med blanksteg (`2026-11-02 08:10`), och då räknades varje lektion som en heldagsuppgift: lektionerna dök upp som "Uppgift" och i veckolistan. Nu visas bara sluttid (och idrott) samt riktiga läxor, prov och uppgifter, och trycker man på en öppnas lärarens text.
+- **Ingen förskola "idag" på söndag.** Vklass visar sin senaste omsorgstid även på helgen; den gäller nu bara vardagar.
+- **Hemskärmen på 11-tums iPad:** knappen "visa hela veckan" täcker inte längre kortet ovanför, kort som inte får plats hoppas över så att ett mindre kort efter det kan använda platsen, och Nu-rutan är tätare.
+
 ## 0.14.5
 
 - **Laddplan och elpris i samma graf (Bil):** timpriset som staplar (billigaste timmarna gröna, nuvarande röd) med en rad per bil under, som visar exakt när varje bil laddar, plus tid och batteri före och efter planen. Ersätter det separata elpriskortet på bilsidan när bilarna har smartstyrd laddning.

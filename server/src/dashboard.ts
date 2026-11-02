@@ -936,7 +936,9 @@ export function buildCareEvents(
     if (!p.care && !live) continue;
     for (let i = 0; i < days; i++) {
       const day = addDays(today, i);
-      const text = i === 0 && live && TIME_RANGE.test(live) ? live : careTimesFor(p.care, day);
+      // Vklass keeps showing its last care time on weekends; it only counts as today's on a weekday.
+      const weekday = day.getDay() !== 0 && day.getDay() !== 6;
+      const text = i === 0 && weekday && live && TIME_RANGE.test(live) ? live : careTimesFor(p.care, day);
       const m = text ? TIME_RANGE.exec(text) : null;
       if (!m || !isHome(p.custody, day) || closed.has(`${p.name}@${dayKey(day)}`)) continue;
       const at = (h: string, min: string) => new Date(day.getFullYear(), day.getMonth(), day.getDate(), Number(h), Number(min));

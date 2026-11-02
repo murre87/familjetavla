@@ -348,7 +348,7 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
       <div className="school-grid">
         <section className="card">
           <h2>{today ? "Idag" : "Nästa skoldag"}</h2>
-          {data.lessonView === "span" ? <DaySpan lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} /> : <Lessons lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} />}
+          <DaySpan lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} />
         </section>
         <section className="card">
           <h2>Läxor och uppgifter</h2>
@@ -375,10 +375,9 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
               {d.lessons.length ? (
                 <>
                   <small className="muted">
-                    {d.lessons[0].start}–{d.lessons[d.lessons.length - 1].end}
+                    Slutar {d.lessons[d.lessons.length - 1].end}
                     {d.lessons.some((l) => l.gym) ? " · Idrott" : ""}
                   </small>
-                  {data.lessonView !== "span" && <Lessons lessons={d.lessons} compact />}
                 </>
               ) : (
                 <small className="muted">Ingen skola</small>
@@ -399,35 +398,10 @@ function DaySpan({ lessons }: { lessons: NonNullable<Dashboard["school"]>[number
   return (
     <div className="day-span">
       <div>
-        <small className="muted">Börjar</small>
-        <b>{lessons[0]!.start}</b>
-      </div>
-      <div>
         <small className="muted">Slutar</small>
         <b>{lessons[lessons.length - 1]!.end}</b>
       </div>
       {gym && <span className="chip">Idrott – gympapåse</span>}
-    </div>
-  );
-}
-
-function Lessons({ lessons, compact = false }: { lessons: NonNullable<Dashboard["school"]>[number]["days"][number]["lessons"]; compact?: boolean }) {
-  if (!lessons.length) return <small className="muted">Inga lektioner</small>;
-  return (
-    <div className={`lessons ${compact ? "compact" : ""}`}>
-      {lessons.map((l, i) => (
-        <div className="lesson" key={i}>
-          <span className="lesson-time">
-            {l.start}
-            {!compact && `–${l.end}`}
-          </span>
-          <span className="grow">
-            {l.title}
-            {l.gym && !/idrott/i.test(l.title) && <span className="gym"> Idrott</span>}
-          </span>
-          {!compact && l.location && <small className="muted">{l.location}</small>}
-        </div>
-      ))}
     </div>
   );
 }

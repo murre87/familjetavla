@@ -501,4 +501,11 @@ describe("middagsfavoriter, hyllan och veckodagar", () => {
     saveShelf("maja", []);
     expect(buildReminders(tuesdayMorning, [], people, [], null).some((r) => r.title.includes("ta med"))).toBe(false);
   });
+  it("Vklass omsorgstid gäller inte en söndag", async () => {
+    const { buildCareEvents } = await import("./dashboard.js");
+    const leo = { id: "leo", name: "Leo", color: "#f5c84b", kind: "child" as const, care: { days: { "1": "07:30-16:00" } } };
+    const sunday = new Date(2026, 10, 1);
+    const care = buildCareEvents([leo], [{ personId: "leo", text: "07:15 - 16:00" }], [], sunday, 2);
+    expect(care.map((c) => c.start.getDate())).toEqual([2]); // bara måndagen, inte söndagen
+  });
 });
