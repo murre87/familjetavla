@@ -2,7 +2,7 @@ import { fetchIcs } from "../connectors/ics.js";
 import { ha, haConnection } from "../connectors/ha.js";
 import { getJson } from "../http.js";
 import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connectors/schoolsoft.js";
-import { skola24Classes, skola24Host, skola24Lessons, skola24Units } from "../connectors/skola24.js";
+import { groupsOfClass, skola24Host, skola24Lessons, skola24Selection, skola24Units } from "../connectors/skola24.js";
 import { isGymLesson, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
 import { addDays, hhmm, shortDate, shortWeekday } from "../time.js";
 import type { ProviderCtx, SchoolEvent, SchoolProvider } from "./types.js";
@@ -257,10 +257,11 @@ export const skola24: SchoolProvider = (() => {
         { key: "host", label: "Kommun", type: "text", placeholder: "t.ex. Eskilstuna", help: "Skola24-adressen är kommun.skola24.se." },
         { key: "school", label: "Skola", type: "select" },
         { key: "class", label: "Klass", type: "select", help: "Välj klassen – eller fyll i barnets personnummer nedan för barnets eget schema." },
+        { key: "group", label: "Grupp (valfritt)", type: "select", optional: true, help: "Har klassen grupper (till exempel 7:1 och 7:2) får du bara gruppens schema. Lämna \"Hela klassen\" för alla i årskursen." },
         { key: "ssn", label: "Barnets personnummer (valfritt)", type: "password", secret: true, optional: true, help: "Ger barnets eget schema (valfria ämnen, grupper). Skickas bara till Skola24 och sparas krypterat." },
       ],
       guide: [
-        "Fyll i kommunens namn och tryck Testa – då hämtas skolorna. Välj skola och tryck Testa igen – då hämtas klasserna.",
+        "Fyll i kommunens namn och tryck Testa – då hämtas skolorna. Välj skola och tryck Testa igen – då hämtas klasserna. Har klassen grupper (7:1, 7:2 …) får du välja grupp när du testat med klassen.",
         "Visar Skola24 att schemavisaren är avstängd för kommunen finns schemat i skolans egen app (till exempel Vklass) – använd den kopplingen i stället.",
         "Lägg till en koppling per barn och välj vilket barn den gäller.",
       ],
@@ -269,22 +270,32 @@ export const skola24: SchoolProvider = (() => {
       const { host, units, unit } = await resolve(ctx);
       if (!unit) return { ok: true, message: `${units.length} skolor hittades. Välj skola och tryck Testa igen.`, choices: { field: "school", options: units.map((u) => ({ value: u.unitId, label: u.unitId })) } };
       const ssn = ctx.secret("ssn");
-      const cls = (await skola24Classes(host, unit.unitGuid)).find((c) => c.groupName === ctx.str("class"));
+      const { classes, groups } = await skola24Selection(host, unit.unitGuid);
+      const cls = classes.find((c) => c.groupName === ctx.str("class"));
       if (!cls && !ssn) {
-        const all = await skola24Classes(host, unit.unitGuid);
-        return { ok: true, message: `${all.length} klasser hittades. Välj klass och tryck Testa igen.`, choices: { field: "class", options: all.map((c) => ({ value: c.groupName, label: c.groupName })) } };
+        return { ok: true, message: `${classes.length} klasser hittades. Välj klass och tryck Testa igen.`, choices: { field: "class", options: classes.map((c) => ({ value: c.groupName, label: c.groupName })) } };
       }
+      const mine = cls ? groupsOfClass(cls.groupName, groups) : [];
+      const grp = mine.find((g) => g.groupName === ctx.str("group"));
       const now = new Date();
-      const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, personalNumber: ssn || undefined }, now, new Date(now.getTime() + 21 * 86_400_000));
-      return { ok: true, message: `${evs.length} lektioner kommande tre veckor.`, preview: evs.slice(0, 5).map(preview) };
+      const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, groupGuid: grp?.groupGuid, personalNumber: ssn || undefined }, now, new Date(now.getTime() + 21 * 86_400_000));
+      const what = grp ? `gruppen ${grp.groupName}` : "klassen";
+      const result = { ok: true as const, message: `${evs.length} lektioner kommande tre veckor för ${what}.`, preview: evs.slice(0, 5).map(preview) };
+      if (!mine.length) return result;
+      // The group picked now stays first, because the form takes the first option as the choice.
+      const options = [{ value: "", label: "Hela klassen" }, ...mine.map((g) => ({ value: g.groupName, label: g.groupName }))];
+      if (grp) options.unshift(...options.splice(options.findIndex((o) => o.value === grp.groupName), 1));
+      return { ...result, message: `${result.message} Klassen har ${mine.length} grupper – välj grupp och tryck Testa igen om du bara vill ha en.`, choices: { field: "group", options } };
     },
     async fetch(ctx, from, to) {
       const { host, unit } = await resolve(ctx);
       if (!unit) return { events: [] };
       const ssn = ctx.secret("ssn");
-      const cls = (await skola24Classes(host, unit.unitGuid)).find((c) => c.groupName === ctx.str("class"));
+      const { classes, groups } = await skola24Selection(host, unit.unitGuid);
+      const cls = classes.find((c) => c.groupName === ctx.str("class"));
       if (!cls && !ssn) return { events: [] };
-      const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, personalNumber: ssn || undefined }, from, to);
+      const grp = cls ? groupsOfClass(cls.groupName, groups).find((g) => g.groupName === ctx.str("group")) : undefined;
+      const evs = await skola24Lessons({ host, unitGuid: unit.unitGuid, classGuid: cls?.groupGuid, groupGuid: grp?.groupGuid, personalNumber: ssn || undefined }, from, to);
       return { events: evs.map((e) => ({ ...e, gym: isGymLesson(e) })) };
     },
   };

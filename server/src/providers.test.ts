@@ -508,4 +508,12 @@ describe("middagsfavoriter, hyllan och veckodagar", () => {
     const care = buildCareEvents([leo], [{ personId: "leo", text: "07:15 - 16:00" }], [], sunday, 2);
     expect(care.map((c) => c.start.getDate())).toEqual([2]); // bara måndagen, inte söndagen
   });
+  it("Skola24: grupperna i en klass är de som heter klassen + skiljetecken, aldrig en annan klass", async () => {
+    const { groupsOfClass } = await import("./connectors/skola24.js");
+    const g = (n: string) => ({ groupName: n, groupGuid: `guid-${n}` });
+    const all = [g("7:1"), g("7:2"), g("7A"), g("70"), g("17:1"), g("7-9F:1"), g("7 A"), g("8:1")];
+    expect(groupsOfClass("7", all).map((x) => x.groupName)).toEqual(["7:1", "7:2"]);
+    expect(groupsOfClass("7A", all)).toEqual([]);
+    expect(groupsOfClass("", all)).toEqual([]);
+  });
 });
