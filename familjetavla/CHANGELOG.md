@@ -2,6 +2,8 @@
 
 ## 0.15.0
 
+- **Schemat är tillbaka på sidan Skolan.** I 0.14.6 försvann lektionslistan för alla. Nu visas alla lektioner igen som standard, och "Bara när skoldagen slutar" är ett val under Inställningar → Skola ("Lektioner på sidan Skolan"). Tack CrallH.
+- **Home Assistant erbjuder inte längre en version som saknar images** (404 "manifest unknown" vid uppdatering till 0.14.7 och 0.14.8). Versionen i `familjetavla/config.yaml` höjs bara av release-jobbet när imagerna finns, och CI stoppar en pull request som ändrar den. Tack CrallH och SanSebb.
 - **Skärmstorlek för den här skärmen.** Knappen "Aa" i sidhuvudet gör allt mindre eller större (60–130 %), per enhet. En 11-tums iPad på tvären startar på 85 %, så att fler kort får plats utan att bläddra. Höjderna följer med så att tavlan fyller skärmen, och knapparna är fortfarande minst 44 px stora.
 - **Kommande 7 dagar med en kolumn per person.** Dagarna som rader och personerna som kolumner, med barnens skolslut ("slutar 14:30 · idrott") överst i deras ruta. Det som gäller flera (Barnvecka …) står en gång under "Gemensamt" med en prick per person i stället för under var och en. Personer utan något den veckan får ingen kolumn.
 - **Personvyn:** "Skolan slutar 14:00" (börjar står i mindre text), och läxor, prov och händelser går att trycka på för mer information.

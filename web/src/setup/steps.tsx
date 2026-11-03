@@ -1173,7 +1173,7 @@ export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow 
             onChange={(v) => set({ ...cfg, dashboard: { ...cfg.dashboard, lessons: v === "span" ? "span" : "all" } })}
             options={[
               { value: "all", label: "Alla lektioner" },
-              { value: "span", label: "Bara när skoldagen börjar och slutar" },
+              { value: "span", label: "Bara när skoldagen slutar" },
             ]}
           />
           <small className="muted">Idrott (gympapåse), läxor, prov och nyheter visas alltid.</small>

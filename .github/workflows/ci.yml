@@ -21,6 +21,16 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      # familjetavla/config.yaml is the version Home Assistant offers for update: only the release job raises it, after the images exist.
+      # A pull request that changes it makes Home Assistant offer a version that cannot be pulled yet (404, "manifest unknown").
+      - name: Add-on-versionen höjs bara av release-jobbet
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "${{ github.base_ref }}"
+          if git diff "origin/${{ github.base_ref }}" HEAD -- familjetavla/config.yaml | grep -E '^[+-]version:'; then
+            echo "::error file=familjetavla/config.yaml::Ändra inte version: i pull requesten. Release-jobbet höjer den när images finns på ghcr (annars erbjuder Home Assistant en version som inte går att hämta). Höj package.json-versionerna i stället."
+            exit 1
+          fi
       - run: npm ci
       - run: npm run typecheck
       - run: npm test

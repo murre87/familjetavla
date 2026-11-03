@@ -352,7 +352,7 @@ export interface Config {
     nightMode?: boolean;
     /** Solbågen under temperaturen i Nu-rutan (av som standard). */
     sunArc?: boolean;
-    /** Sidan Skolan: "span" visar bara när skoldagen börjar och slutar (och idrott), inte varje lektion. */
+    /** Sidan Skolan: "span" visar bara när skoldagen slutar (och idrott), inte varje lektion. Standard är alla lektioner. */
     lessons?: "all" | "span";
   };
 }
