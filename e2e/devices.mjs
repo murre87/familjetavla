@@ -185,7 +185,8 @@ for (const [name0, dev, tablet] of DEVICES) {
         range.selectNodeContents(n);
         for (let r of range.getClientRects()) {
           if (r.width < 2 || r.height < 2) continue;
-          if (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) continue;
+          // A text that is only a sliver inside the screen (a fraction of a pixel after scrolling) counts as outside: its centre cannot be probed.
+          if (r.bottom < 2 || r.top > innerHeight - 2 || r.right < 2 || r.left > innerWidth - 2) continue;
           // A radio station's scrolling text slides on purpose.
           if (el.closest(".ticker")) continue;
           // Hidden by a fit area or a scroll box? Then it is not shown – skip.
