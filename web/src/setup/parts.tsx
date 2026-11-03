@@ -343,13 +343,15 @@ function FieldInput({
   }
   if (f.type === "select") {
     const opts = choices ?? f.options ?? [];
+    // What was picked earlier is shown even before the list has been fetched again (otherwise the field looks empty).
+    const saved = setting && !opts.some((o) => o.value === setting) ? [{ value: setting, label: setting }] : [];
     return (
       <Select
         label={f.label}
         value={setting}
         help={f.help}
         onChange={setSetting}
-        options={[...(f.optional || !setting ? [{ value: "", label: "– Välj –" }] : []), ...opts]}
+        options={[...(f.optional || !setting ? [{ value: "", label: "– Välj –" }] : []), ...saved, ...opts]}
       />
     );
   }

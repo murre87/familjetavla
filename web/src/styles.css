@@ -128,6 +128,16 @@ body,
   margin: 0;
   min-height: 100%;
 }
+/* Skärmstorleken (zoom på sidan, se uiscale.ts): vh räknas om så att tavlan fyller skärmen även när allt är mindre eller större. */
+:root {
+  --ui: 1;
+  --vh1: calc(1vh / var(--ui));
+}
+@supports (height: 100dvh) {
+  :root {
+    --vh1: calc(1dvh / var(--ui));
+  }
+}
 body {
   background: var(--bg-solid);
   color: var(--text);
@@ -212,8 +222,8 @@ a {
 /* ---------- Living sky ---------- */
 .app-bg {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: calc(100 * var(--vh1));
+  min-height: calc(100 * var(--vh1));
   isolation: isolate;
 }
 .sky {
@@ -578,7 +588,7 @@ a.btn {
 }
 
 .center-screen {
-  min-height: 100vh;
+  min-height: calc(100 * var(--vh1));
   display: grid;
   place-items: center;
   padding: 24px;
@@ -589,7 +599,7 @@ a.btn {
 
 /* ---------- Board shell ---------- */
 .board {
-  max-width: 1480px;
+  max-width: calc(1480px / var(--ui, 1));
   margin: 0 auto;
   padding-top: max(18px, env(safe-area-inset-top));
   padding-bottom: calc(112px + env(safe-area-inset-bottom));
@@ -733,8 +743,8 @@ a.btn {
 @media (min-width: 1000px) and (min-height: 600px), (min-width: 700px) and (min-height: 900px) {
   .board:has(> .tab-page),
   .board:has(> .detail-page) {
-    height: 100vh;
-    height: 100dvh;
+    height: calc(100 * var(--vh1));
+    height: calc(100 * var(--vh1));
     overflow: hidden;
   }
   .board > .tab-page,
@@ -1274,7 +1284,7 @@ a.btn {
   gap: 10px;
 }
 .lamp-row .light-btn {
-  flex: 1 1 140px;
+  flex: 1 1 120px;
   min-width: 0;
   justify-content: flex-start;
 }
@@ -1285,7 +1295,7 @@ a.btn {
   white-space: nowrap;
 }
 .lamp-dim {
-  flex: 1 1 140px;
+  flex: 1 1 96px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1298,7 +1308,7 @@ a.btn {
   accent-color: var(--amber);
 }
 .lamp-pct {
-  width: 3.2em;
+  width: 2.6em;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-weight: 650;
@@ -1480,14 +1490,24 @@ a.btn {
 .page-grid {
   display: grid;
   gap: 18px;
-  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
   align-items: start;
+}
+/* Sidor med några få kort (Bil, Hus, Energi): lika höga i samma rad – olika stora kort bredvid varandra ser ihopklistrade ut. */
+.page-grid.even {
+  align-items: stretch;
+}
+/* Diagram och grafer får två kolumner när det finns plats. */
+@media (min-width: 760px) {
+  .page-grid > .plan-chart {
+    grid-column: 1 / -1;
+  }
 }
 .car-ring {
   align-self: center;
   position: relative;
-  width: 170px;
-  height: 170px;
+  width: 140px;
+  height: 140px;
 }
 .chips {
   display: flex;
@@ -1501,12 +1521,12 @@ a.btn {
   gap: 14px;
 }
 .big-btn {
-  min-height: 120px;
-  border-radius: 28px;
+  min-height: 84px;
+  border-radius: 22px;
   border: 1px solid var(--control-border);
   background: var(--control);
   font-family: var(--font-display);
-  font-size: 23px;
+  font-size: 21px;
   font-weight: 700;
   box-shadow: inset 0 1px 0 var(--glass-hi);
   transition: transform 0.35s var(--spring);
@@ -1531,7 +1551,7 @@ a.btn {
 }
 .big-btn.wide {
   grid-column: 1 / -1;
-  min-height: 96px;
+  min-height: 72px;
 }
 .flow {
   display: flex;
@@ -1701,7 +1721,7 @@ marker.pf-buy path {
 }
 .sheet {
   width: min(720px, 100%);
-  max-height: 90vh;
+  max-height: calc(90 * var(--vh1));
   overflow: auto;
   border-radius: 32px 32px 0 0;
   padding: 24px;
@@ -1834,8 +1854,8 @@ marker.pf-buy path {
 .wizard {
   max-width: 980px;
   margin: 0 auto;
-  height: 100vh;
-  height: 100dvh;
+  height: calc(100 * var(--vh1));
+  height: calc(100 * var(--vh1));
   padding-top: max(20px, env(safe-area-inset-top));
   padding-bottom: 0;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
@@ -2225,7 +2245,7 @@ marker.pf-buy path {
 
 /* ---------- iPad preview (#ipad) ---------- */
 .ipad-stage {
-  min-height: 100dvh;
+  min-height: calc(100 * var(--vh1));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2316,7 +2336,7 @@ marker.pf-buy path {
 }
 .plan-sheet {
   max-width: 680px;
-  max-height: min(88dvh, 900px);
+  max-height: min(calc(88 * var(--vh1)), 900px);
   overflow-y: auto;
 }
 .plan-list {
@@ -2659,7 +2679,7 @@ marker.pf-buy path {
   white-space: pre-line;
   font-size: 17px;
   line-height: 1.45;
-  max-height: 55vh;
+  max-height: calc(55 * var(--vh1));
   overflow-y: auto;
   padding: 14px 16px;
   border-radius: 16px;
@@ -2939,7 +2959,7 @@ marker.pf-buy path {
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--row);
-  max-height: 40vh;
+  max-height: calc(40 * var(--vh1));
   overflow-y: auto;
 }
 .event-text a,
@@ -3076,7 +3096,7 @@ marker.pf-buy path {
 .news-image img {
   display: block;
   max-width: 100%;
-  max-height: 70vh;
+  max-height: calc(70 * var(--vh1));
   border-radius: 14px;
   border: 1px solid var(--glass-edge);
 }
@@ -3249,17 +3269,17 @@ marker.pf-buy path {
 /* Tablets: a box of fixed height that shows one page of stations – never a scroll. */
 @media (min-width: 1000px) and (min-height: 600px), (min-width: 700px) and (min-height: 900px) {
   .station-list {
-    height: max(130px, calc(100vh - 860px));
+    height: max(130px, calc(calc(100 * var(--vh1)) - 860px));
     overflow: hidden;
     align-content: start;
   }
   .music-tab .station-list {
-    height: max(180px, calc(100vh - 900px));
+    height: max(180px, calc(calc(100 * var(--vh1)) - 900px));
   }
 }
 @media (min-width: 1000px) and (min-height: 600px) {
   .music-tab .station-list {
-    height: max(180px, calc(100vh - 470px));
+    height: max(180px, calc(calc(100 * var(--vh1)) - 470px));
   }
 }
 /* Wide screens: speakers, favourites and Spotify on the left, every station on the right. */
@@ -3409,13 +3429,13 @@ marker.pf-buy path {
 /* Tablets: one page of covers in a box of fixed height – never a scroll. */
 @media (min-width: 1000px) and (min-height: 600px), (min-width: 700px) and (min-height: 900px) {
   .cover-grid {
-    height: max(234px, calc(100vh - 790px));
+    height: max(234px, calc(calc(100 * var(--vh1)) - 790px));
     overflow: hidden;
   }
 }
 @media (min-width: 1000px) and (min-height: 600px) {
   .cover-grid {
-    height: max(200px, calc(100vh - 470px));
+    height: max(200px, calc(calc(100 * var(--vh1)) - 470px));
   }
 }
 .spotify-box .guide {
@@ -3674,7 +3694,7 @@ marker.pf-buy path {
   background: rgba(0, 0, 0, 0.35);
 }
 .camera.big .camera-img {
-  max-height: calc(100vh - 330px);
+  max-height: calc(calc(100 * var(--vh1)) - 330px);
 }
 .camera-img img {
   width: 100%;
@@ -3757,12 +3777,12 @@ marker.pf-buy path {
 }
 @media (min-width: 1000px) and (min-height: 600px), (min-width: 700px) and (min-height: 900px) {
   .cameras-card .camera:not(.big) .camera-img {
-    max-height: 22vh;
+    max-height: calc(22 * var(--vh1));
     aspect-ratio: auto;
-    height: 22vh;
+    height: calc(22 * var(--vh1));
   }
   .camera.big .camera-img {
-    max-height: calc(100vh - 420px);
+    max-height: calc(calc(100 * var(--vh1)) - 420px);
   }
 }
 .day-span {
@@ -3868,13 +3888,13 @@ marker.pf-buy path {
 /* Tablets: at most a screenful of songs, then ‹ › – a short playlist takes only the room it needs. */
 @media (min-width: 1000px) and (min-height: 600px), (min-width: 700px) and (min-height: 900px) {
   .track-list {
-    max-height: max(150px, calc(100vh - 860px));
+    max-height: max(150px, calc(calc(100 * var(--vh1)) - 860px));
     overflow: hidden;
   }
 }
 @media (min-width: 1000px) and (min-height: 600px) {
   .track-list {
-    max-height: max(150px, calc(100vh - 560px));
+    max-height: max(150px, calc(calc(100 * var(--vh1)) - 560px));
   }
 }
 .track-order {
@@ -4312,11 +4332,11 @@ marker.pf-buy path {
 .vol-ico,
 .seg-btn,
 .light-btn {
-  min-height: calc(44px / var(--wzoom, 1));
+  min-height: calc(44px / var(--wzoom, 1) / var(--ui, 1));
 }
 .btn.small,
 .vol-ico {
-  min-width: calc(44px / var(--wzoom, 1));
+  min-width: calc(44px / var(--wzoom, 1) / var(--ui, 1));
 }
 .vol-ico {
   width: 44px;
@@ -4825,4 +4845,198 @@ button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offs
   .home-grid .area-week .week-body .day.big {
     grid-column: 1 / -1;
   }
+}
+
+/* Veckan med en kolumn per person: dagarna som rader, personerna som kolumner. */
+.wk-head {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 8px;
+  /* samma inryckning som dagens namn: radens luft + namnets bredd + mellanrummet */
+  margin: 0 14px 6px calc(14px + 84px + 16px);
+}
+.wk-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+}
+.wk-who b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wk-dot {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.wk-who {
+  font-size: 15px;
+}
+.wk-with {
+  flex: none;
+  display: inline-flex;
+  gap: 3px;
+  align-self: center;
+  margin-left: auto;
+}
+.wk-with i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.wk-row {
+  align-items: flex-start;
+}
+.wk-cells {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 8px;
+}
+.wk-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.wk-evt {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  min-height: 32px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  border: 0;
+  border-left: 4px solid var(--accent);
+  background: var(--chip);
+  font-size: 14px;
+  line-height: 1.25;
+  text-align: left;
+  min-width: 0;
+}
+.wk-evt .t {
+  flex: none;
+  font-weight: 700;
+}
+.wk-evt .ti {
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.wk-school {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.wk-cell .more-chip {
+  align-self: flex-start;
+}
+/* Smal skärm (mobil): inga kolumner – bara de personer som har något, med namnet över. */
+@media (max-width: 700px) {
+  .wk-head {
+    display: none;
+  }
+  .wk-cells {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wk-cell:empty {
+    display: none;
+  }
+  .wk-cell:not(:empty)::before {
+    content: attr(data-who);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+}
+/* Matrisen behöver hela radens bredd: inte det tvåkolumnsläge som dagarna har på laptop och iPad. */
+.home-grid .area-week .week-body.wk-matrix > .fit-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Hemkortet är smalare: kortare dagnamn, namnlösa kolumnhuvuden (färg + initial), tid ovanför titeln. */
+.wk-head.compact {
+  margin-left: calc(14px + 62px + 16px);
+  gap: 8px;
+}
+.week-body.wk-matrix .day-name {
+  width: 62px;
+}
+.week-body.wk-matrix .wk-evt {
+  flex-direction: column;
+  gap: 0;
+  align-items: flex-start;
+}
+.week-body.wk-matrix .wk-evt .t {
+  font-size: 12px;
+}
+/* Smalt veckokort: dagens namn ligger då ovanför cellerna, så kolumnrubrikerna ska inte dras in. */
+@container (max-width: 480px) {
+  .wk-head.compact {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+}
+/* Personvyn: rader som går att trycka på (läxor, prov, händelser) ser ut som knappar och är minst 44 px höga. */
+button.p-line {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px 6px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+button.p-line > span {
+  flex: 1;
+  min-width: 0;
+}
+.p-click {
+  min-height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.p-click:active {
+  background: var(--chip);
+}
+.p-more {
+  display: block;
+}
+
+/* Skärmstorlek-rutan */
+.scale-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scale-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  accent-color: var(--accent);
+}
+.scale-pct {
+  min-width: 56px;
+  text-align: right;
+  font-size: 20px;
+}
+/* Veckokortets knapp lika dämpad som resten av kortet. */
+.home-grid .area-week .plan-btn {
+  min-height: 40px;
+  font-size: 16px;
+  padding-top: 0;
+  padding-bottom: 0;
 }

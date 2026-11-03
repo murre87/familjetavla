@@ -2002,6 +2002,7 @@ function PinCard({ secrets, setSecrets, resp }: Pick<StepProps, "secrets" | "set
 // ======================= Påminnelser =======================
 
 const MORNING_TIMES = ["05:45", "06:00", "06:15", "06:30", "06:45", "07:00", "07:15", "07:30", "07:45", "08:00"];
+const WASTE_TIMES = ["17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30"];
 const BEFORE = [0, 15, 30, 45, 60, 90];
 
 export function NotifyStep({ cfg, set, resp }: StepProps) {
@@ -2068,6 +2069,13 @@ export function NotifyStep({ cfg, set, resp }: StepProps) {
                   value={n.morning ?? "06:45"}
                   onChange={(v) => setNotify(a.id, { morning: v })}
                   options={[{ value: "", label: "Ingen morgonnotis" }, ...MORNING_TIMES.map((t) => ({ value: t, label: `Kl ${t}` }))]}
+                />
+                <Select
+                  label="Sopor – kvällen innan hämtning"
+                  value={n.waste ?? "19:30"}
+                  onChange={(v) => setNotify(a.id, { waste: v })}
+                  options={[{ value: "", label: "Ingen sopnotis" }, ...WASTE_TIMES.map((t) => ({ value: t, label: `Kl ${t}` }))]}
+                  help="En notis dagen innan sopbilen kommer: ställ ut kärlet. Kräver att sophämtning är inställd."
                 />
                 {kidsForNotify.length > 1 && (
                   <div className="field">

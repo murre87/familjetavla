@@ -7,6 +7,7 @@ import { Icon, type IconName } from "../Icon";
 import { INNER_NAME } from "../IpadFrame";
 import { Avatar, EventIcon } from "./bits";
 import { PersonPage } from "./Person";
+import { ScaleSheet } from "./ScaleSheet";
 import { GroceryModal } from "./GroceryModal";
 import { Home } from "./Home";
 import { Fit } from "./Fit";
@@ -875,6 +876,7 @@ export function Dashboard() {
   const [grocery, setGrocery] = useState<{ store?: string } | null>(null);
   const [awakeUntil, setAwakeUntil] = useState(0);
   const [themeOverride, setThemeOverride] = useState(readThemeOverride);
+  const [scaleOpen, setScaleOpen] = useState(false);
   const [asking, setAsking] = useState<{ question: string; label: string; fn: () => Promise<unknown> } | null>(null);
   const [eventOpen, setEventOpen] = useState<(DashEvent & { dayLabel?: string }) | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
@@ -1286,6 +1288,9 @@ export function Dashboard() {
             {clock}
           </div>
           <div className="row gap">
+            <button className="btn icon" aria-label="Skärmstorlek" title="Skärmstorlek – mindre ger plats åt fler kort" onClick={() => setScaleOpen(true)}>
+              <Icon name="textsize" size={24} />
+            </button>
             <button className="btn icon" aria-label={theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"} onClick={toggleTheme}>
               <Icon name={theme === "dark" ? "moon" : "sun"} size={24} />
             </button>
@@ -1302,6 +1307,8 @@ export function Dashboard() {
             </a>
           </div>
         </header>
+
+        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} />}
 
         {error && (
           <div className="card result bad" role="status" style={{ padding: "12px 18px" }}>
@@ -1327,7 +1334,7 @@ export function Dashboard() {
         {!isDemo && <InstallNudge onHelp={() => setInstallOpen(true)} />}
 
         {personId ? (
-          <PersonPage data={data} personId={personId} />
+          <PersonPage data={data} personId={personId} onOpenEvent={actions.openEvent} />
         ) : page ? (
           <DetailPage page={page} data={data} actions={actions} />
         ) : (

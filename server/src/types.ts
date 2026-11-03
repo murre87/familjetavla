@@ -56,6 +56,8 @@ export interface NotifySettings {
   morning?: string;
   /** Söndag kl 19: "Planera veckan" om något saknar ansvarig. */
   weekly?: boolean;
+  /** "19:30": kvällen innan sophämtning, "Sopor hämtas imorgon". "" = av, saknas = 19:30. */
+  waste?: string;
   /** Hemmet: tvätten klar, roboten har fastnat, dörren olåst kl 22, porten öppen, larmet. Saknas = på. */
   home?: boolean;
   /** En notis när en ny version av Familjetavlan finns (en gång per version). Saknas = på. */

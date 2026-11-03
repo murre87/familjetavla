@@ -44,7 +44,9 @@ export function Fit({
       let cut = 0;
       if (getComputedStyle(o).overflowY === "auto") {
         const avail = o.clientHeight;
-        const height = () => i.getBoundingClientRect().height;
+        // The page can be zoomed as a whole (skärmstorlek): the rectangle is then in screen pixels while the area's height is in the page's own.
+        const pageZoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+        const height = () => i.getBoundingClientRect().height / pageZoom;
         if (avail) {
           let h = height();
           let scale = 1;

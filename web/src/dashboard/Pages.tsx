@@ -325,7 +325,7 @@ function SmartChargingCard({ index, car, actions }: { index: number; car: Dashbo
   return (
     <section className="card">
       <div className="card-head">
-        <h2>Laddplan</h2>
+        <h2>Laddning</h2>
         <span className={`chip ${car.charging ? "good" : ""}`}>{s.state || (car.charging ? "Laddar" : "Ingen plan")}</span>
       </div>
       {s.modeEntity && big && (
@@ -472,7 +472,7 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
   return (
     <section className="card strong plan-chart">
       <div className="card-head">
-        <h2>Laddplan och elpris</h2>
+        <h2>Elpris och laddning</h2>
         <span className={`chip ${prices.level === "dyrt" ? "danger" : prices.level === "billigt" ? "good" : ""}`}>{prices.level}</span>
       </div>
       <div className="row gap" style={{ alignItems: "baseline" }}>
@@ -547,17 +547,18 @@ export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions 
           ))}
         </div>
       )}
-      <div className="page-grid">
+      <div className="page-grid even">
         <section className="card strong" style={{ alignItems: "center" }}>
           <div className="row gap">
-            <span className="muted">{car.name}</span>
+            {/* With several cars the picker above already says which one: no second title with the same name and percent. */}
+            <span className="muted">{data.cars.length > 1 ? "Batteri" : car.name}</span>
             <button className="btn small ghost" style={{ color: "var(--blue)" }} onClick={() => setDetails(true)}>
               Alla data
             </button>
           </div>
           <div className="car-ring">
-            <Ring progress={(car.battery ?? 0) / 100} size={170} stroke={12}>
-              <b style={{ fontSize: 48, fontWeight: 800, lineHeight: 1 }}>
+            <Ring progress={(car.battery ?? 0) / 100} size={140} stroke={11}>
+              <b style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
                 {car.battery ?? "–"}
                 <small style={{ fontSize: 18 }}>%</small>
               </b>
@@ -718,7 +719,7 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
 
 export function HousePage({ data, actions }: { data: Dashboard; actions: Actions }) {
   return (
-    <main className="page-grid">
+    <main className="page-grid even">
       {(data.smartModes ?? []).length > 0 && (
         <section className="card strong">
           <span className="muted" style={{ fontWeight: 600 }}>
@@ -847,7 +848,7 @@ export function EnergyPage({ data }: { data: Dashboard }) {
   const e = data.energy;
   const kw = (n?: number) => `${fmtNum(n ?? 0)} kW`;
   return (
-    <main className="page-grid">
+    <main className="page-grid even">
       {e && (e.solarKw !== undefined || e.gridKw !== undefined) && <PowerFlow e={e} price={data.prices?.now} spot={data.prices?.kind === "spot"} />}
       {(e?.houseKw !== undefined || e?.batteryPct !== undefined) && (
         <section className="card">

@@ -519,4 +519,31 @@ describe("middagsfavoriter, hyllan och veckodagar", () => {
     expect(groupsOfClass("7", all, ["7", "7A", "7B"]).map((x) => x.groupName)).toEqual(["7:1", "7:2", "7MAS"]);
     expect(groupsOfClass("", all)).toEqual([]);
   });
+  it("sopnotis: kl 19:30 kvällen innan som standard, eget klockslag, och av med tom sträng", async () => {
+    const { dueNotifications } = await import("./notify.js");
+    const a = (waste?: string) => ({ id: "emil", name: "Emil", color: "#fff", kind: "adult" as const, notify: { service: "mobile_app_x", before: 0, evening: false, weekly: false, morning: "", ...(waste !== undefined ? { waste } : {}) } });
+    const at = (h: number, m: number) => new Date(2026, 10, 3, h, m);
+    const msg = (person: ReturnType<typeof a>, h: number, m: number, types = ["Kärl 1", "Kärl 2"]) => dueNotifications([person], [], 0, 0, at(h, m), [], types).map((n) => `${n.title}: ${n.message}`);
+    expect(msg(a(), 19, 30)).toEqual(["Sopor imorgon: Kärl 1, Kärl 2 hämtas imorgon – ställ ut kärlet ikväll"]);
+    expect(msg(a(), 19, 29)).toEqual([]);
+    expect(msg(a("18:00"), 18, 0)).toHaveLength(1);
+    expect(msg(a("18:00"), 19, 30)).toEqual([]);
+    expect(msg(a(""), 19, 30)).toEqual([]);
+    expect(msg(a(), 19, 30, [])).toEqual([]); // inget hämtas imorgon
+  });
+  it("sopor (EDP): en gata utan nummer som ger tio träffar ber om husnummer", async () => {
+    const { wasteEdp } = await import("./providers/waste.js");
+    const orig = globalThis.fetch;
+    const street = Array.from({ length: 10 }, (_, i) => `Malmgatan ${i + 1}, Taberg (${100 + i})`);
+    globalThis.fetch = (async () => new Response(JSON.stringify({ Succeeded: true, Buildings: street }), { headers: { "content-type": "application/json" } })) as typeof fetch;
+    try {
+      const ctx = (address: string) => ({ str: (k: string) => ({ municipality: "june", address }[k] ?? ""), secret: () => undefined, integration: { id: "waste", settings: {} } }) as never;
+      const r = (await wasteEdp.test(ctx("Malmgatan"))) as { message: string; choices: { options: unknown[] } };
+      expect(r.message).toContain("husnummer");
+      expect(r.choices.options).toHaveLength(10);
+      expect(((await wasteEdp.test(ctx("Malmgatan 3"))) as { message: string }).message).not.toContain("husnummer");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
 });

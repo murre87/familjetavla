@@ -1,5 +1,15 @@
 # Ändringar
 
+## 0.15.0
+
+- **Skärmstorlek för den här skärmen.** Knappen "Aa" i sidhuvudet gör allt mindre eller större (60–130 %), per enhet. En 11-tums iPad på tvären startar på 85 %, så att fler kort får plats utan att bläddra. Höjderna följer med så att tavlan fyller skärmen, och knapparna är fortfarande minst 44 px stora.
+- **Kommande 7 dagar med en kolumn per person.** Dagarna som rader och personerna som kolumner, med barnens skolslut ("slutar 14:30 · idrott") överst i deras ruta. Det som gäller flera (Barnvecka …) står en gång under "Gemensamt" med en prick per person i stället för under var och en. Personer utan något den veckan får ingen kolumn.
+- **Personvyn:** "Skolan slutar 14:00" (börjar står i mindre text), och läxor, prov och händelser går att trycka på för mer information.
+- **Sopor:** en notis kvällen innan hämtning, som standard kl 19:30 – eget klockslag eller av under Inställningar → Påminnelser. June Avfall (och andra EDP-renhållare) visar bara de första tio adresserna: skriver du gatan utan nummer får du nu veta att du ska lägga till numret.
+- **Det man valt syns.** Ett sparat val i en lista (till exempel adressen för sophämtning) visas nu när man kommer tillbaka, i stället för ett tomt fält.
+- **Snyggare och lugnare sidor.** Bil, Hus och Energi har lika höga kort, "Laddplan" heter "Laddning" och diagrammet "Elpris och laddning" (inga dubbletter), batterikortet upprepar inte bilens namn, knappar och ringar är lägre, och lamporna har reglaget på samma rad som namnet.
+- **Rättat:** knappen "+N kort till" kunde hamna ovanpå ett kort när hela sidan var förminskad.
+
 ## 0.14.9
 
 - **Butikslistan går att skriva i när ingen butik hittas.** Hittade City Gross (eller Willys/Hemköp) ingen butik på orten fanns bara valet "Automatiskt", fast meddelandet sa "skriv ortens namn". Nu visas ett skrivfält när listan är tom, och "Annan ort – skriv själv…" sist i en lista med träffar.

@@ -98,10 +98,10 @@ export function MealsPage({ data, actions }: { data: Dashboard; actions: Actions
 
 const KIND_LABEL = { läxa: "Läxa", prov: "Prov", inlämning: "Inlämning", uppgift: "Uppgift" } as const;
 
-type Task = NonNullable<Dashboard["school"]>[number]["tasks"][number];
+export type Task = NonNullable<Dashboard["school"]>[number]["tasks"][number];
 
 /** Everything about one homework/test: when, the teacher's text, and a link to the school platform. */
-function TaskSheet({ task, child, onClose }: { task: Task; child: string; onClose: () => void }) {
+export function TaskSheet({ task, child, onClose }: { task: Task; child: string; onClose: () => void }) {
   return (
     <OnTop>
     <div className="overlay" onClick={onClose}>
