@@ -1,5 +1,9 @@
 # Ändringar
 
+## 0.14.9
+
+- **Butikslistan går att skriva i när ingen butik hittas.** Hittade City Gross (eller Willys/Hemköp) ingen butik på orten fanns bara valet "Automatiskt", fast meddelandet sa "skriv ortens namn". Nu visas ett skrivfält när listan är tom, och "Annan ort – skriv själv…" sist i en lista med träffar.
+
 ## 0.14.8
 
 - **Skola24: välj grupp inom klassen.** Har klassen grupper (till exempel 7:1, 7:2, 7A eller ämnesgrupper som 7MAS) får du efter test med klassen välja grupp och bara gruppens schema, i stället för hela årskursens. Grupperna hör ihop med klassen via namnet. Lämnar du "Hela klassen" blir det som förut. Önskat av Christian Hollbjär.

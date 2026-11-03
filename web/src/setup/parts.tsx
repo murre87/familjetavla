@@ -559,6 +559,7 @@ export function ProviderTiles({
 function StorePicker({ f, integ, ready, typed, value, onPick }: { f: ProviderField; integ: Integration; ready: boolean; typed: Record<string, string>; value: string; onPick: (v: string) => void }) {
   const [options, setOptions] = useState<{ value: string; label: string }[] | null>(null);
   const [error, setError] = useState("");
+  const [manual, setManual] = useState(false);
   useEffect(() => {
     if (!ready) return;
     let alive = true;
@@ -574,13 +575,32 @@ function StorePicker({ f, integ, ready, typed, value, onPick }: { f: ProviderFie
   if (!ready) return <p className="faint">{f.label}: logga in först (tryck Testa) – då kan du välja butik i en lista.</p>;
   if (error || !options) return error ? <Text label={f.label} value={value} placeholder={f.placeholder} help={`${error} – skriv orten i stället.`} onChange={onPick} /> : <p className="faint" role="status">Hämtar butiker…</p>;
   const known = options.some((o) => o.value === value);
+  const MANUAL = "__skriv";
+  // Nothing matches the town (or the shop is in another town): the list alone leaves no way forward, so a field to type in.
+  if (manual || options.length === 0)
+    return (
+      <>
+        <Text
+          label={f.label}
+          value={value}
+          placeholder={f.placeholder ?? "t.ex. Jönköping"}
+          help={options.length === 0 ? "Hittade ingen butik på orten. Skriv ortens eller butikens namn och tryck Testa." : "Skriv ortens eller butikens namn och tryck Testa."}
+          onChange={onPick}
+        />
+        {options.length > 0 && (
+          <button type="button" className="btn small ghost" onClick={() => setManual(false)}>
+            Välj i listan i stället
+          </button>
+        )}
+      </>
+    );
   return (
     <Select
       label={f.label}
       value={value}
-      onChange={onPick}
+      onChange={(v) => (v === MANUAL ? setManual(true) : onPick(v))}
       help={f.help}
-      options={[{ value: "", label: "Automatiskt – orten där ni bor" }, ...(value && !known ? [{ value, label: value }] : []), ...options]}
+      options={[{ value: "", label: "Automatiskt – orten där ni bor" }, ...(value && !known ? [{ value, label: value }] : []), ...options, { value: MANUAL, label: "Annan ort – skriv själv…" }]}
     />
   );
 }
