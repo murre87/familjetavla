@@ -38,3 +38,23 @@ export function saveScale(z: number): number {
   applyScale(v);
   return v;
 }
+
+const SAVER_KEY = "familjetavla.screensaver";
+
+/** Skärmsläckaren (fotoramen efter en stunds inaktivitet och nattläget) avstängd på just den här skärmen? */
+export function screensaverOff(): boolean {
+  try {
+    return localStorage.getItem(SAVER_KEY) === "off";
+  } catch {
+    return false;
+  }
+}
+
+export function setScreensaverOff(off: boolean) {
+  try {
+    if (off) localStorage.setItem(SAVER_KEY, "off");
+    else localStorage.removeItem(SAVER_KEY);
+  } catch {
+    /* privat läge: gäller tills sidan laddas om */
+  }
+}

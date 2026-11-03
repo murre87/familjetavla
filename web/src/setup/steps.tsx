@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ScaleSheet } from "../dashboard/ScaleSheet";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { WIDGET_LABELS } from "../widgets";
 import { CUSTODY_PRESETS, isHome } from "../../../server/src/custody";
@@ -1792,8 +1793,8 @@ function PhotoFrame({ cfg, set }: { cfg: Config; set: (c: Config) => void }) {
   const d = cfg.dashboard;
   return (
     <section className="card">
-      <h2>Fotoram i viloläge</h2>
-      <p className="muted">När ingen rört tavlan på en stund visas familjens bilder med klocka och nästa händelse. Utan bilder visas en lugn himmel.</p>
+      <h2>Fotoram på dagen</h2>
+      <p className="muted">Valfritt: när ingen rört tavlan på en stund visas familjens bilder med klocka och nästa händelse. Utan bilder visas en lugn himmel. Välj "Aldrig" om skärmsläckaren bara ska gå på natten. Vill du stänga av skärmsläckaren på just en skärm gör du det under Skärm-knappen (Aa) på den skärmen.</p>
       <Select
         label="Visa efter"
         value={String(d.idleMinutes ?? 10)}
@@ -1912,8 +1913,17 @@ function OrderList<T extends { id: string; on: boolean; size?: string }>({
 export function DisplayStep({ cfg, set }: StepProps) {
   const d = cfg.dashboard;
   const setD = (patch: Partial<Config["dashboard"]>) => set({ ...cfg, dashboard: { ...d, ...patch } });
+  const [scaleOpen, setScaleOpen] = useState(false);
   return (
     <div className="stack">
+      <section className="card">
+        <h2>Den här skärmen</h2>
+        <p className="muted">Storlek (mindre ger plats åt fler kort utan att bläddra) och om skärmsläckaren ska användas. Gäller bara den här skärmen – surfplattan i hallen och telefonen kan ha olika.</p>
+        <button className="btn" onClick={() => setScaleOpen(true)}>
+          Ändra storlek och skärmsläckare
+        </button>
+        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} />}
+      </section>
       <section className="card">
         <h2>Startskärmen</h2>
         <p className="muted">
@@ -1944,7 +1954,7 @@ export function DisplayStep({ cfg, set }: StepProps) {
         />
         <div className="grid-2">
           <label className="field">
-            <span>Nattläge från</span>
+            <span>Skärmsläckare från</span>
             <input type="time" value={d.nightFrom} onChange={(e) => setD({ nightFrom: e.target.value })} />
           </label>
           <label className="field">
@@ -1952,7 +1962,8 @@ export function DisplayStep({ cfg, set }: StepProps) {
             <input type="time" value={d.nightTo} onChange={(e) => setD({ nightTo: e.target.value })} />
           </label>
         </div>
-        <small className="faint">Nattläge visar bara klockan på svart skärm. Tryck för att väcka.</small>
+        <Toggle label="Skärmsläckare på natten" checked={d.nightMode !== false} onChange={(v) => setD({ nightMode: v })} help="Av = skärmen blir aldrig svart på natten." />
+        <small className="faint">Skärmsläckaren visar bara klockan på svart skärm mellan de här tiderna (standard 22:00–06:00). Tryck för att väcka.</small>
       </section>
       <PhotoFrame cfg={cfg} set={set} />
     </div>

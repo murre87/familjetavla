@@ -313,6 +313,7 @@ export const configSchema = z
       nightFrom: z.string().regex(/^\d{2}:\d{2}$/),
       nightTo: z.string().regex(/^\d{2}:\d{2}$/),
       idleMinutes: z.number().int().min(0).max(240).default(10),
+      nightMode: z.boolean().optional(),
       sunArc: z.boolean().optional(),
       lessons: z.enum(["all", "span"]).optional(),
     }),

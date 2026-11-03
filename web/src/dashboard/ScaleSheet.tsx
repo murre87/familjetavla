@@ -1,28 +1,29 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
-import { SCALE_MAX, SCALE_MIN, readScale, saveScale } from "../uiscale";
+import { SCALE_MAX, SCALE_MIN, readScale, saveScale, screensaverOff, setScreensaverOff } from "../uiscale";
 
 const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
 
 /** "Skärmstorlek": gör allt mindre eller större på just den här skärmen. Syns direkt medan man drar. */
 export function ScaleSheet({ onClose }: { onClose: () => void }) {
   const [z, setZ] = useState(readScale);
+  const [saverOff, setSaverOff] = useState(screensaverOff);
   const set = (v: number) => setZ(saveScale(v));
   const pct = Math.round(z * 100);
   return createPortal(
     <div className="overlay" onClick={onClose}>
-      <div className="sheet scale-sheet" role="dialog" aria-modal="true" aria-label="Skärmstorlek" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+      <div className="sheet scale-sheet" role="dialog" aria-modal="true" aria-label="Skärm" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
         <div className="row gap">
           <h2 className="grow" style={{ fontSize: 24 }}>
-            Skärmstorlek
+            Skärm
           </h2>
           <button className="btn icon" aria-label="Stäng" onClick={onClose}>
             <Icon name="x" />
           </button>
         </div>
         <p className="muted" style={{ margin: 0 }}>
-          Mindre ger plats åt fler kort utan att behöva bläddra. Gäller bara den här skärmen.
+          Storlek: mindre ger plats åt fler kort utan att behöva bläddra. Gäller bara den här skärmen.
         </p>
         <div className="scale-row">
           <button className="btn icon" aria-label="Mindre" onClick={() => set(z - 0.05)} disabled={z <= SCALE_MIN}>
@@ -41,6 +42,20 @@ export function ScaleSheet({ onClose }: { onClose: () => void }) {
             </button>
           ))}
         </div>
+        <label className="saver-row">
+          <input
+            type="checkbox"
+            checked={!saverOff}
+            onChange={(e) => {
+              setScreensaverOff(!e.target.checked);
+              setSaverOff(!e.target.checked);
+            }}
+          />
+          <span>
+            <b>Skärmsläckare på den här skärmen</b>
+            <small className="muted"> Svart skärm med klocka på natten (tiderna ställs i Inställningar, standard 22–06) och fotoramen om den är på. Avstängd här även om det är på i inställningarna.</small>
+          </span>
+        </label>
       </div>
     </div>,
     document.body,

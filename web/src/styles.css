@@ -1496,6 +1496,10 @@ a.btn {
 /* Sidor med några få kort (Bil, Hus, Energi): lika höga i samma rad – olika stora kort bredvid varandra ser ihopklistrade ut. */
 .page-grid.even {
   align-items: stretch;
+  gap: 12px;
+}
+.page-grid.even > .card {
+  padding: 16px 18px;
 }
 /* Diagram och grafer får två kolumner när det finns plats. */
 @media (min-width: 760px) {
@@ -1521,7 +1525,7 @@ a.btn {
   gap: 14px;
 }
 .big-btn {
-  min-height: 84px;
+  min-height: 72px;
   border-radius: 22px;
   border: 1px solid var(--control-border);
   background: var(--control);
@@ -1551,7 +1555,7 @@ a.btn {
 }
 .big-btn.wide {
   grid-column: 1 / -1;
-  min-height: 72px;
+  min-height: 64px;
 }
 .flow {
   display: flex;
@@ -4738,7 +4742,7 @@ button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offs
 
 /* Laddplan och elpris: staplar per timme och en rad per bil på samma tidsaxel */
 .pc-grid {
-  height: 104px;
+  height: 64px;
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -4929,10 +4933,7 @@ button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offs
 }
 .wk-evt .ti {
   min-width: 0;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
 }
 .wk-school {
   display: inline-flex;
@@ -5021,6 +5022,12 @@ button.p-line > span {
 }
 
 /* Skärmstorlek-rutan */
+/* Sidhuvudet på en smal skärm (stående platta, mobil) har inte plats för en knapp till: där ligger skärmstorleken under Inställningar. */
+@media (max-width: 899px) {
+  .scale-btn {
+    display: none;
+  }
+}
 .scale-row {
   display: flex;
   align-items: center;
@@ -5043,4 +5050,22 @@ button.p-line > span {
   font-size: 16px;
   padding-top: 0;
   padding-bottom: 0;
+}
+
+.saver-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-height: 44px;
+  cursor: pointer;
+}
+.saver-row input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+.saver-row small {
+  display: block;
 }

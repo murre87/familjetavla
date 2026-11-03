@@ -448,7 +448,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     home: cfg.dashboard.home,
     tabs: cfg.dashboard.tabs,
     daypart: inTimeWindow(now, "07:00", "19:00") ? "day" : "night",
-    night: inTimeWindow(now, cfg.dashboard.nightFrom, cfg.dashboard.nightTo),
+    night: cfg.dashboard.nightMode !== false && inTimeWindow(now, cfg.dashboard.nightFrom, cfg.dashboard.nightTo),
     errors,
   };
 }

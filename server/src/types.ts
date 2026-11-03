@@ -348,6 +348,8 @@ export interface Config {
     nightTo: string; // "06:00"
     /** Minuter utan beröring innan fotoramen visas. 0 = av. */
     idleMinutes: number;
+    /** Nattläget (svart skärm med klocka mellan nightFrom och nightTo). Saknas = på. */
+    nightMode?: boolean;
     /** Solbågen under temperaturen i Nu-rutan (av som standard). */
     sunArc?: boolean;
     /** Sidan Skolan: "span" visar bara när skoldagen börjar och slutar (och idrott), inte varje lektion. */
