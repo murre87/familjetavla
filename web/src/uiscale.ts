@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 /** Skärmstorlek för den här enheten (iPaden och hallskärmen vill ha olika). Sparas i webbläsaren, inte i tavlans inställningar. */
 const KEY = "familjetavla.uiscale";
 export const SCALE_MIN = 0.6;
@@ -57,4 +59,45 @@ export function setScreensaverOff(off: boolean) {
   } catch {
     /* privat läge: gäller tills sidan laddas om */
   }
+}
+
+export type Design = "flat" | "glass";
+const DESIGN_KEY = "familjetavla.design";
+
+function readDesign(): Design | null {
+  try {
+    const v = localStorage.getItem(DESIGN_KEY);
+    return v === "flat" || v === "glass" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+let designOverride: Design | null = readDesign();
+const designListeners = new Set<() => void>();
+
+/** Utseendet för just den här skärmen (null = som i inställningarna). */
+export function setDesignOverride(v: Design | null) {
+  designOverride = v;
+  try {
+    if (v) localStorage.setItem(DESIGN_KEY, v);
+    else localStorage.removeItem(DESIGN_KEY);
+  } catch {
+    /* privat läge: gäller tills sidan laddas om */
+  }
+  designListeners.forEach((f) => f());
+}
+
+export const getDesignOverride = () => designOverride;
+
+/** Utseendet som gäller här: skärmens eget val, annars familjens inställning. */
+export function useDesign(fromSettings: Design): Design {
+  const o = useSyncExternalStore(
+    (f) => {
+      designListeners.add(f);
+      return () => designListeners.delete(f);
+    },
+    () => designOverride,
+  );
+  return o ?? fromSettings;
 }

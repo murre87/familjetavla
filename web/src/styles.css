@@ -5069,3 +5069,32 @@ button.p-line > span {
 .saver-row small {
   display: block;
 }
+
+/* Värmestartens veckodagar som cirklar på en rad (M T O T F L S): vilka dagar som är på syns direkt. */
+.item-row:has(.day-dots) {
+  flex-wrap: wrap;
+}
+.day-dots {
+  display: inline-flex;
+  gap: 4px;
+  min-width: 0;
+  flex-wrap: wrap;
+  flex: 1 1 150px;
+}
+.day-dots i {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--chip);
+  color: var(--muted);
+}
+.day-dots i.on {
+  background: var(--accent);
+  color: var(--on-accent);
+}

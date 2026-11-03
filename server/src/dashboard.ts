@@ -445,6 +445,8 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     graphs: (cfg.entities.graphs ?? []).map((g, index) => ({ index, title: g.title })),
     accent: cfg.dashboard.accent,
     theme: cfg.dashboard.theme ?? "auto",
+    design: cfg.dashboard.design ?? "glass",
+    waste: nextWaste(waste, now),
     home: cfg.dashboard.home,
     tabs: cfg.dashboard.tabs,
     daypart: inTimeWindow(now, "07:00", "19:00") ? "day" : "night",
@@ -669,6 +671,26 @@ function buildEnergy(cfg: Config, states: Map<string, HaState>, series: Record<s
     today: energyToday(e, series, units, spot, (p) => (hasPriceExtras(cfg) ? totalPrice(cfg, p) : p)),
   };
   return Object.values(out).some((v) => v !== undefined) ? out : undefined;
+}
+
+/** The next pickup of each kind of waste: "Kärl 1 imorgon", "Kärl 2 ons 18/11". */
+export function nextWaste(waste: { date: Date; type: string }[], now: Date): Dashboard["waste"] {
+  const today = startOfDay(now);
+  const first = new Map<string, Date>();
+  for (const w of waste) {
+    const d = startOfDay(w.date);
+    if (d < today) continue;
+    const prev = first.get(w.type);
+    if (!prev || d < prev) first.set(w.type, d);
+  }
+  const SHORT = ["sön", "mån", "tis", "ons", "tor", "fre", "lör"];
+  return [...first]
+    .sort((a, b) => a[1].getTime() - b[1].getTime() || a[0].localeCompare(b[0], "sv"))
+    .slice(0, 4)
+    .map(([type, d]) => {
+      const diff = daysBetween(today, d);
+      return { type, dayKey: dayKey(d), label: diff === 0 ? "idag" : diff === 1 ? "imorgon" : `${SHORT[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` };
+    });
 }
 
 export function buildPrices(cfg: Config, spot: HourPrice[], now: Date): Dashboard["prices"] {

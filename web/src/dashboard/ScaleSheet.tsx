@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
-import { SCALE_MAX, SCALE_MIN, readScale, saveScale, screensaverOff, setScreensaverOff } from "../uiscale";
+import { SCALE_MAX, SCALE_MIN, getDesignOverride, readScale, saveScale, screensaverOff, setDesignOverride, setScreensaverOff, type Design } from "../uiscale";
 
 const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
 
@@ -9,6 +9,7 @@ const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
 export function ScaleSheet({ onClose }: { onClose: () => void }) {
   const [z, setZ] = useState(readScale);
   const [saverOff, setSaverOff] = useState(screensaverOff);
+  const [design, setDesign] = useState<Design | null>(getDesignOverride);
   const set = (v: number) => setZ(saveScale(v));
   const pct = Math.round(z * 100);
   return createPortal(
@@ -41,6 +42,25 @@ export function ScaleSheet({ onClose }: { onClose: () => void }) {
               {Math.round(p * 100)} %{p === 1 ? " (standard)" : ""}
             </button>
           ))}
+        </div>
+        <div className="design-row">
+          <b>Utseende på den här skärmen</b>
+          <div className="seg-btns" role="radiogroup" aria-label="Utseende">
+            {([[null, "Som i inställningarna"], ["flat", "Ny, platt"], ["glass", "Klassisk, glasig"]] as [Design | null, string][]).map(([v, label]) => (
+              <button
+                key={String(v)}
+                role="radio"
+                aria-checked={design === v}
+                className={`btn small ${design === v ? "primary" : ""}`}
+                onClick={() => {
+                  setDesignOverride(v);
+                  setDesign(v);
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
         <label className="saver-row">
           <input
