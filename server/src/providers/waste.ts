@@ -54,10 +54,14 @@ export const wasteEdp: WasteProvider = {
       if (address.length < 3) throw new Error("Skriv gatuadress och nummer.");
       const found = await edpSearch(url, address);
       if (!found.length) throw new Error(`Hittade ingen adress som matchar "${address}".`);
+      // The service only answers with its first ten matches: a street without a number then shows 1–9 and not your house.
+      const capped = found.length >= 10 && !/\d/.test(address);
       return {
         ok: true,
-        message: `Hittade ${found.length} adress${found.length === 1 ? "" : "er"} – välj din och testa igen.`,
-        choices: { field: "building", options: found.slice(0, 15).map((b) => ({ value: b, label: b })) },
+        message: capped
+          ? `Renhållaren visar bara de första ${found.length} träffarna. Skriv med husnummer (till exempel "${address} 34") i Gatuadress och tryck Testa igen.`
+          : `Hittade ${found.length} adress${found.length === 1 ? "" : "er"} – välj din och testa igen.`,
+        choices: { field: "building", options: found.slice(0, 40).map((b) => ({ value: b, label: b })) },
       };
     }
     const pickups = await edpSchedule(url, building);

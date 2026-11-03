@@ -56,6 +56,8 @@ export interface NotifySettings {
   morning?: string;
   /** Söndag kl 19: "Planera veckan" om något saknar ansvarig. */
   weekly?: boolean;
+  /** "19:30": kvällen innan sophämtning, "Sopor hämtas imorgon". "" = av, saknas = 19:30. */
+  waste?: string;
   /** Hemmet: tvätten klar, roboten har fastnat, dörren olåst kl 22, porten öppen, larmet. Saknas = på. */
   home?: boolean;
   /** En notis när en ny version av Familjetavlan finns (en gång per version). Saknas = på. */
@@ -346,9 +348,11 @@ export interface Config {
     nightTo: string; // "06:00"
     /** Minuter utan beröring innan fotoramen visas. 0 = av. */
     idleMinutes: number;
+    /** Nattläget (svart skärm med klocka mellan nightFrom och nightTo). Saknas = på. */
+    nightMode?: boolean;
     /** Solbågen under temperaturen i Nu-rutan (av som standard). */
     sunArc?: boolean;
-    /** Sidan Skolan: "span" visar bara när skoldagen börjar och slutar (och idrott), inte varje lektion. */
+    /** Sidan Skolan: "span" visar bara när skoldagen slutar (och idrott), inte varje lektion. Standard är alla lektioner. */
     lessons?: "all" | "span";
   };
 }

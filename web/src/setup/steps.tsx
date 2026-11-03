@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ScaleSheet } from "../dashboard/ScaleSheet";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { WIDGET_LABELS } from "../widgets";
 import { CUSTODY_PRESETS, isHome } from "../../../server/src/custody";
@@ -1172,7 +1173,7 @@ export function SchoolStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNow 
             onChange={(v) => set({ ...cfg, dashboard: { ...cfg.dashboard, lessons: v === "span" ? "span" : "all" } })}
             options={[
               { value: "all", label: "Alla lektioner" },
-              { value: "span", label: "Bara när skoldagen börjar och slutar" },
+              { value: "span", label: "Bara när skoldagen slutar" },
             ]}
           />
           <small className="muted">Idrott (gympapåse), läxor, prov och nyheter visas alltid.</small>
@@ -1792,8 +1793,8 @@ function PhotoFrame({ cfg, set }: { cfg: Config; set: (c: Config) => void }) {
   const d = cfg.dashboard;
   return (
     <section className="card">
-      <h2>Fotoram i viloläge</h2>
-      <p className="muted">När ingen rört tavlan på en stund visas familjens bilder med klocka och nästa händelse. Utan bilder visas en lugn himmel.</p>
+      <h2>Fotoram på dagen</h2>
+      <p className="muted">Valfritt: när ingen rört tavlan på en stund visas familjens bilder med klocka och nästa händelse. Utan bilder visas en lugn himmel. Välj "Aldrig" om skärmsläckaren bara ska gå på natten. Vill du stänga av skärmsläckaren på just en skärm gör du det under Skärm-knappen (Aa) på den skärmen.</p>
       <Select
         label="Visa efter"
         value={String(d.idleMinutes ?? 10)}
@@ -1912,8 +1913,17 @@ function OrderList<T extends { id: string; on: boolean; size?: string }>({
 export function DisplayStep({ cfg, set }: StepProps) {
   const d = cfg.dashboard;
   const setD = (patch: Partial<Config["dashboard"]>) => set({ ...cfg, dashboard: { ...d, ...patch } });
+  const [scaleOpen, setScaleOpen] = useState(false);
   return (
     <div className="stack">
+      <section className="card">
+        <h2>Den här skärmen</h2>
+        <p className="muted">Storlek (mindre ger plats åt fler kort utan att bläddra) och om skärmsläckaren ska användas. Gäller bara den här skärmen – surfplattan i hallen och telefonen kan ha olika.</p>
+        <button className="btn" onClick={() => setScaleOpen(true)}>
+          Ändra storlek och skärmsläckare
+        </button>
+        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} />}
+      </section>
       <section className="card">
         <h2>Startskärmen</h2>
         <p className="muted">
@@ -1944,7 +1954,7 @@ export function DisplayStep({ cfg, set }: StepProps) {
         />
         <div className="grid-2">
           <label className="field">
-            <span>Nattläge från</span>
+            <span>Skärmsläckare från</span>
             <input type="time" value={d.nightFrom} onChange={(e) => setD({ nightFrom: e.target.value })} />
           </label>
           <label className="field">
@@ -1952,7 +1962,8 @@ export function DisplayStep({ cfg, set }: StepProps) {
             <input type="time" value={d.nightTo} onChange={(e) => setD({ nightTo: e.target.value })} />
           </label>
         </div>
-        <small className="faint">Nattläge visar bara klockan på svart skärm. Tryck för att väcka.</small>
+        <Toggle label="Skärmsläckare på natten" checked={d.nightMode !== false} onChange={(v) => setD({ nightMode: v })} help="Av = skärmen blir aldrig svart på natten." />
+        <small className="faint">Skärmsläckaren visar bara klockan på svart skärm mellan de här tiderna (standard 22:00–06:00). Tryck för att väcka.</small>
       </section>
       <PhotoFrame cfg={cfg} set={set} />
     </div>
@@ -2002,6 +2013,7 @@ function PinCard({ secrets, setSecrets, resp }: Pick<StepProps, "secrets" | "set
 // ======================= Påminnelser =======================
 
 const MORNING_TIMES = ["05:45", "06:00", "06:15", "06:30", "06:45", "07:00", "07:15", "07:30", "07:45", "08:00"];
+const WASTE_TIMES = ["17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30"];
 const BEFORE = [0, 15, 30, 45, 60, 90];
 
 export function NotifyStep({ cfg, set, resp }: StepProps) {
@@ -2068,6 +2080,13 @@ export function NotifyStep({ cfg, set, resp }: StepProps) {
                   value={n.morning ?? "06:45"}
                   onChange={(v) => setNotify(a.id, { morning: v })}
                   options={[{ value: "", label: "Ingen morgonnotis" }, ...MORNING_TIMES.map((t) => ({ value: t, label: `Kl ${t}` }))]}
+                />
+                <Select
+                  label="Sopor – kvällen innan hämtning"
+                  value={n.waste ?? "19:30"}
+                  onChange={(v) => setNotify(a.id, { waste: v })}
+                  options={[{ value: "", label: "Ingen sopnotis" }, ...WASTE_TIMES.map((t) => ({ value: t, label: `Kl ${t}` }))]}
+                  help="En notis dagen innan sopbilen kommer: ställ ut kärlet. Kräver att sophämtning är inställd."
                 />
                 {kidsForNotify.length > 1 && (
                   <div className="field">

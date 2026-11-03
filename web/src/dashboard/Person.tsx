@@ -1,9 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { DashEvent, Dashboard } from "../../../server/src/types";
 import { Icon } from "../Icon";
 import { navigate } from "../route";
 import { Avatar } from "./bits";
-import { PageBar } from "./Detail";
+import { PageBar, TaskSheet, type Task } from "./Detail";
 
 // "Personvyn": tryck på ett namn i toppen och se allt som gäller just den personen de kommande sju dagarna –
 // skolans start och sluttid, gympadagar, läxor och prov, träningar och matcher (med tider och skjuts) samt maten.
@@ -28,7 +28,8 @@ export function schoolSpan(lessons: { start: string; end: string }[]) {
 
 const KIND_LABEL: Record<string, string> = { läxa: "Läxa", prov: "Prov", inlämning: "Inlämning", uppgift: "Uppgift" };
 
-export function PersonPage({ data, personId }: { data: Dashboard; personId: string }) {
+export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; personId: string; onOpenEvent?: (e: DashEvent & { dayLabel?: string }) => void }) {
+  const [openTask, setOpenTask] = useState<Task | null>(null);
   const person = data.people.find((p) => p.id === personId);
   const kid = (data.school ?? []).find((k) => k.personId === personId);
   const days = data.days;
@@ -71,22 +72,24 @@ export function PersonPage({ data, personId }: { data: Dashboard; personId: stri
                 <div className="p-line">
                   <Icon name="school" size={20} />
                   <span>
-                    <b>Skola {span.start}–{span.end}</b>
+                    <b>Skolan slutar {span.end}</b> <small className="muted">(börjar {span.start})</small>
                     {gym && <span className="p-badge gym"> <Icon name="gym" size={14} /> Gympa – ta med gymkläder</span>}
                   </span>
                 </div>
               )}
               {tasks.map((t, i) => (
-                <div className={`p-line task ${t.kind}`} key={i}>
+                <button className={`p-line task ${t.kind} p-click`} key={i} onClick={() => setOpenTask(t)} aria-label={`${KIND_LABEL[t.kind] ?? "Uppgift"}: ${t.title} – visa mer`}>
                   <Icon name={t.kind === "prov" ? "alert" : "check"} size={20} />
                   <span>
                     <b>{KIND_LABEL[t.kind] ?? "Uppgift"}:</b> {t.title}
                     {t.time ? ` · ${t.time}` : ""}
+                    {t.detail && <small className="muted p-more"> {t.detail.split("\n")[0]!.slice(0, 80)}</small>}
                   </span>
-                </div>
+                  <Icon name="chevronRight" size={18} />
+                </button>
               ))}
               {events.map((e, i) => (
-                <div className="p-line" key={i}>
+                <div className={`p-line ${onOpenEvent ? "p-click" : ""}`} key={i} role={onOpenEvent ? "button" : undefined} tabIndex={onOpenEvent ? 0 : undefined} onClick={() => onOpenEvent?.({ ...e, dayLabel: d.name.toLowerCase() })} onKeyDown={(ev) => ev.key === "Enter" && onOpenEvent?.({ ...e, dayLabel: d.name.toLowerCase() })}>
                   <Icon name={e.icon === "event" ? "calendar" : e.icon} size={20} />
                   <span>
                     <b>{e.time ? `${e.time}${e.end ? `–${e.end}` : ""}` : "Heldag"}</b> {e.title}
@@ -133,15 +136,17 @@ export function PersonPage({ data, personId }: { data: Dashboard; personId: stri
         <section className="card person-later">
           <h2>Längre fram</h2>
           {later.map((t, i) => (
-            <div className={`p-line task ${t.kind}`} key={i}>
+            <button className={`p-line task ${t.kind} p-click`} key={i} onClick={() => setOpenTask(t)}>
               <Icon name={t.kind === "prov" ? "alert" : "check"} size={20} />
               <span>
                 <b>{KIND_LABEL[t.kind] ?? "Uppgift"} {t.label}:</b> {t.title}
               </span>
-            </div>
+              <Icon name="chevronRight" size={18} />
+            </button>
           ))}
         </section>
       )}
+      {openTask && <TaskSheet task={openTask} child={person.name} onClose={() => setOpenTask(null)} />}
     </main>
   );
 }

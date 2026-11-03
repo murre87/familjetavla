@@ -99,7 +99,44 @@ function MoreButton({ n, what, label, onClick }: { n: number; what: string; labe
   );
 }
 
+type WeekEvent = Dashboard["days"][number]["events"][number];
+interface WeekCol {
+  key: string;
+  name: string;
+  initial: string;
+  color: string;
+  family?: boolean;
+}
+
+/** Whom an event is about: the people it names, none = the whole family. */
+const eventPeople = (e: WeekEvent, known: Set<string>) => (e.whoAll?.length ? e.whoAll : e.who ? [e.who] : []).filter((n) => known.has(n));
+
+/** One column per person who has something this week (or a school day), and "Familjen" first for what is for everyone. */
+export function weekColumns(data: Dashboard): WeekCol[] {
+  const known = new Set(data.people.map((p) => p.name));
+  const used = new Set<string>();
+  let family = false;
+  for (const d of data.days)
+    for (const e of d.events) {
+      const who = eventPeople(e, known);
+      if (who.length === 1) used.add(who[0]!);
+      else family = true; // nobody named, or several: one shared entry instead of the same thing under each person
+    }
+  for (const k of data.school ?? []) if (k.days.some((d) => d.lessons.length)) used.add(k.name);
+  const people = data.people.filter((p) => used.has(p.name)).map((p) => ({ key: p.id, name: p.name, initial: p.initial, color: p.color }));
+  return [...(family ? [{ key: "family", name: "Gemensamt", initial: "G", color: "var(--accent)", family: true }] : []), ...people];
+}
+
+/** When the child's school day ends (and whether there is gym), for the week's columns. */
+function schoolEnd(data: Dashboard, name: string, dayKey: string): { end: string; gym: boolean } | undefined {
+  const lessons = data.school?.find((k) => k.name === name)?.days.find((d) => d.dayKey === dayKey)?.lessons;
+  if (!lessons?.length) return undefined;
+  return { end: lessons[lessons.length - 1]!.end, gym: lessons.some((l) => l.gym) };
+}
+
 export function Week({ data, actions, full = false, edit }: { data: Dashboard; actions: Actions; full?: boolean; edit?: EditProps }) {
+  const cols = weekColumns(data);
+  const known = new Set(data.people.map((p) => p.name));
   return (
     <section className={`card area-week week-swipe ${edit?.className ?? ""}`} {...edit?.handlers}>
       {edit?.bar}
@@ -133,8 +170,65 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
             ))}
         </div>
       </div>
-      <Fit className={full ? "week-full" : "week-body"} deps={[data]} min={0.8} more={full ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
-        {data.days.map((d, di) => (
+      {cols.length > 1 && (
+        <div className={`wk-head ${full ? "" : "compact"}`} aria-hidden="true" style={{ ["--cols" as string]: cols.length }}>
+          {cols.map((c) => (
+            <span className="wk-who" key={c.key} title={c.name}>
+              <i className="wk-dot" style={{ background: c.color }} />
+              <b>{c.name}</b>
+            </span>
+          ))}
+        </div>
+      )}
+      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data]} min={0.8} more={full ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
+        {cols.length > 1
+          ? data.days.map((d, di) => (
+              <div key={d.key} className={`day wk-row ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
+                <div className="day-name">
+                  <b>{d.name}</b>
+                  <small>{d.date}</small>
+                </div>
+                <div className="wk-cells" style={{ ["--cols" as string]: cols.length }}>
+                  {cols.map((c) => {
+                    const evs = d.events.filter((e) => {
+                      const who = eventPeople(e, known);
+                      return c.family ? who.length !== 1 : who[0] === c.name;
+                    });
+                    const sch = c.family ? undefined : schoolEnd(data, c.name, d.key);
+                    const shown = full ? evs : evs.slice(0, 2);
+                    return (
+                      <div className="wk-cell" key={c.key} data-who={c.name}>
+                        {sch && (
+                          <span className="wk-school" title="När skoldagen slutar">
+                            <Icon name="school" size={14} /> slutar {sch.end}
+                            {sch.gym ? " · idrott" : ""}
+                          </span>
+                        )}
+                        {shown.map((e, i) => (
+                          <button className="wk-evt" key={i} style={{ borderLeftColor: e.color }} onClick={() => actions.openEvent({ ...e, dayLabel: d.name.toLowerCase() })} aria-label={eventLabel(e)}>
+                            {e.time && <span className="t">{e.time}</span>}
+                            <span className="ti">{e.title}</span>
+                            {c.family && eventPeople(e, known).length > 1 && (
+                              <span className="wk-with" aria-label={eventPeople(e, known).join(", ")}>
+                                {eventPeople(e, known).map((n) => (
+                                  <i key={n} style={{ background: data.people.find((p) => p.name === n)?.color }} title={n} />
+                                ))}
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                        {!full && evs.length > shown.length && (
+                          <button className="more-chip" aria-label={`${evs.length - shown.length} till – visa hela veckan`} onClick={() => actions.openPage("veckan")}>
+                            +{evs.length - shown.length}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          : data.days.map((d, di) => (
           <div key={d.key} className={`day ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
             <div className="day-name">
               <b>{d.name}</b>

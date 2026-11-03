@@ -432,7 +432,9 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
         value: formatTemp(stateMap, t.entityId),
         ...(offline ? { offline: true, days: since ? Math.max(0, Math.floor((now.getTime() - new Date(since).getTime()) / 86_400_000)) : undefined } : {}),
       };
-    }),
+    })
+      // Only the temperatures that exist: a sensor that cannot be found or does not answer is not shown as "–" or as a warning.
+      .filter((t) => !t.offline && /\d/.test(t.value)),
     deviceCards: (cfg.entities.deviceCards ?? []).map((c, index) => ({
       index,
       title: c.title,
@@ -446,7 +448,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     home: cfg.dashboard.home,
     tabs: cfg.dashboard.tabs,
     daypart: inTimeWindow(now, "07:00", "19:00") ? "day" : "night",
-    night: inTimeWindow(now, cfg.dashboard.nightFrom, cfg.dashboard.nightTo),
+    night: cfg.dashboard.nightMode !== false && inTimeWindow(now, cfg.dashboard.nightFrom, cfg.dashboard.nightTo),
     errors,
   };
 }

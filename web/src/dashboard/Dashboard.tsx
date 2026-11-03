@@ -7,6 +7,8 @@ import { Icon, type IconName } from "../Icon";
 import { INNER_NAME } from "../IpadFrame";
 import { Avatar, EventIcon } from "./bits";
 import { PersonPage } from "./Person";
+import { ScaleSheet } from "./ScaleSheet";
+import { screensaverOff } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
 import { Home } from "./Home";
 import { Fit } from "./Fit";
@@ -875,6 +877,7 @@ export function Dashboard() {
   const [grocery, setGrocery] = useState<{ store?: string } | null>(null);
   const [awakeUntil, setAwakeUntil] = useState(0);
   const [themeOverride, setThemeOverride] = useState(readThemeOverride);
+  const [scaleOpen, setScaleOpen] = useState(false);
   const [asking, setAsking] = useState<{ question: string; label: string; fn: () => Promise<unknown> } | null>(null);
   const [eventOpen, setEventOpen] = useState<(DashEvent & { dayLabel?: string }) | null>(null);
   const [planOpen, setPlanOpen] = useState(false);
@@ -1028,7 +1031,7 @@ export function Dashboard() {
     window.addEventListener("keydown", touch);
     const t = window.setInterval(() => {
       const mins = data?.idle.minutes ?? 0;
-      if (mins > 0 && Date.now() - lastTouch.current > mins * 60_000) setIdle(true);
+      if (mins > 0 && !screensaverOff() && Date.now() - lastTouch.current > mins * 60_000) setIdle(true);
     }, 10_000);
     return () => {
       window.removeEventListener("pointerdown", touch);
@@ -1193,7 +1196,7 @@ export function Dashboard() {
   const order = (id: Tab) => (id === "home" ? -1 : data.tabs.findIndex((t) => t.id === id));
   const tabs = TABS.filter((t) => t.show(data) && tabOn(t.id)).sort((a, b) => order(a.id) - order(b.id));
   const clock = now.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-  const sleeping = data.night && data.theme !== "eink" && data.theme !== "mirror" && !screenTheme && Date.now() > awakeUntil;
+  const sleeping = data.night && !screensaverOff() && data.theme !== "eink" && data.theme !== "mirror" && !screenTheme && Date.now() > awakeUntil;
 
   const tabIds = tabs.map((t) => t.id);
 
@@ -1286,6 +1289,9 @@ export function Dashboard() {
             {clock}
           </div>
           <div className="row gap">
+            <button className="btn icon scale-btn" aria-label="Skärm: storlek och skärmsläckare" title="Skärm – storlek och skärmsläckare" onClick={() => setScaleOpen(true)}>
+              <Icon name="textsize" size={24} />
+            </button>
             <button className="btn icon" aria-label={theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"} onClick={toggleTheme}>
               <Icon name={theme === "dark" ? "moon" : "sun"} size={24} />
             </button>
@@ -1302,6 +1308,8 @@ export function Dashboard() {
             </a>
           </div>
         </header>
+
+        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} />}
 
         {error && (
           <div className="card result bad" role="status" style={{ padding: "12px 18px" }}>
@@ -1327,7 +1335,7 @@ export function Dashboard() {
         {!isDemo && <InstallNudge onHelp={() => setInstallOpen(true)} />}
 
         {personId ? (
-          <PersonPage data={data} personId={personId} />
+          <PersonPage data={data} personId={personId} onOpenEvent={actions.openEvent} />
         ) : page ? (
           <DetailPage page={page} data={data} actions={actions} />
         ) : (

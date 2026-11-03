@@ -27,8 +27,10 @@ export function Reminders({ items: all, food, limit, data, actions }: { items: R
     if (n && !n.seen) api.newsSeen([id]).then(() => actions?.refresh()).catch(() => {});
   };
   // On the home screen: the most important few; the Kom ihåg page shows them all.
-  const items = limit ? all.slice(0, limit) : all;
-  const more = all.length - items.length;
+  // "Middag ikväll" without a warning is already in Maten and in the week: no third copy on the start page.
+  const list = limit ? all.filter((r) => !(r.icon === "food" && r.tone === "neutral")) : all;
+  const items = limit ? list.slice(0, limit) : list;
+  const more = list.length - items.length;
   return (
     <section className="card strong">
       <h2>Kom ihåg</h2>

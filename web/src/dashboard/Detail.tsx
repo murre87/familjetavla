@@ -98,10 +98,10 @@ export function MealsPage({ data, actions }: { data: Dashboard; actions: Actions
 
 const KIND_LABEL = { läxa: "Läxa", prov: "Prov", inlämning: "Inlämning", uppgift: "Uppgift" } as const;
 
-type Task = NonNullable<Dashboard["school"]>[number]["tasks"][number];
+export type Task = NonNullable<Dashboard["school"]>[number]["tasks"][number];
 
 /** Everything about one homework/test: when, the teacher's text, and a link to the school platform. */
-function TaskSheet({ task, child, onClose }: { task: Task; child: string; onClose: () => void }) {
+export function TaskSheet({ task, child, onClose }: { task: Task; child: string; onClose: () => void }) {
   return (
     <OnTop>
     <div className="overlay" onClick={onClose}>
@@ -348,7 +348,7 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
       <div className="school-grid">
         <section className="card">
           <h2>{today ? "Idag" : "Nästa skoldag"}</h2>
-          <DaySpan lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} />
+          {data.lessonView === "span" ? <DaySpan lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} /> : <Lessons lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} />}
         </section>
         <section className="card">
           <h2>Läxor och uppgifter</h2>
@@ -375,9 +375,10 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
               {d.lessons.length ? (
                 <>
                   <small className="muted">
-                    Slutar {d.lessons[d.lessons.length - 1].end}
+                    {data.lessonView === "span" ? `Slutar ${d.lessons[d.lessons.length - 1].end}` : `${d.lessons[0].start}–${d.lessons[d.lessons.length - 1].end}`}
                     {d.lessons.some((l) => l.gym) ? " · Idrott" : ""}
                   </small>
+                  {data.lessonView !== "span" && <Lessons lessons={d.lessons} compact />}
                 </>
               ) : (
                 <small className="muted">Ingen skola</small>
@@ -402,6 +403,27 @@ function DaySpan({ lessons }: { lessons: NonNullable<Dashboard["school"]>[number
         <b>{lessons[lessons.length - 1]!.end}</b>
       </div>
       {gym && <span className="chip">Idrott – gympapåse</span>}
+    </div>
+  );
+}
+
+function Lessons({ lessons, compact = false }: { lessons: NonNullable<Dashboard["school"]>[number]["days"][number]["lessons"]; compact?: boolean }) {
+  if (!lessons.length) return <small className="muted">Inga lektioner</small>;
+  return (
+    <div className={`lessons ${compact ? "compact" : ""}`}>
+      {lessons.map((l, i) => (
+        <div className="lesson" key={i}>
+          <span className="lesson-time">
+            {l.start}
+            {!compact && `–${l.end}`}
+          </span>
+          <span className="grow">
+            {l.title}
+            {l.gym && !/idrott/i.test(l.title) && <span className="gym"> Idrott</span>}
+          </span>
+          {!compact && l.location && <small className="muted">{l.location}</small>}
+        </div>
+      ))}
     </div>
   );
 }

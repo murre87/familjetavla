@@ -68,7 +68,7 @@ for (const [name0, dev, tablet] of DEVICES) {
       await p.locator(".edlevo-help").scrollIntoViewIfNeeded();
     }
     if (open === "sport") {
-      await p.locator(".event", { hasText: "F14" }).first().click();
+      await p.locator(".event, .wk-evt", { hasText: "F14" }).first().click();
       await p.locator(".event-text").scrollIntoViewIfNeeded();
     }
     if (open === "care4") {
@@ -129,7 +129,7 @@ for (const [name0, dev, tablet] of DEVICES) {
       await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     }
     if (open === "eventCancel") {
-      await p.locator(".event").first().click();
+      await p.locator(".event, .wk-evt").first().click();
       await p.getByRole("button", { name: "Utgår" }).click();
     }
     if (open === "reminderNews") await p.locator(".reminder-link").first().click();
@@ -144,7 +144,9 @@ for (const [name0, dev, tablet] of DEVICES) {
     await p.waitForTimeout(300);
     const m = await p.evaluate((tablet) => {
       const de = document.documentElement;
-      const out = { covered: [], overlap: [], cut: [], more: [...document.querySelectorAll(".fit-more")].map((m) => m.textContent.trim()), pageScroll: de.scrollHeight - window.innerHeight, sideways: de.scrollWidth - window.innerWidth, behind: [], overflow: [], scales: [], small: 0 };
+      // The page can be zoomed as a whole (skärmstorlek): scroll sizes are then in the page's own pixels, the window's in screen pixels.
+      const pageZoom = parseFloat(getComputedStyle(de).zoom) || 1;
+      const out = { covered: [], overlap: [], cut: [], more: [...document.querySelectorAll(".fit-more")].map((m) => m.textContent.trim()), pageScroll: Math.round(de.scrollHeight * pageZoom - window.innerHeight), sideways: Math.round(de.scrollWidth * pageZoom - window.innerWidth), behind: [], overflow: [], scales: [], small: 0 };
       const bar = document.querySelector(".tabbar")?.getBoundingClientRect();
       const overlay = document.querySelector(".overlay");
       if (bar && overlay) {
@@ -183,7 +185,8 @@ for (const [name0, dev, tablet] of DEVICES) {
         range.selectNodeContents(n);
         for (let r of range.getClientRects()) {
           if (r.width < 2 || r.height < 2) continue;
-          if (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) continue;
+          // A text that is only a sliver inside the screen (a fraction of a pixel after scrolling) counts as outside: its centre cannot be probed.
+          if (r.bottom < 2 || r.top > innerHeight - 2 || r.right < 2 || r.left > innerWidth - 2) continue;
           // A radio station's scrolling text slides on purpose.
           if (el.closest(".ticker")) continue;
           // Hidden by a fit area or a scroll box? Then it is not shown – skip.
