@@ -8,6 +8,7 @@
 - **Sopor:** en notis kvällen innan hämtning, som standard kl 19:30 – eget klockslag eller av under Inställningar → Påminnelser. June Avfall (och andra EDP-renhållare) visar bara de första tio adresserna: skriver du gatan utan nummer får du nu veta att du ska lägga till numret.
 - **Det man valt syns.** Ett sparat val i en lista (till exempel adressen för sophämtning) visas nu när man kommer tillbaka, i stället för ett tomt fält.
 - **Snyggare och lugnare sidor.** Bil, Hus och Energi har lika höga kort, "Laddplan" heter "Laddning" och diagrammet "Elpris och laddning" (inga dubbletter), batterikortet upprepar inte bilens namn, knappar och ringar är lägre, och lamporna har reglaget på samma rad som namnet.
+- **Temperaturer visar bara det som finns.** En sensor som inte hittas eller inte svarar visas inte längre som "–" eller som en gul varning, varken på startsidan eller under Hus.
 - **Rättat:** knappen "+N kort till" kunde hamna ovanpå ett kort när hela sidan var förminskad.
 
 ## 0.14.9

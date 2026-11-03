@@ -4876,12 +4876,16 @@ button.chip:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offs
 .wk-who {
   font-size: 15px;
 }
+/* Vilka det gäller: prickarna ligger i hörnet och tar ingen plats i raden (annars växer rutan och krockar med knappen under). */
+.wk-evt {
+  position: relative;
+}
 .wk-with {
-  flex: none;
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
   display: inline-flex;
   gap: 3px;
-  align-self: center;
-  margin-left: auto;
 }
 .wk-with i {
   width: 9px;
