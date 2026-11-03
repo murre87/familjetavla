@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 /** Smallest scale we accept – below this text gets too small to read across the room. */
 const MIN = 0.7;
 /** Room kept free at the bottom for the "+N till" button when items are hidden. */
-const HINT = 40;
+const HINT = 52;
 /** Last resort when a single remaining card still collides with the "+N" button. */
 const FLOOR = 0.55;
 

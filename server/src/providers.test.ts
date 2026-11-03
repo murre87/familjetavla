@@ -546,4 +546,20 @@ describe("middagsfavoriter, hyllan och veckodagar", () => {
       globalThis.fetch = orig;
     }
   });
+  it("nextWaste: närmaste hämtning per sort, med idag/imorgon/veckodag", async () => {
+    const { nextWaste } = await import("./dashboard.js");
+    const now = new Date(2026, 10, 3, 17, 0); // tisdag 3 nov
+    const at = (d: number, h = 0) => new Date(2026, 10, d, h);
+    const r = nextWaste(
+      [
+        { date: at(18), type: "Kärl 2" },
+        { date: at(4), type: "Kärl 1" },
+        { date: at(2), type: "Kärl 1" }, // förbi
+        { date: at(18), type: "Kärl 1" },
+        { date: at(3, 6), type: "Matavfall" },
+      ],
+      now,
+    );
+    expect(r.map((x) => `${x.type} ${x.label}`)).toEqual(["Matavfall idag", "Kärl 1 imorgon", "Kärl 2 ons 18/11"]);
+  });
 });

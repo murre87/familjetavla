@@ -5,6 +5,7 @@ import { applyScale, readScale } from "./uiscale";
 import { App } from "./App";
 import { IpadFrame, wantsIpadFrame } from "./IpadFrame";
 import "./styles.css";
+import "./flat.css";
 
 applyScale(readScale());
 

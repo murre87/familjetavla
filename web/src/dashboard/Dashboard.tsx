@@ -7,8 +7,9 @@ import { Icon, type IconName } from "../Icon";
 import { INNER_NAME } from "../IpadFrame";
 import { Avatar, EventIcon } from "./bits";
 import { PersonPage } from "./Person";
+import { HomeFlat } from "./HomeFlat";
 import { ScaleSheet } from "./ScaleSheet";
-import { screensaverOff } from "../uiscale";
+import { screensaverOff, useDesign } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
 import { Home } from "./Home";
 import { Fit } from "./Fit";
@@ -1015,12 +1016,16 @@ export function Dashboard() {
   const screenTheme = ({ spegel: "mirror", mirror: "mirror", eink: "eink" } as const)[new URLSearchParams(location.search).get("tema") ?? ""] as "mirror" | "eink" | undefined;
   const fixed = screenTheme ?? (data?.theme === "eink" || data?.theme === "mirror" ? data.theme : undefined);
   const theme = fixed ?? themeOverride ?? (data?.theme === "auto" || !data ? (phase === "dawn" || phase === "day" ? "light" : "dark") : data.theme);
+  // The new flat design has a light and a dark look; e-ink and mirror keep their own.
+  const design = useDesign(data?.design ?? "glass");
+  const flat = design === "flat" && (theme === "light" || theme === "dark");
   useEffect(() => {
     const root = document.documentElement;
+    root.dataset.design = flat ? "flat" : "glass";
     root.dataset.theme = theme;
     root.dataset.phase = theme === "light" || theme === "eink" ? (phase === "dawn" ? "dawn" : "day") : theme === "mirror" ? "night" : phase === "dusk" ? "dusk" : "night";
     root.dataset.sky = data?.header.sky ?? "partly";
-  }, [theme, phase, data?.header.sky]);
+  }, [theme, phase, data?.header.sky, flat]);
 
   // Photo frame after N minutes without touch.
   useEffect(() => {
@@ -1341,7 +1346,7 @@ export function Dashboard() {
         ) : (
         <div className="tab-page">
           {tab !== "home" && <PageBar title={TABS.find((t) => t.id === tab)?.label ?? ""} />}
-          {tab === "home" && <Home data={data} actions={actions} />}
+          {tab === "home" && (flat ? <HomeFlat data={data} actions={actions} /> : <Home data={data} actions={actions} />)}
           {tab !== "home" && (
             <Fit className="tab-body view-in" key={tab} deps={[data, tab]}>
               {tab === "cars" && <CarsPage data={data} actions={actions} />}

@@ -102,7 +102,13 @@ function ScheduleEditor({ car, actions }: { car: Dashboard["cars"][number]; acti
           <b className="tabular" style={{ fontSize: 22 }}>
             {s.time}
           </b>
-          <span className="grow muted">{s.days.length === 7 ? "Alla dagar" : s.days.map((d) => DAYS[d - 1]).join(" ")}</span>
+          <span className="grow day-dots" role="img" aria-label={s.days.length === 7 ? "Alla dagar" : s.days.map((d) => DAYS[d - 1]).join(" ")}>
+            {DAYS.map((d, i) => (
+              <i key={d} className={s.days.includes(i + 1) ? "on" : ""} title={d}>
+                {d.charAt(0)}
+              </i>
+            ))}
+          </span>
           <button className="btn small ghost" aria-label="Ta bort schema" onClick={() => actions.run("Schema", () => api.deleteSchedule(s.id))}>
             <Icon name="x" size={18} />
           </button>
@@ -493,7 +499,7 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
       <div className="pc-grid" role="img" aria-label={`Elpris och laddplan kommande ${prices.bars.length} timmar`}>
         {prices.bars.map((b, i) => (
           <span key={i} title={`${b.hour}:00 ${fmt(b.price)} kr`}>
-            <i className={b.current ? "current" : b.price <= low ? "cheap" : ""} style={{ height: `${Math.round((b.price / max) * 96) + 6}px` }} />
+            <i className={b.current ? "current" : b.price <= low ? "cheap" : ""} style={{ height: `${Math.max(6, Math.round((b.price / max) * 100))}%` }} />
           </span>
         ))}
       </div>

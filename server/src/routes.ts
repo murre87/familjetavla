@@ -314,6 +314,7 @@ export const configSchema = z
       nightTo: z.string().regex(/^\d{2}:\d{2}$/),
       idleMinutes: z.number().int().min(0).max(240).default(10),
       nightMode: z.boolean().optional(),
+      design: z.enum(["flat", "glass"]).optional(),
       sunArc: z.boolean().optional(),
       lessons: z.enum(["all", "span"]).optional(),
     }),

@@ -180,7 +180,7 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
           ))}
         </div>
       )}
-      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data]} min={0.8} more={full ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
+      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data]} min={0.7} more={full ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
         {cols.length > 1
           ? data.days.map((d, di) => (
               <div key={d.key} className={`day wk-row ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
@@ -195,7 +195,8 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                       return c.family ? who.length !== 1 : who[0] === c.name;
                     });
                     const sch = c.family ? undefined : schoolEnd(data, c.name, d.key);
-                    const shown = full ? evs : evs.slice(0, 2);
+                    // Everything is shown: a cell never hides things behind "+N".
+                    const shown = evs;
                     return (
                       <div className="wk-cell" key={c.key} data-who={c.name}>
                         {sch && (
@@ -217,11 +218,6 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                             )}
                           </button>
                         ))}
-                        {!full && evs.length > shown.length && (
-                          <button className="more-chip" aria-label={`${evs.length - shown.length} till – visa hela veckan`} onClick={() => actions.openPage("veckan")}>
-                            +{evs.length - shown.length}
-                          </button>
-                        )}
                       </div>
                     );
                   })}

@@ -1925,6 +1925,19 @@ export function DisplayStep({ cfg, set }: StepProps) {
         {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} />}
       </section>
       <section className="card">
+        <h2>Utseende</h2>
+        <Select
+          label="Design"
+          value={d.design ?? "glass"}
+          onChange={(v) => setD({ design: v === "flat" ? "flat" : "glass" })}
+          options={[
+            { value: "flat", label: "Ny – lugn och platt, tät översikt" },
+            { value: "glass", label: "Klassisk – blå och glasig" },
+          ]}
+          help="Gäller alla skärmar. Varje skärm kan välja sitt eget under knappen Aa. Den nya designen har en fast startsida (Nu, veckan per person, maten och en teknikrad); att ordna om korten gäller bara den klassiska."
+        />
+      </section>
+      <section className="card">
         <h2>Startskärmen</h2>
         <p className="muted">
           Slå på det du vill se och flytta i den ordning du vill. Rutor utan data döljs automatiskt. Storlek <b>Auto</b> gör rutorna större när

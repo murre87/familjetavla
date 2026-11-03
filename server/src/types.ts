@@ -350,6 +350,8 @@ export interface Config {
     idleMinutes: number;
     /** Nattläget (svart skärm med klocka mellan nightFrom och nightTo). Saknas = på. */
     nightMode?: boolean;
+    /** Utseendet: "flat" = ny, lugn och platt design; "glass" = klassiskt blått och glasigt. Saknas = glass. */
+    design?: "flat" | "glass";
     /** Solbågen under temperaturen i Nu-rutan (av som standard). */
     sunArc?: boolean;
     /** Sidan Skolan: "span" visar bara när skoldagen slutar (och idrott), inte varje lektion. Standard är alla lektioner. */
@@ -486,6 +488,10 @@ export interface PriceBar {
 }
 
 export interface Dashboard {
+  /** "flat" = ny, platt design; "glass" = klassisk. Kan ersättas per skärm. */
+  design: "flat" | "glass";
+  /** Nästa hämtning per sorts sopor, närmast först (högst fyra). */
+  waste: { type: string; dayKey: string; label: string }[];
   generatedAt: string;
   header: {
     dateLabel: string;

@@ -1,5 +1,12 @@
 # Ändringar
 
+## 0.16.0
+
+- **Ny design (valbar): lugn, platt och tät.** Under Inställningar → Startskärm → Utseende väljer du "Ny" eller "Klassisk" (blå och glasig) för hela familjen, och knappen "Aa" på en skärm kan välja sitt eget. Den nya designen har ett typsnitt i fem storlekar, samma hörn och luft överallt, en tunn linje i stället för skuggor och oskärpa, och knappar som aldrig bryter rad. Ljust och mörkt läge finns i båda. Den klassiska designen är oförändrad och förblir standard.
+- **Ny startsida i den nya designen:** Nu (de två närmaste sakerna), idag (väder, sopor, när skolan slutar och en sak att komma ihåg) och Maten överst. Veckan per person i full bredd under, med alla sju dagar synliga och inget "+N". Temperatur, ljus och musik i en rad längst ner som öppnar sin flik. Att ordna om korten gäller bara den klassiska designen.
+- **Sophämtning på startsidan:** nästa hämtning per sorts sopor ("Kärl 1 imorgon · Kärl 2 ons 18/11").
+- **Värmestartens veckodagar** är cirklar på en rad (M T O T F L S) i stället för text som bröts lodrätt.
+
 ## 0.15.0
 
 - **Schemat är tillbaka på sidan Skolan.** I 0.14.6 försvann lektionslistan för alla. Nu visas alla lektioner igen som standard, och "Bara när skoldagen slutar" är ett val under Inställningar → Skola ("Lektioner på sidan Skolan"). Tack CrallH.
