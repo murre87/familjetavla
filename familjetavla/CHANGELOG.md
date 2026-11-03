@@ -9,6 +9,7 @@
 - **Det man valt syns.** Ett sparat val i en lista (till exempel adressen för sophämtning) visas nu när man kommer tillbaka, i stället för ett tomt fält.
 - **Snyggare och lugnare sidor.** Bil, Hus och Energi har lika höga kort, "Laddplan" heter "Laddning" och diagrammet "Elpris och laddning" (inga dubbletter), batterikortet upprepar inte bilens namn, knappar och ringar är lägre, och lamporna har reglaget på samma rad som namnet.
 - **Temperaturer visar bara det som finns.** En sensor som inte hittas eller inte svarar visas inte längre som "–" eller som en gul varning, varken på startsidan eller under Hus.
+- **Startsidan:** "Middag ikväll" står inte längre en tredje gång i Kom ihåg (den finns i Maten och i veckan), om det inte finns en varning att visa.
 - **Rättat:** knappen "+N kort till" kunde hamna ovanpå ett kort när hela sidan var förminskad.
 
 ## 0.14.9
