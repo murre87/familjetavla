@@ -318,6 +318,8 @@ export interface Config {
     temps: NamedEntity[];
     /** Ljusfliken: grupper med Tänd alla / Släck alla. */
     lightGroups: { name: string; entities: string[] }[];
+    /** Lampor som Tänd alla / Tänd inne hoppar över på natten (t.ex. ett barns rum). */
+    quietLights?: { entities: string[]; from: string; to: string };
     /** Scener, skript och knappar, t.ex. "Godnatt – släck uppe". */
     buttons: { name: string; entityId: string; style: "accent" | "blue" | "amber" | "plain" }[];
     /** Hus-fliken: climate.* och water_heater.* (värmepump, termostat, varmvatten, spabad). */
@@ -666,6 +668,8 @@ export interface SchoolChild {
     detail?: string;
     /** Opens the task on the school platform. */
     url?: string;
+    /** The attachments (homework sheet), fetched through the board: api/school/file?u=… */
+    files?: { name: string; url: string }[];
   }[];
 }
 

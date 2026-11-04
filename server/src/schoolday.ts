@@ -119,6 +119,8 @@ export function buildSchoolWeek(
           time: e.allDay ? undefined : hm(e.start),
           detail: detail && detail !== e.title ? detail.slice(0, 4000) : undefined,
           url: e.url,
+          // Through the board's own file route (it logs in to the school platform for you).
+          ...(e.files?.length ? { files: e.files.map((f) => ({ name: f.name, url: `api/school/file?u=${encodeURIComponent(f.url)}` })) } : {}),
         };
       });
     if (!days.some((d) => d.lessons.length) && !tasks.length) continue;

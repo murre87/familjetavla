@@ -45,6 +45,12 @@ const forcedTheme = typeof location !== "undefined" ? new URLSearchParams(locati
 for (const [di, day] of (d.days ?? []).entries()) for (const [ei, ev] of day.events.entries()) if (!ev.ownId && !ev.cancelKey) ev.cancelKey = `demo:${di}:${ei}`;
 // ?lektioner=tider shows Skolan with only when the school day starts and ends.
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("lektioner") === "tider") d.lessonView = "span";
+// ?design=flat shows the demo in the new flat design (the device check uses it); the demo has sample waste pickups too.
+d.design = typeof location !== "undefined" && new URLSearchParams(location.search).get("design") === "flat" ? "flat" : "glass";
+d.waste ??= [
+  { type: "Kärl 1", dayKey: d.days?.[1]?.key ?? "", label: "imorgon" },
+  { type: "Kärl 2", dayKey: d.days?.[5]?.key ?? "", label: "tor 12/11" },
+];
 // ?utan-ma shows the Musik tab of a home without Music Assistant (the device check uses it).
 if (typeof location !== "undefined" && new URLSearchParams(location.search).has("utan-ma") && d.music) d.music.assistant = false;
 if (forcedTheme === "eink" || forcedTheme === "light" || forcedTheme === "dark") d.theme = forcedTheme;

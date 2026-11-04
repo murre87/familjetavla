@@ -19,6 +19,8 @@ export interface SourcedEvent extends CalEvent {
   gym?: boolean;
   /** Homework, test or hand-in from a school platform. */
   task?: boolean;
+  /** Attachments of that task. */
+  files?: { name: string; url: string }[];
   /** The item on the school platform. */
   url?: string;
   /** Name of the calendar (helps pick an icon: "Fotboll F14" → ball). */
@@ -95,6 +97,7 @@ export async function collectSchool(cfg: Config, from: Date, to: Date, errors: S
           for (const e of data.events) {
             const personId = e.child ? integ.personMap?.[e.child] : integ.personId;
             out.events.push({ ...e, sourceId: `school:${integ.id}`, personId, category: "school" });
+            for (const f of e.files ?? []) newsFiles.set(f.url, integ.id);
           }
           for (const c of data.care ?? []) {
             const pid = c.child ? integ.personMap?.[c.child] : integ.personId;

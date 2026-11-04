@@ -1,9 +1,11 @@
 import type { Dashboard } from "../../../server/src/types";
 import { Icon } from "../Icon";
+import { Fit } from "../dashboard/Fit";
 import type { WidgetModule } from "./types";
 
 /** Today's school lunch per child (tomorrow's after 14) and tonight's dinner – big enough for the kids. */
-export function Meals({ data }: { data: Dashboard }) {
+/** `fit`: the new start page lets the content shrink to the card instead of overflowing it. */
+export function Meals({ data, fit = false }: { data: Dashboard; fit?: boolean }) {
   const h = new Date().getHours();
   const start = h >= 14 ? 1 : 0;
   // The next school day with a menu: after Friday lunch that is Monday.
@@ -11,10 +13,12 @@ export function Meals({ data }: { data: Dashboard }) {
   const dinnerDay = h < 20 ? data.meals[0] : data.meals[1];
   const dinner = dinnerDay?.dinner;
   if (!lunch && !dinner) return null;
+  const wrap = (body: React.ReactNode) => (fit ? <Fit className="hf-fit" deps={[data]}>{body}</Fit> : body);
   const when = (label: string) => (label === "idag" || label === "imorgon" ? label : `på ${label.split(" ")[0]}`);
   return (
     <section className="card meals-card">
       <h2>Maten</h2>
+      {wrap(<>
       {lunch && (
         <div className="meal-block">
           <span className="eyebrow">Lunch {when(lunch.dayLabel)}</span>
@@ -38,6 +42,7 @@ export function Meals({ data }: { data: Dashboard }) {
           </div>
         </div>
       )}
+      </>)}
     </section>
   );
 }

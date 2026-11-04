@@ -1,5 +1,18 @@
 # Ändringar
 
+## 0.17.0
+
+- **Den nya designen finns nu på alla sidor** (Bil, Hus, Ljus, Energi, Mat, Grafer, Musik, Säkerhet, Hushåll, personvyn och Skolan), inte bara startsidan. Den klassiska designen är oförändrad och fortfarande standard. Den nya designen är byggd för skärmar på tvären; stående skärmar stöds inte där tills vidare.
+- **Allt ryms alltid, vid vilken skärmstorlek (60–130 %) som helst.** Inget scrollar, inget döljs bakom "+N" och inget får täcka något annat. Om något inte får plats krymper det i stället. Texter bryter rad i stället för att kapas med "…".
+- **Bil:** bägge bilarna sida vid sida på samma sida, med laddning, värmestart och elpris. Laddplanen visas som stapel och sammanfattning.
+- **Ljus:** "Inne" och "Ute" överst med Tänd och Släck, hela lampnamn, och lampor som inte svarar göms. På startsidan finns "Tänd inne" och "Släck inne".
+- **Vem som kör** syns vid varje träning och match i veckan på startsidan. Läxor, prov och uppgifter har egen färg och etikett, och läxtexten står direkt i personvyn.
+- **Läxpapper från Vklass:** bifogade läxor (PDF eller bild) visas direkt på tavlan, så att man inte behöver gå in i Vklass.
+- **Lampor som inte får tändas på natten:** en ny inställning (`quietLights`) gör att "Tänd alla" och "Tänd inne" hoppar över utpekade lampor, till exempel ett barns rum, mellan två klockslag. Släck fungerar alltid.
+- **Spabadets knappar** visar korta namn ("Blower" i stället för "Spabad Spa …: Blower") och ryms i rutorna.
+- **Planera-knappen** täcker inte längre kolumnrubrikerna, och sidhuvudet bryter rad vid stor skärmstorlek i stället för att bli bredare än skärmen.
+- Testerna kör nu hela enhetsserien i den nya designen, vid tre skärmstorlekar.
+
 ## 0.16.0
 
 - **Ny design (valbar): lugn, platt och tät.** Under Inställningar → Startskärm → Utseende väljer du "Ny" eller "Klassisk" (blå och glasig) för hela familjen, och knappen "Aa" på en skärm kan välja sitt eget. Den nya designen har ett typsnitt i fem storlekar, samma hörn och luft överallt, en tunn linje i stället för skuggor och oskärpa, och knappar som aldrig bryter rad. Ljust och mörkt läge finns i båda. Den klassiska designen är oförändrad och förblir standard.

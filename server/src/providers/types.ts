@@ -24,6 +24,8 @@ export interface SchoolEvent extends CalEvent {
   gym?: boolean;
   /** Homework, test or hand-in (the provider says so, whatever the title). */
   task?: boolean;
+  /** Attachments of a task on the school platform (the homework sheet as a PDF or picture). */
+  files?: { name: string; url: string }[];
   /** The item on the school platform. */
   url?: string;
 }

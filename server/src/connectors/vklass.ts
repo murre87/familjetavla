@@ -509,6 +509,48 @@ export function mapVklassItems(list: VklassItem[]): (CalEvent & { task?: boolean
     });
 }
 
+/**
+ * The attachments of a task page (Calendar/Assignment/…): Vklass puts them in the page as JSON
+ * (`files.bind="[{name, url, …}]"`). Only addresses on vklass.se are kept.
+ */
+export function parseAssignmentFiles(html: string): { name: string; url: string }[] {
+  const m = /files\.bind="([^"]*)"/.exec(html) ?? /files\.bind='([^']*)'/.exec(html);
+  if (!m) return [];
+  const raw = m[1]!.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&amp;/g, "&");
+  try {
+    const list = JSON.parse(raw) as { name?: string; nameWithExtension?: string; url?: string; isFolder?: boolean }[];
+    return list.flatMap((f) => {
+      if (f.isFolder || !f.url) return [];
+      try {
+        const u = new URL(f.url);
+        if (u.protocol !== "https:" || !/(^|\.)vklass\.se$/.test(u.hostname)) return [];
+        return [{ name: f.nameWithExtension || f.name || "Bilaga", url: u.toString() }];
+      } catch {
+        return [];
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
+const assignmentFiles = new Map<string, { at: number; files: { name: string; url: string }[] }>();
+
+/** Attachments of one task, remembered for six hours (a failed look is not remembered). */
+export async function vklassAssignmentFiles(s: VklassSession, taskUrl: string): Promise<{ name: string; url: string }[]> {
+  const hit = assignmentFiles.get(taskUrl);
+  if (hit && Date.now() - hit.at < 6 * 3_600_000) return hit.files;
+  try {
+    const res = await vklassFile(s, taskUrl);
+    if (!res.ok) return [];
+    const files = parseAssignmentFiles(await res.text());
+    assignmentFiles.set(taskUrl, { at: Date.now(), files });
+    return files;
+  } catch {
+    return [];
+  }
+}
+
 /** Lessons that mean "bring gym clothes". Vklass uses short codes like "idh". */
 export function isGymLesson(ev: CalEvent): boolean {
   const s = `${ev.title} ${ev.description ?? ""}`.toLowerCase();

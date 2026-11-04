@@ -27,7 +27,9 @@ const LIST = [
 // PART=1/3 runs every third device (for running in parallel).
 const [partNo, parts] = (process.env.PART ?? "1/1").split("/").map(Number);
 const only = process.env.ONLY ? new RegExp(process.env.ONLY, "i") : null;
-const DEVICES = LIST.filter((_, i) => i % parts === partNo - 1).filter(([n]) => !only || only.test(n));
+// The new (flat) design is made for landscape screens; portrait is not supported there for now (decided 2026-11-04).
+const flatNoPortrait = process.env.DESIGN === "flat";
+const DEVICES = LIST.filter((_, i) => i % parts === partNo - 1).filter(([n]) => !only || only.test(n)).filter(([n]) => !(flatNoPortrait && /stående|Spegel/.test(n)));
 const ROUTES = [
   ["guide-hem", "#/setup/hem"], ["guide-familj", "#/setup/familj"], ["guide-kalendrar", "#/setup/kalendrar"], ["guide-omsorg", "#/setup/familj", "care4"], ["guide-skola", "#/setup/skola"], ["guide-huset", "#/setup/huset"], ["guide-musik", "#/setup/huset", "radio"], ["guide-edlevo", "#/setup/skola", "edlevo"], ["guide-startskarm", "#/setup/visning"], ["guide-klart", "#/setup/klart"],
   ["planera", "", "plan"], ["handelse", "", "event"], ["handelse-utgar", "", "eventCancel"], ["skjuts", "#/sida/veckan", "sport"], ["uppgift", "#/sida/skolan", "task"], ["nyhet", "#/sida/skolan", "news"], ["nyhet-vecka", "#/sida/skolan", "newsadd"], ["lagg-till", "#/lagg-till"],
@@ -35,11 +37,14 @@ const ROUTES = [
 // ROUTES_ONLY=ljus,uppgift checks just those views (quick local runs).
 const routeOnly = process.env.ROUTES_ONLY?.split(",");
 if (routeOnly) ROUTES.splice(0, ROUTES.length, ...ROUTES.filter(([r]) => routeOnly.includes(r)));
+// The new design has a fixed start page (no "Ordna startsidan" by holding a card), and no e-ink / mirror themes.
+if (process.env.DESIGN === "flat") ROUTES.splice(0, ROUTES.length, ...ROUTES.filter(([r]) => r !== "ordna" && !/^(eink|spegel)-/.test(r)));
 const report = [];
 const line = (row) => {
   if (row.issues.length || row.more?.length) console.log(`${row.issues.length ? "FEL " : "obs "} ${row.device} · ${row.route}: ${row.issues.join("; ")} ${row.more?.length ? `[knappar: ${row.more.join(" / ")}]` : ""}`);
 };
-for (const [theme, clock] of [["ljust", "2026-10-18T16:00:00+02:00"], ["mörkt", "2026-10-18T20:30:00+02:00"]])
+// THEME=ljust|mörkt runs only that theme (half the time, for quick checks).
+for (const [theme, clock] of [["ljust", "2026-10-18T16:00:00+02:00"], ["mörkt", "2026-10-18T20:30:00+02:00"]].filter(([t]) => !process.env.THEME || process.env.THEME === t))
 for (const [name0, dev, tablet] of DEVICES) {
   const name = `${name0} ${theme}`;
   const d = typeof dev === "string" ? devices[dev] : dev;
@@ -47,6 +52,8 @@ for (const [name0, dev, tablet] of DEVICES) {
   const b = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
   const ctx = await b.newContext({ ...d, locale: "sv-SE", timezoneId: "Europe/Stockholm" });
   const p = await ctx.newPage();
+  // SCALE=0.6|1|1.3 runs everything at that "Storlek" setting (60–130 %): nothing may cover anything or scroll at any of them.
+  if (process.env.SCALE) await p.addInitScript((v) => { try { localStorage.setItem("familjetavla.uiscale", v); } catch {} }, process.env.SCALE);
   const errors = [];
   let at = "";
   p.on("pageerror", (e) => errors.push(`${e.message} (${at}) ${(e.stack ?? "").split("\n")[1]?.trim() ?? ""}`));
@@ -57,12 +64,15 @@ for (const [name0, dev, tablet] of DEVICES) {
    try {
     at = r;
     await p.goto("about:blank");
-    await p.goto(URL + hash);
+    // DESIGN=flat runs the same checks in the new flat design (the demo reads ?design=flat).
+    const D = process.env.DESIGN;
+    const target = !D ? hash : hash.includes("?") ? hash.replace("?", `?design=${D}&`) : `?design=${D}${hash}`;
+    await p.goto(URL + target);
     // Measure like a real board: the demo's extra header buttons don't exist there.
     await p.addStyleTag({ content: ".demo-only{display:none!important}" });
     await p.waitForTimeout(1400);
-    if (open === "plan") await p.getByRole("button", { name: /Planera veckan/ }).first().click();
-    if (open === "event") await p.locator(".now-item").first().click();
+    if (open === "plan") await p.getByRole("button", { name: /Planera/ }).first().click();
+    if (open === "event") await p.locator(".now-item, .hf-row").first().click();
     if (open === "edlevo") {
       await p.getByRole("button", { name: /Har ni Edlevo/ }).click();
       await p.locator(".edlevo-help").scrollIntoViewIfNeeded();
@@ -187,8 +197,8 @@ for (const [name0, dev, tablet] of DEVICES) {
           if (r.width < 2 || r.height < 2) continue;
           // A text that is only a sliver inside the screen (a fraction of a pixel after scrolling) counts as outside: its centre cannot be probed.
           if (r.bottom < 2 || r.top > innerHeight - 2 || r.right < 2 || r.left > innerWidth - 2) continue;
-          // A radio station's scrolling text slides on purpose.
-          if (el.closest(".ticker")) continue;
+          // A radio station's scrolling text slides on purpose; screen-reader-only text is not meant to be seen.
+          if (el.closest(".ticker, .sr-only")) continue;
           // Hidden by a fit area or a scroll box? Then it is not shown – skip.
           let clipped = false;
           for (let a = el; a && a !== document.body; a = a.parentElement) {
@@ -200,7 +210,7 @@ for (const [name0, dev, tablet] of DEVICES) {
               // Partly outside its box (cut text) – unless that box shows an ellipsis on purpose.
               const cut = r.bottom > cr.bottom + 2 || r.top < cr.top - 2 || ((r.right > cr.right + 2 || r.left < cr.left - 2) && s2.textOverflow !== "ellipsis" && cs.textOverflow !== "ellipsis");
               const scroller = s2.overflowY === "auto" || s2.overflowY === "scroll";
-              if (cut && !scroller && !a.classList.contains("fit")) out.cut.push(n.textContent.trim().slice(0, 24));
+              if (cut && !scroller && !a.classList.contains("fit")) out.cut.push(`${n.textContent.trim().slice(0, 24)} i ${String(a.className?.baseVal ?? a.className ?? "").split(" ").filter(Boolean).slice(0, 2).join(".") || a.tagName.toLowerCase()}`);
             }
           }
           if (clipped) continue;

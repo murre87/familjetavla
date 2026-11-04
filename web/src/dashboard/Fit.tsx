@@ -6,6 +6,8 @@ const MIN = 0.7;
 const HINT = 52;
 /** Last resort when a single remaining card still collides with the "+N" button. */
 const FLOOR = 0.55;
+/** The new design never hides or scrolls: an area shrinks as far as it takes (whatever the page zoom). */
+const FLAT_MIN = 0.2;
 
 /**
  * An area that fits its content on a tablet. When CSS puts it in fit mode (fixed height, see `.fit`
@@ -37,6 +39,7 @@ export function Fit({
     const i = inner.current;
     if (!o || !i) return;
     const fit = () => {
+      const lo = document.documentElement.dataset.design === "flat" ? FLAT_MIN : min;
       const kids = [...i.children] as HTMLElement[];
       kids.forEach((k) => (k.style.display = ""));
       i.style.zoom = "1";
@@ -52,8 +55,22 @@ export function Fit({
           let scale = 1;
           // Scaling changes line breaks, so measure again and adjust once more.
           // (A few more passes and a hair of margin: text re-wraps as it shrinks, so one step rarely lands exactly.)
-          for (let pass = 0; pass < 6 && h > avail + 1 && scale > min; pass++) {
-            scale = Math.max(min, scale * (avail / h) * 0.99);
+          for (let pass = 0; pass < 6 && h > avail + 1 && scale > lo; pass++) {
+            scale = Math.max(lo, scale * (avail / h) * 0.99);
+            i.style.zoom = String(scale);
+            h = height();
+          }
+          // Text re-wraps as it shrinks, so the first fit is often smaller than needed: find the largest scale that still fits.
+          if (h <= avail + 1 && scale < 1) {
+            let lo = scale;
+            let hi = 1;
+            for (let k = 0; k < 6; k++) {
+              const mid = (lo + hi) / 2;
+              i.style.zoom = String(mid);
+              if (height() <= avail + 1) lo = mid;
+              else hi = mid;
+            }
+            scale = lo;
             i.style.zoom = String(scale);
             h = height();
           }

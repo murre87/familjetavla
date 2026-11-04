@@ -4,6 +4,7 @@ import { Icon } from "../Icon";
 import { navigate } from "../route";
 import { Avatar } from "./bits";
 import { PageBar, TaskSheet, type Task } from "./Detail";
+import { Fit } from "./Fit";
 
 // "Personvyn": tryck på ett namn i toppen och se allt som gäller just den personen de kommande sju dagarna –
 // skolans start och sluttid, gympadagar, läxor och prov, träningar och matcher (med tider och skjuts) samt maten.
@@ -53,15 +54,19 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
           </button>
         ))}
       </div>
+      <Fit className="detail-body person-fit" deps={[data, personId]} min={0.55}>
       <div className="person-days">
         {days.map((d) => {
-          const { mine: events, family: famEvents } = personEvents(d.events, person);
+          const { mine: allEvents, family: famEvents } = personEvents(d.events, person);
           const sd = kid?.days.find((x) => x.dayKey === d.key);
           const span = sd ? schoolSpan(sd.lessons) : null;
           const gym = sd?.lessons.some((l) => l.gym);
           const tasks = (kid?.tasks ?? []).filter((t) => t.dayKey === d.key);
+          // A homework that is also an all-day item in the calendar is shown once (as the homework).
+          const events = allEvents.filter((e) => !tasks.some((t) => t.title === e.title));
           const meal = (data.meals ?? []).find((m) => m.dayKey === d.key);
           const lunch = meal?.lunch.filter((l) => !l.child || l.child === person.name) ?? [];
+          const dinnerTwice = Boolean(meal?.dinner && famEvents.some((e) => e.title === `Middag: ${meal.dinner}`));
           const empty = !span && !events.length && !famEvents.length && !tasks.length && !lunch.length;
           return (
             <section className={`card person-day ${d.isToday ? "today" : ""}`} key={d.key}>
@@ -72,7 +77,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
                 <div className="p-line">
                   <Icon name="school" size={20} />
                   <span>
-                    <b>Skolan slutar {span.end}</b> <small className="muted">(börjar {span.start})</small>
+                    <b>Skolan slutar {span.end}</b>
                     {gym && <span className="p-badge gym"> <Icon name="gym" size={14} /> Gympa – ta med gymkläder</span>}
                   </span>
                 </div>
@@ -83,7 +88,8 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
                   <span>
                     <b>{KIND_LABEL[t.kind] ?? "Uppgift"}:</b> {t.title}
                     {t.time ? ` · ${t.time}` : ""}
-                    {t.detail && <small className="muted p-more"> {t.detail.split("\n")[0]!.slice(0, 80)}</small>}
+                    {t.files?.length ? <small className="p-more p-file">📎 {t.files.map((f) => f.name).join(", ")}</small> : null}
+                    {t.detail && <small className="p-more">{t.detail.replace(/\s*\n\s*/g, " ").slice(0, 240)}</small>}
                   </span>
                   <Icon name="chevronRight" size={18} />
                 </button>
@@ -119,7 +125,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
                   </span>
                 </div>
               ))}
-              {meal?.dinner && (
+              {meal?.dinner && !dinnerTwice && (
                 <div className="p-line meal">
                   <Icon name="food" size={20} />
                   <span>
@@ -132,6 +138,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
           );
         })}
       </div>
+      </Fit>
       {later.length > 0 && (
         <section className="card person-later">
           <h2>Längre fram</h2>

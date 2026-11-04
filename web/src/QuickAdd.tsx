@@ -1,3 +1,4 @@
+import { Fit } from "./dashboard/Fit";
 import { useEffect, useState } from "react";
 import type { Person } from "../../server/src/types";
 import { api } from "./api";
@@ -27,6 +28,7 @@ export function QuickAdd({ people }: { people: Person[] }) {
   const added = (text: string) => setDone((d) => [text, ...d].slice(0, 6));
   return (
     <main className="quick-add">
+      <Fit className="qa-fit" deps={[tab, done.length]}>
       <header className="row gap" style={{ alignItems: "center" }}>
         <h1 className="grow">Lägg till på tavlan</h1>
         <button className="btn small ghost" onClick={() => navigate("/")}>
@@ -56,6 +58,7 @@ export function QuickAdd({ people }: { people: Person[] }) {
           ))}
         </section>
       )}
+      </Fit>
     </main>
   );
 }

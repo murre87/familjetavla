@@ -14,6 +14,15 @@ function defaultScale(): number {
   return w >= 1000 && w <= 1300 && h >= 600 && h <= 900 ? 0.85 : 1;
 }
 
+/** True when someone has chosen a size on this screen (the default is then not used). */
+export function scaleChosen(): boolean {
+  try {
+    return Number(localStorage.getItem(KEY)) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export function readScale(): number {
   try {
     const v = Number(localStorage.getItem(KEY));

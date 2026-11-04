@@ -3,7 +3,7 @@ import { ha, haConnection } from "../connectors/ha.js";
 import { getJson } from "../http.js";
 import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connectors/schoolsoft.js";
 import { groupsOfClass, skola24Host, skola24Lessons, skola24Selection, skola24Units } from "../connectors/skola24.js";
-import { isGymLesson, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
+import { isGymLesson, vklassAssignmentFiles, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
 import { addDays, hhmm, shortDate, shortWeekday } from "../time.js";
 import type { ProviderCtx, SchoolEvent, SchoolProvider } from "./types.js";
 
@@ -55,6 +55,17 @@ export const vklass: SchoolProvider = {
     for (const k of kids) {
       if (!k.id) continue; // preschool child without lessons: menu and care time only
       for (const e of await vklassEvents(s, k.id, from, to)) events.push({ ...e, child: k.name, gym: isGymLesson(e) });
+    }
+    // The homework sheets: the tasks of the next two weeks, a few pages at a time.
+    const soon = Date.now() + 16 * 86_400_000;
+    const tasks = events.filter((e) => e.task && e.url && e.end.getTime() > Date.now() && e.start.getTime() < soon);
+    for (let i = 0; i < tasks.length; i += 4) {
+      await Promise.all(
+        tasks.slice(i, i + 4).map(async (e) => {
+          const files = await vklassAssignmentFiles(s, e.url!);
+          if (files.length) e.files = files;
+        }),
+      );
     }
     const food = kids.flatMap((k) => k.food.map((f) => ({ child: k.name, ...f })));
     const care = kids.flatMap((k) => (k.careTime ? [{ child: k.name, text: k.careTime }] : []));

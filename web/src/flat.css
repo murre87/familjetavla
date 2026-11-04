@@ -93,9 +93,15 @@ html[data-design="flat"] .card h2 {
 html[data-design="flat"] .btn,
 html[data-design="flat"] .chip,
 html[data-design="flat"] .tab-btn,
-html[data-design="flat"] .seg-btn,
-html[data-design="flat"] button {
+html[data-design="flat"] .seg-btn {
   white-space: nowrap;
+}
+/* Rader som är knappar (påminnelser, uppgifter, nyheter) bryter rad: texten ska rymmas i rutan, inte sticka ut. */
+html[data-design="flat"] button.reminder,
+html[data-design="flat"] button.task-row,
+html[data-design="flat"] button.news-strip {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 html[data-design="flat"] .btn {
   border-radius: 12px;
@@ -167,8 +173,12 @@ html[data-design="flat"] .side-tabs {
   gap: var(--f-gap, 12px);
   min-height: 0;
 }
-.hf > .hf-tech {
+.hf > .hf-tech,
+.hf > .hf-tech-wrap {
   grid-column: 1 / -1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .hf-label {
   font-size: 12px;
@@ -223,17 +233,17 @@ html[data-design="flat"] .side-tabs {
   display: block;
   font-size: 15px;
   font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 .hf-what span {
   display: block;
   font-size: 13px;
   color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 .hf-weather {
   display: flex;
@@ -264,9 +274,9 @@ html[data-design="flat"] .side-tabs {
 }
 .hf-tip span {
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 .hf-idag {
   display: flex;
@@ -326,8 +336,8 @@ html[data-design="flat"] .hf .wk-evt {
   border-radius: 8px;
   background: var(--f-soft);
   font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
+  white-space: normal;
+  overflow: visible;
 }
 html[data-design="flat"] .hf .wk-evt .t {
   font-size: 14px;
@@ -335,9 +345,9 @@ html[data-design="flat"] .hf .wk-evt .t {
 }
 html[data-design="flat"] .hf .wk-evt .ti {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
   display: block;
 }
 html[data-design="flat"] .hf .wk-school {
@@ -364,9 +374,9 @@ html[data-design="flat"] .hf > .meals-card .meal-line {
 }
 html[data-design="flat"] .hf > .meals-card .meal-line > span {
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 html[data-design="flat"] .hf > .meals-card .meal-line svg {
   flex: none;
@@ -379,6 +389,7 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
 /* Tekniken i en rad längst ner */
 .hf-tech {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--f-gap, 12px);
   min-width: 0;
 }
@@ -457,7 +468,7 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
   .hf > .hf-idag,
   .hf > .area-week,
   .hf > .hf-side,
-  .hf > .hf-tech {
+  .hf > .hf-tech-wrap {
     grid-column: 1 / -1;
   }
   .hf-tech {
@@ -490,7 +501,7 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
   grid-row: 2;
   grid-column: 1 / -1;
 }
-.hf > .hf-tech {
+.hf > .hf-tech-wrap {
   grid-row: 3;
   grid-column: 1 / -1;
 }
@@ -499,7 +510,7 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
   .hf > .hf-idag,
   .hf > .meals-card,
   .hf > .area-week,
-  .hf > .hf-tech {
+  .hf > .hf-tech-wrap {
     grid-row: auto;
     grid-column: 1 / -1;
   }
@@ -643,8 +654,9 @@ html[data-design="flat"] .hf > .area-week {
 }
 html[data-design="flat"] .hf > .area-week > .card-head {
   position: absolute;
-  top: 10px;
-  right: var(--f-pad);
+  top: 8px;
+  left: var(--f-pad);
+  right: auto;
   margin: 0;
   z-index: 2;
 }
@@ -684,4 +696,570 @@ html[data-design="flat"] .hf .wk-head {
 }
 html[data-design="flat"] .hf > .area-week .fit-more {
   display: none;
+}
+
+/* ---------- Bil: alla bilar på samma sida ---------- */
+.cars-flat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--f-gap, 12px);
+}
+.cars-cols {
+  display: grid;
+  gap: var(--f-gap, 12px);
+  align-items: start;
+}
+.car-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--f-gap, 12px);
+  min-width: 0;
+}
+html[data-design="flat"] .car-head {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 10px var(--f-pad);
+}
+.car-head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.car-head-text b {
+  font-size: 17px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.car-head-text .chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow: hidden;
+}
+.car-head-text .chip {
+  white-space: nowrap;
+  font-size: 13px;
+  padding: 2px 8px;
+}
+.car-col .card {
+  padding: 12px var(--f-pad);
+}
+.car-col .card h2 {
+  font-size: 15px;
+}
+.car-col .card-head {
+  margin-bottom: 6px;
+}
+.car-col .big-btn {
+  min-height: 44px;
+  font-size: 17px;
+}
+.car-col .plan-rows,
+.car-col details {
+  display: none;
+}
+.car-col .item-row {
+  padding: 4px 0;
+  gap: 8px;
+}
+.car-col .item-row b {
+  font-size: 17px !important;
+}
+
+/* ---------- Hus och andra sidor: knappar och etiketter får plats ---------- */
+html[data-design="flat"] .light-btn,
+html[data-design="flat"] .btn.small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+html[data-design="flat"] .light-btn {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 15px;
+  justify-content: center;
+}
+html[data-design="flat"] .page-grid.even .big-num {
+  font-size: 34px !important;
+}
+
+/* Läxor, prov och uppgifter från skolan: egen färg (bärnsten) och en liten etikett. */
+.wk-evt.wk-task {
+  border-left-color: #d9892b;
+  background: color-mix(in srgb, #f0a030 16%, var(--f-soft, var(--chip)));
+}
+.wk-kind {
+  flex: none;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a65f0a;
+}
+html[data-theme="dark"] .wk-kind {
+  color: #f3b35a;
+}
+.wk-evt.wk-task.kind-prov .wk-kind {
+  color: #c02a3c;
+}
+html[data-theme="dark"] .wk-evt.wk-task.kind-prov .wk-kind {
+  color: #ff8a98;
+}
+/* Vem som kör: kompakt märke efter titeln, på samma rad. */
+html[data-design="flat"] .wk-evt .travel-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 4px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 12px;
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+  white-space: nowrap;
+}
+html[data-design="flat"] .wk-evt .travel-badge svg {
+  width: 12px;
+  height: 12px;
+}
+html[data-design="flat"] .wk-evt .travel-badge b {
+  font-weight: 700;
+}
+html[data-design="flat"] .wk-evt .travel-badge.unset {
+  color: #b42318;
+}
+/* Veckosidan (utanför startsidans täta rutnät): titeln och resebrickan får bryta rad i stället för att ligga över varandra. */
+html[data-design="flat"] .week-full .wk-evt,
+html[data-design="flat"] .detail-body .wk-evt {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+html[data-design="flat"] .week-full .wk-evt .ti,
+html[data-design="flat"] .detail-body .wk-evt .ti {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Kvällens middag står redan i veckan: Maten visar bara lunchen (men middagen om det inte finns någon lunch). */
+html[data-design="flat"] .hf > .meals-card .meal-block:last-child:not(:first-child) {
+  display: none;
+}
+html[data-design="flat"] .hf > .area-week .fit-overflow {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* Personvyn: läxor och prov i egen färg, med texten direkt i listan (inget klick behövs för att läsa den). */
+html[data-design="flat"] .p-line.task {
+  border-left: 4px solid #d9892b;
+  background: color-mix(in srgb, #f0a030 14%, transparent);
+  border-radius: 10px;
+  padding-left: 10px;
+}
+html[data-design="flat"] .p-line.task.prov {
+  border-left-color: #c02a3c;
+  background: color-mix(in srgb, #e04050 12%, transparent);
+  color: var(--text);
+}
+html[data-design="flat"] .p-line.task .p-more {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: var(--f-t-meta, 13px);
+  line-height: 1.35;
+}
+/* Personvyn som tät radlista: en rad per dag, sakerna som märken efter varandra (som veckan på startsidan). */
+html[data-design="flat"] .person-days {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+html[data-design="flat"] .person-day {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 12px;
+}
+html[data-design="flat"] .person-day h2 {
+  flex: 0 0 84px;
+  font-size: 15px;
+  margin: 0;
+}
+html[data-design="flat"] .person-day .p-line {
+  flex: 0 1 auto;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: var(--f-soft);
+  font-size: 14px;
+  min-width: 0;
+}
+html[data-design="flat"] .person-day .p-line > span {
+  min-width: 0;
+}
+html[data-design="flat"] .person-day .p-line svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+html[data-design="flat"] .person-day .p-line.fam {
+  opacity: 1;
+  color: var(--muted);
+}
+html[data-design="flat"] .person-day .p-line.meal,
+html[data-design="flat"] .person-day .p-line.fam {
+  flex: 0 1 auto;
+}
+/* Läxan och dess text får en egen rad under dagen. */
+html[data-design="flat"] .person-day .p-line.task {
+  flex: 1 1 100%;
+  border-left: 4px solid #d9892b;
+}
+html[data-design="flat"] .person-day .p-line.task .p-more {
+  -webkit-line-clamp: 2;
+}
+
+/* Personväljaren och sidtiteln lägre i den nya designen, så att dagarna får mer plats. */
+html[data-design="flat"] .person-switch {
+  margin: 0 0 8px;
+  gap: 6px;
+}
+html[data-design="flat"] .person-switch .seg-btn {
+  min-height: 40px;
+  padding: 0 14px 0 6px;
+  font-size: 15px;
+}
+html[data-design="flat"] .person-switch .avatar {
+  width: 28px;
+  height: 28px;
+}
+html[data-design="flat"] .person-page .page-bar,
+html[data-design="flat"] .detail-page > .page-bar {
+  min-height: 0;
+}
+
+/* ---------- Ljus: hela lampnamnet, reglaget på raden under, grupperna i kolumner ---------- */
+html[data-design="flat"] .lights-page {
+  display: block;
+  column-width: 230px;
+  column-gap: var(--f-gap, 12px);
+}
+html[data-design="flat"] .lights-page > .card {
+  break-inside: avoid;
+  margin-bottom: var(--f-gap, 12px);
+  padding: 10px var(--f-pad);
+  gap: 6px;
+}
+html[data-design="flat"] .lights-page .card h2 {
+  font-size: 15px;
+}
+html[data-design="flat"] .lights-page .big-buttons {
+  gap: 6px;
+}
+html[data-design="flat"] .lights-page .big-btn {
+  min-height: 36px;
+  font-size: 15px;
+}
+html[data-design="flat"] .lamp-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+}
+html[data-design="flat"] .lamp-row .light-btn {
+  flex: none;
+  width: 100%;
+  min-height: 34px;
+  justify-content: flex-start;
+  padding: 0 12px;
+  white-space: normal;
+  line-height: 1.2;
+  text-align: left;
+}
+html[data-design="flat"] .lamp-row .lamp-name {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+html[data-design="flat"] .lamp-row .lamp-dim {
+  flex: none;
+  min-height: 24px;
+}
+@media (max-width: 899px) {
+  html[data-design="flat"] .lights-page {
+    column-count: 1;
+  }
+}
+
+/* Lampor som inte svarar visas inte (precis som temperatursensorer som saknas). */
+html[data-design="flat"] .lamp-row.offline,
+html[data-design="flat"] .lamp-off-note {
+  display: none;
+}
+
+html[data-design="flat"] .lights-all {
+  display: block;
+  width: 100%;
+  break-inside: avoid;
+  margin-bottom: var(--f-gap, 12px);
+  min-height: 40px;
+}
+
+/* Mat: tätare dagkort så att knappen under får plats. */
+html[data-design="flat"] .meals-grid {
+  gap: 8px;
+}
+html[data-design="flat"] .meals-grid > .card {
+  padding: 10px 14px;
+}
+html[data-design="flat"] .meals-grid .meal-line,
+html[data-design="flat"] .meals-grid .meal-block,
+html[data-design="flat"] .meals-grid p {
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+/* "Planera veckan": alltid den korta formen ("Planera · 3") på startsidan, så att knappen aldrig täcker en kolumnrubrik. */
+html[data-design="flat"] .hf > .area-week .plan-btn .plan-long {
+  display: none !important;
+}
+html[data-design="flat"] .hf > .area-week .plan-btn .plan-short {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+}
+html[data-design="flat"] .hf > .area-week .plan-btn .plan-word {
+  display: inline !important;
+}
+html[data-design="flat"] .hf > .area-week .plan-btn {
+  max-width: 150px;
+  padding: 0 10px;
+}
+html[data-design="flat"] .hf > .area-week .wk-head .wk-who {
+  min-width: 0;
+}
+html[data-design="flat"] .hf > .area-week .wk-head {
+  /* lämna plats åt knappen längst till höger så att sista kolumnens rubrik aldrig hamnar under den */
+  padding-right: 0;
+}
+
+/* Ljus: Inne och Ute överst, med Tänd och Släck på var sin rad av knappar. */
+html[data-design="flat"] .lights-top {
+  column-span: all;
+  display: flex;
+  gap: var(--f-gap, 12px);
+  margin-bottom: var(--f-gap, 12px);
+}
+html[data-design="flat"] .lights-top-group {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--f-card);
+  border: 1px solid var(--f-line);
+  border-radius: var(--f-r);
+}
+html[data-design="flat"] .lights-top-group b {
+  flex: none;
+  width: 44px;
+  font-size: 15px;
+}
+html[data-design="flat"] .lights-top-group .btn {
+  flex: 1;
+  min-height: 44px;
+  font-size: 15px;
+}
+/* Startsidans teknikrad: tänd och släck inne som knappar. */
+.hf-act {
+  justify-content: center;
+  font-weight: 700;
+  background: var(--f-soft, var(--f-card));
+}
+
+/* ---------- Stående platta (iPad 820×1180): Nu överst, idag och maten bredvid varandra, veckan, tekniken ---------- */
+@media (min-width: 700px) and (max-width: 899px) and (min-height: 900px) {
+  .hf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .hf > .hf-now {
+    grid-row: 1;
+    grid-column: 1 / -1;
+  }
+  .hf > .hf-idag {
+    grid-row: 2;
+    grid-column: 1;
+  }
+  .hf > .meals-card {
+    grid-row: 2;
+    grid-column: 2;
+  }
+  .hf > .area-week {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+  .hf > .hf-tech-wrap {
+    grid-row: 4;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+  }
+  html[data-design="flat"] .lights-page {
+    column-count: 2;
+  }
+}
+
+/* Läxpapper: PDF:en visas i rutan, utan att man behöver gå till Vklass. */
+.task-pdf {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.task-pdf iframe {
+  width: 100%;
+  height: min(60vh, 520px);
+  border: 1px solid var(--f-line, var(--glass-edge));
+  border-radius: 10px;
+  background: #fff;
+}
+.p-file {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* Stående platta: datumet får en rad och lite mindre text, så att personikonerna inte hamnar ovanpå. */
+@media (min-width: 700px) and (max-width: 899px) and (min-height: 900px) {
+  html[data-design="flat"] .board-header h1 {
+    font-size: 24px;
+    white-space: nowrap;
+  }
+  html[data-design="flat"] .board-header .sub {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  html[data-design="flat"] .board-header .d,
+  html[data-design="flat"] .board-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  html[data-design="flat"] .clock {
+    font-size: 36px;
+  }
+}
+/* Ljus på bred skärm: fem kolumner, så att alla grupper ryms utan att något skärs av. */
+@media (min-width: 1100px) {
+  html[data-design="flat"] .lights-page {
+    column-width: 210px;
+  }
+}
+
+/* Bil i två kolumner: laddplanens rader ryms inte, stapeln och sammanfattningen visar planen. Bilens eget schema blir kompakt. */
+html[data-design="flat"] .car-col .car-sched h3 {
+  font-size: 12px !important;
+  margin: 2px 0;
+}
+html[data-design="flat"] .car-col .car-sched .row {
+  padding: 3px 0 !important;
+  font-size: 14px;
+}
+
+/* Texter med ellipsis i knappar: radhöjd så att bokstävernas under- och överdelar inte klipps. */
+html[data-design="flat"] .station-name,
+html[data-design="flat"] .lamp-name,
+html[data-design="flat"] .light-btn > span {
+  line-height: 1.35;
+  padding-block: 1px;
+}
+
+/* Ljus: lampknapparna bryter rad i stället för att klippas, vid vilken zoom som helst. */
+html[data-design="flat"] .lights-page .light-btn {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  height: auto;
+  line-height: 1.25;
+  padding-block: 6px;
+}
+html[data-design="flat"] .now-title {
+  line-height: 1.3;
+}
+
+/* Sidhuvudet vid hög zoom: får aldrig bli bredare än skärmen. Rad­brytning i stället, och datumet kan krympa. */
+html[data-design="flat"] .board-header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+  column-gap: 14px;
+  max-width: 100%;
+  min-width: 0;
+}
+html[data-design="flat"] .board-header > * {
+  min-width: 0;
+}
+html[data-design="flat"] .board-header h1 {
+  white-space: nowrap;
+}
+html[data-design="flat"] .board-header .sub {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+/* Övre raden får högst ~46 % av höjden; korten krymper sitt innehåll (aldrig scroll, aldrig något utanför rutan). */
+html[data-design="flat"] .hf {
+  grid-template-rows: fit-content(26%) minmax(46%, 1fr) fit-content(14%);
+}
+html[data-design="flat"] .hf > .hf-now,
+html[data-design="flat"] .hf > .hf-idag,
+html[data-design="flat"] .hf > .meals-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+html[data-design="flat"] .hf-fit {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+/* Planera-knappen: egen rad över kolumnrubrikerna när det är trångt, så att den aldrig ligger över en rubrik. */
+html[data-design="flat"] .hf > .area-week > .card-head {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+html[data-design="flat"] .hf > .area-week .plan-btn {
+  position: static;
+  margin-left: auto;
+}
+
+html[data-design="flat"] .hf-tech-fit {
+  overflow-x: hidden;
+}
+
+/* Planera-knappen sitter i den tomma rutan till vänster om kolumnrubrikerna (ikon och antal; hela namnet finns för skärmläsare). */
+html[data-design="flat"] .hf > .area-week .plan-btn {
+  min-height: 30px;
+  padding: 0 8px;
+  max-width: 74px;
+  margin-left: 0;
+}
+html[data-design="flat"] .hf > .area-week .plan-btn .plan-word {
+  display: none !important;
+}
+html[data-design="flat"] .hf .wk-head,
+html[data-design="flat"] .hf .wk-head .wk-who {
+  font-size: 15px;
 }

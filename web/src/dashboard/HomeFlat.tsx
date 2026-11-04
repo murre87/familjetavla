@@ -1,10 +1,12 @@
 import { Fragment } from "react";
+import { Fit } from "./Fit";
 import type { Dashboard } from "../../../server/src/types";
 import { api } from "../api";
 import { Icon, type IconName } from "../Icon";
 import { Meals } from "../widgets/meals";
 import type { Actions } from "./Dashboard";
 import { Avatar, travelText } from "./bits";
+import { insideGroups, setGroups } from "./lightGroups";
 import { Week } from "./Home";
 
 const SKY_LABEL: Record<string, string> = { clear: "Klart", partly: "Halvklart", cloudy: "Mulet", rain: "Regn", snow: "Snö", fog: "Dimma" };
@@ -21,6 +23,7 @@ function Nu({ data, actions }: { data: Dashboard; actions: Actions }) {
       <div className="hf-label">
         Nu{data.now.headline ? <span> · {data.now.headline}</span> : null}
       </div>
+      <Fit className="hf-fit" deps={[data]}>
       {rows.length === 0 && <div className="hf-empty">Inget det närmaste.</div>}
       {rows.map((e, i) => (
         <button key={i} className="hf-row" onClick={() => actions.openEvent(e)}>
@@ -37,6 +40,7 @@ function Nu({ data, actions }: { data: Dashboard; actions: Actions }) {
           {e.who && e.initial && <Avatar initial={e.initial} color={e.color} name={e.who} />}
         </button>
       ))}
+      </Fit>
     </section>
   );
 }
@@ -49,6 +53,7 @@ function Idag({ data, actions }: { data: Dashboard; actions: Actions }) {
   const tips = data.reminders.filter((r) => r.icon !== "kids" && r.icon !== "trash" && !(r.icon === "food" && r.tone === "neutral")).slice(0, 1);
   return (
     <section className="card hf-idag" aria-label="Idag">
+      <Fit className="hf-fit" deps={[data]}>
       <div className="hf-weather">
         {header.tempNow !== undefined && (
           <span className="hf-temp num">
@@ -94,6 +99,7 @@ function Idag({ data, actions }: { data: Dashboard; actions: Actions }) {
           <span>{r.sub && !/tryck|bocka|tavlan/i.test(r.sub) ? `${r.title} – ${r.sub.charAt(0).toLowerCase()}${r.sub.slice(1)}` : r.title}</span>
         </button>
       ))}
+      </Fit>
     </section>
   );
 }
@@ -107,6 +113,8 @@ function Teknik({ data, actions }: { data: Dashboard; actions: Actions }) {
   const transport = (action: "play_pause" | "next" | "previous", label: string) => sp && actions.run(label, () => api.musicTransport(sp.entityId, action), { done: label, check: () => true });
   if (!data.temps.length && !total && !sp) return null;
   return (
+    <div className="hf-tech-wrap">
+    <Fit className="hf-fit hf-tech-fit" deps={[data]}>
     <div className="hf-tech">
       {data.temps.slice(0, 3).map((t) => (
         <button key={t.name} className="hf-pill" onClick={() => actions.openTab("house")}>
@@ -122,6 +130,16 @@ function Teknik({ data, actions }: { data: Dashboard; actions: Actions }) {
           <b className="num">{on}</b>
           <span>av {total} tända</span>
         </button>
+      )}
+      {insideGroups(data).length > 0 && (
+        <>
+          <button className="hf-pill hf-act" onClick={() => setGroups(actions, insideGroups(data), true, "Tänd inne")}>
+            Tänd inne
+          </button>
+          <button className="hf-pill hf-act" onClick={() => setGroups(actions, insideGroups(data), false, "Släck allt inne")}>
+            Släck inne
+          </button>
+        </>
       )}
       {sp && (
         <div className="hf-pill hf-music grow">
@@ -158,6 +176,8 @@ function Teknik({ data, actions }: { data: Dashboard; actions: Actions }) {
         </div>
       )}
     </div>
+    </Fit>
+    </div>
   );
 }
 
@@ -168,7 +188,7 @@ export function HomeFlat({ data, actions }: { data: Dashboard; actions: Actions 
       <Nu data={data} actions={actions} />
       <Idag data={data} actions={actions} />
       <Week data={data} actions={actions} />
-      <Meals data={data} />
+      <Meals data={data} fit />
       <Teknik data={data} actions={actions} />
     </main>
   );

@@ -5098,3 +5098,30 @@ button.p-line > span {
   background: var(--accent);
   color: var(--on-accent);
 }
+
+/* Läxetiketten i veckokolumnerna hör till den nya designen: i den klassiska veckan får den inte göra raderna högre. */
+html:not([data-design="flat"]) .wk-kind {
+  display: none;
+}
+
+/* "Lägg till på tavlan" på en surfplatta: formuläret krymper till skärmen i stället för att scrolla (på telefon scrollar sidan som vanligt). */
+@media (min-width: 700px) {
+  .quick-add {
+    height: calc(100 * var(--vh1));
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding-block: 8px;
+  }
+  .quick-add > .qa-fit {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+.quick-add > .qa-fit > div {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

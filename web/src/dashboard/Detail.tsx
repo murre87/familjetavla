@@ -122,7 +122,26 @@ export function TaskSheet({ task, child, onClose }: { task: Task; child: string;
             {task.time ? ` ${task.time}` : ""}
           </span>
         </div>
-        {task.detail ? <div className="task-detail">{task.detail}</div> : <p className="muted">Ingen beskrivning från skolan.</p>}
+        {task.detail ? <div className="task-detail">{task.detail}</div> : !task.files?.length && <p className="muted">Ingen beskrivning från skolan.</p>}
+        {/* The homework sheet right here: pictures as pictures, a PDF as a page to read, so nobody has to go to Vklass. */}
+        {task.files?.map((f) =>
+          /\.(png|jpe?g|gif|webp)$/i.test(f.name) ? (
+            <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="news-image">
+              <img src={f.url} alt={f.name} loading="lazy" />
+            </a>
+          ) : /\.pdf$/i.test(f.name) ? (
+            <div key={f.url} className="task-pdf">
+              <a className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
+                <Icon name="link" size={18} /> Öppna {f.name} i helskärm
+              </a>
+              <iframe title={f.name} src={`${f.url}#view=FitH&toolbar=0`} />
+            </div>
+          ) : (
+            <a key={f.url} className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
+              <Icon name="link" size={18} /> Öppna {f.name}
+            </a>
+          ),
+        )}
         {task.url && (
           <a className="btn" href={task.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
             Öppna i Vklass <Icon name="chevronRight" size={18} />
