@@ -9,7 +9,7 @@ import { Avatar, EventIcon } from "./bits";
 import { PersonPage } from "./Person";
 import { HomeFlat } from "./HomeFlat";
 import { ScaleSheet } from "./ScaleSheet";
-import { screensaverOff, useDesign } from "../uiscale";
+import { applyScale, readScale, scaleChosen, screensaverOff, useDesign } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
 import { Home } from "./Home";
 import { Fit } from "./Fit";
@@ -1019,6 +1019,10 @@ export function Dashboard() {
   // The new flat design has a light and a dark look; e-ink and mirror keep their own.
   const design = useDesign(data?.design ?? "glass");
   const flat = design === "flat" && (theme === "light" || theme === "dark");
+  // The new design is made to fit at 100 %: the tablet default of 85 % only applies to the classic one.
+  useEffect(() => {
+    if (!scaleChosen()) applyScale(flat ? 1 : readScale());
+  }, [flat]);
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.design = flat ? "flat" : "glass";

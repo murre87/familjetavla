@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "../api";
+import { useDesign } from "../uiscale";
 import { WIDGET_LABELS } from "../widgets";
 import type { Dashboard } from "../../../server/src/types";
 import { Fit } from "./Fit";
@@ -135,6 +136,8 @@ function schoolEnd(data: Dashboard, name: string, dayKey: string): { end: string
 }
 
 export function Week({ data, actions, full = false, edit }: { data: Dashboard; actions: Actions; full?: boolean; edit?: EditProps }) {
+  // The new design never hides a day behind "+N": the week shrinks to fit instead.
+  const flat = useDesign(data.design) === "flat";
   const cols = weekColumns(data);
   const known = new Set(data.people.map((p) => p.name));
   return (
@@ -142,7 +145,7 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
       {edit?.bar}
       <div className="card-head" style={{ flexWrap: "wrap" }}>
         {/* On its own page the page title already says it – the room goes to the days. */}
-        {full ? <h2 className="sr-only">Kommande 7 dagar</h2> : <h2>Kommande 7 dagar</h2>}
+        {full || flat ? <h2 className="sr-only">Kommande 7 dagar</h2> : <h2>Kommande 7 dagar</h2>}
         {full && <span className="grow" />}
         {/* Always there: it is also where the week's dinners are planned, even with nothing to drive to. */}
         <button
@@ -180,7 +183,7 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
           ))}
         </div>
       )}
-      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data]} min={0.7} more={full ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
+      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data]} min={flat ? 0.55 : 0.7} more={full || flat ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
         {cols.length > 1
           ? data.days.map((d, di) => (
               <div key={d.key} className={`day wk-row ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
@@ -197,6 +200,8 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                     const sch = c.family ? undefined : schoolEnd(data, c.name, d.key);
                     // Everything is shown: a cell never hides things behind "+N".
                     const shown = evs;
+                    // Homework, tests and hand-ins from the school are marked in their own colour.
+                    const taskOf = (e: WeekEvent) => (c.family ? undefined : data.school?.find((k) => k.name === c.name)?.tasks.find((t) => t.dayKey === d.key && t.title === e.title));
                     return (
                       <div className="wk-cell" key={c.key} data-who={c.name}>
                         {sch && (
@@ -206,9 +211,11 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                           </span>
                         )}
                         {shown.map((e, i) => (
-                          <button className="wk-evt" key={i} style={{ borderLeftColor: e.color }} onClick={() => actions.openEvent({ ...e, dayLabel: d.name.toLowerCase() })} aria-label={eventLabel(e)}>
+                          <button className={`wk-evt ${taskOf(e) ? `wk-task kind-${taskOf(e)!.kind}` : ""}`} key={i} style={taskOf(e) ? undefined : { borderLeftColor: e.color }} onClick={() => actions.openEvent({ ...e, dayLabel: d.name.toLowerCase() })} aria-label={eventLabel(e)}>
                             {e.time && <span className="t">{e.time}</span>}
+                            {taskOf(e) && <span className="wk-kind">{{ läxa: "Läxa", prov: "Prov", inlämning: "Inlämning", uppgift: "Uppgift" }[taskOf(e)!.kind]}</span>}
                             <span className="ti">{e.title}</span>
+                            {flat && <TravelBadge t={e.travel} />}
                             {c.family && eventPeople(e, known).length > 1 && (
                               <span className="wk-with" aria-label={eventPeople(e, known).join(", ")}>
                                 {eventPeople(e, known).map((n) => (

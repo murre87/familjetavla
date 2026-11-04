@@ -5,13 +5,19 @@ import { Icon } from "../Icon";
 import type { Actions } from "./Dashboard";
 import { AnimatedNumber, Ring } from "./bits";
 import { PriceCard } from "../widgets/prices";
+import { useDesign } from "../uiscale";
+import { insideGroups, outsideGroups, setGroups } from "./lightGroups";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const fmtNum = (n: number | null | undefined, d = 1) => (n === null || n === undefined ? "–" : String(Math.round(n * 10 ** d) / 10 ** d).replace(".", ","));
 
 // ---------- Generic control (switch / select / number / button) ----------
 
-export function ControlView({ c, actions }: { c: Control; actions: Actions }) {
+/** "Spabad Spa Malmgatan 34: Blower" → "Blower": the card already says which device it is. */
+const shortControl = (name: string) => (name.includes(": ") ? name.slice(name.lastIndexOf(": ") + 2) : name);
+
+export function ControlView({ c: control, actions }: { c: Control; actions: Actions }) {
+  const c = { ...control, name: shortControl(control.name) };
   if (c.domain === "select" || c.domain === "input_select") {
     return (
       <label className="field">
@@ -350,7 +356,7 @@ function SmartChargingCard({ index, car, actions }: { index: number; car: Dashbo
       )}
       <PlanBar slots={s.slots} />
       {upcoming.length > 0 ? (
-        <div className="stack" style={{ gap: 0 }}>
+        <div className="stack plan-rows" style={{ gap: 0 }}>
           {upcoming.map((x, i) => {
             const kwh = ((x.kw ?? 0) * (Date.parse(x.end) - Date.parse(x.start))) / 3_600_000;
             const showDay = i === 0 || dayName(x.start) !== dayName(upcoming[i - 1].start);
@@ -434,7 +440,7 @@ function ChargingCard({ index, charging, actions }: { index: number; charging: b
       )}
       {!target && <p className="muted">Bilen går inte att starta härifrån – integrationen saknar laddknapp.</p>}
       {c.schedule.length > 0 && (
-        <div className="stack" style={{ gap: 0 }}>
+        <div className="stack car-sched" style={{ gap: 0 }}>
           <h3 className="muted" style={{ fontSize: 14, textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Laddschema i bilen
           </h3>
@@ -537,11 +543,53 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
   );
 }
 
+/** One car as a column: battery, charging, heat start. Used when several cars sit side by side. */
+function CarColumn({ data, car, actions }: { data: Dashboard; car: Dashboard["cars"][number]; actions: Actions }) {
+  const [details, setDetails] = useState(false);
+  const index = data.cars.indexOf(car);
+  return (
+    <div className="car-col">
+      <section className="card car-head">
+        <Ring progress={(car.battery ?? 0) / 100} size={72} stroke={8}>
+          <b style={{ fontSize: 20, fontWeight: 800, lineHeight: 1 }}>{car.battery ?? "–"}</b>
+        </Ring>
+        <div className="car-head-text">
+          <b>{car.name}</b>
+          <span className="chips">
+            {car.home !== null && <span className="chip">{car.home ? "Hemma" : "Borta"}</span>}
+            {car.rangeKm !== null && <span className="chip">{Math.round(car.rangeKm)} km</span>}
+            {car.charging && <span className="chip good">Laddar</span>}
+            {car.ageHours !== null && car.ageHours >= 3 && <span className="chip warn">{car.ageHours} h gammal</span>}
+          </span>
+        </div>
+        <button className="btn small ghost" onClick={() => setDetails(true)}>
+          Alla data
+        </button>
+      </section>
+      {car.smart ? <SmartChargingCard index={index} car={car} actions={actions} /> : <ChargingCard index={index} charging={Boolean(car.charging)} actions={actions} />}
+      <ScheduleEditor car={car} actions={actions} />
+      {details && <CarDetailsSheet index={index} onClose={() => setDetails(false)} actions={actions} />}
+    </div>
+  );
+}
+
 export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
+  const flat = useDesign(data.design) === "flat";
   const [sel, setSel] = useState(0);
   const [details, setDetails] = useState(false);
   const car = data.cars[Math.min(sel, data.cars.length - 1)];
   if (!car) return null;
+  if (flat && data.cars.length > 1)
+    return (
+      <main className="cars-flat">
+        <div className="cars-cols" style={{ gridTemplateColumns: `repeat(${data.cars.length}, minmax(0, 1fr))` }}>
+          {data.cars.map((c) => (
+            <CarColumn key={c.name} data={data} car={c} actions={actions} />
+          ))}
+        </div>
+        {data.cars.some((c) => c.smart) ? <PlanPriceChart data={data} selected={0} /> : data.prices && <PriceCard prices={data.prices} />}
+      </main>
+    );
   return (
     <main className="stack" style={{ gap: 18 }}>
       {data.cars.length > 1 && (
@@ -645,8 +693,41 @@ function LampRow({ lamp, actions }: { lamp: Lamp; actions: Actions }) {
 }
 
 export function LightsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
+  const flat = useDesign(data.design) === "flat";
+  // In the new design a lamp that already sits in a group is not listed a second time.
+  const grouped = new Set(data.lightGroups.flatMap((g) => g.lamps.map((l) => l.entityId)));
+  const groupNames = new Set(data.lightGroups.map((g) => g.name.toLowerCase()));
+  const lights = flat ? data.lights.filter((l) => !grouped.has(l.entityId) && !groupNames.has(l.name.toLowerCase()) && !l.offline) : data.lights;
+  const inside = insideGroups(data);
+  const outside = outsideGroups(data);
   return (
-    <main className="page-grid">
+    <main className="page-grid lights-page">
+      {flat && (inside.length > 0 || outside.length > 0) && (
+        <div className="lights-top">
+          {inside.length > 0 && (
+            <div className="lights-top-group">
+              <b>Inne</b>
+              <button className="btn primary" onClick={() => setGroups(actions, inside, true, "Tänd inne")}>
+                Tänd inne
+              </button>
+              <button className="btn" onClick={() => setGroups(actions, inside, false, "Släck allt inne")}>
+                Släck allt inne
+              </button>
+            </div>
+          )}
+          {outside.length > 0 && (
+            <div className="lights-top-group">
+              <b>Ute</b>
+              <button className="btn primary" onClick={() => setGroups(actions, outside, true, "Tänd ute")}>
+                Tänd ute
+              </button>
+              <button className="btn" onClick={() => setGroups(actions, outside, false, "Släck ute")}>
+                Släck ute
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       {data.buttons.length > 0 && (
         <section className="card">
           <h2>Snabbval</h2>
@@ -663,7 +744,7 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
         <section className="card" key={g.index}>
           <h2>{g.name}</h2>
           <p className="muted">
-            {g.on} av {g.total} tända{g.offline.length ? ` · offline: ${g.offline.join(", ")}` : ""}
+            {g.on} av {g.total - g.offline.length} tända{g.offline.length ? <span className="lamp-off-note"> · offline: {g.offline.join(", ")}</span> : null}
           </p>
           <div className="big-buttons">
             <button
@@ -702,7 +783,12 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
           {g.lamps.length === 1 && g.lamps[0].dimmable && <LampRow lamp={g.lamps[0]} actions={actions} />}
         </section>
       ))}
-      {data.lights.length > 0 && (
+      {flat && data.lights.length > 0 && lights.length === 0 && (
+        <button className="btn lights-all" onClick={() => actions.run("Släck allt", () => api.lightsOff(), { done: "Allt släckt", check: (d) => d.lights.every((l) => !l.on || l.offline) })}>
+          Släck allt
+        </button>
+      )}
+      {lights.length > 0 && (
         <section className="card">
           <div className="card-head">
             <h2>Lampor</h2>
@@ -711,7 +797,7 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
             </button>
           </div>
           <div className="lamp-list">
-            {data.lights.map((l) => (
+            {lights.map((l) => (
               <LampRow key={l.entityId} lamp={l} actions={actions} />
             ))}
           </div>
@@ -854,7 +940,7 @@ export function EnergyPage({ data }: { data: Dashboard }) {
   const e = data.energy;
   const kw = (n?: number) => `${fmtNum(n ?? 0)} kW`;
   return (
-    <main className="page-grid even">
+    <main className="page-grid">
       {e && (e.solarKw !== undefined || e.gridKw !== undefined) && <PowerFlow e={e} price={data.prices?.now} spot={data.prices?.kind === "spot"} />}
       {(e?.houseKw !== undefined || e?.batteryPct !== undefined) && (
         <section className="card">
@@ -1177,11 +1263,14 @@ function GraphCard({ index }: { index: number }) {
       .then(setData)
       .catch((e: Error) => setError(e.message));
   }, [index]);
+  // A graph without any series has nothing to show: no empty card.
+  if (data && !data.series.some((s) => s.points.some((p) => p !== null))) return null;
   return (
     <section className="card">
       <div className="card-head">
         <h2>{data?.title ?? "Graf"}</h2>
       </div>
+      {!data && !error && <p className="muted">Hämtar…</p>}
       {data && (
         <div className="graph-chips">
           {data.series.map((s) => {
@@ -1203,12 +1292,14 @@ function GraphCard({ index }: { index: number }) {
 }
 
 export function GraphsPage({ data }: { data: Dashboard }) {
+  // The new design shows the electricity price once (on Energi), not on every page that can.
+  const flat = useDesign(data.design) === "flat";
   return (
     <main className="page-grid">
       {data.graphs.map((g) => (
         <GraphCard key={g.index} index={g.index} />
       ))}
-      {data.prices && <PriceCard prices={data.prices} />}
+      {data.prices && !(flat && data.energy) && <PriceCard prices={data.prices} />}
     </main>
   );
 }

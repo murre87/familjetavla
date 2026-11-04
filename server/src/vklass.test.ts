@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapVklassItems, parseVklassWelcome, vklassDayLabel } from "./connectors/vklass.js";
+import { mapVklassItems, parseAssignmentFiles, parseVklassWelcome, vklassDayLabel } from "./connectors/vklass.js";
 
 // Same structure as the real custodian start page (2026-10-19), made-up names and food.
 const card = (name: string, extra: string, days: [string, string[]][]) => `
@@ -103,5 +103,20 @@ describe("Vklass calendar items", () => {
     expect(hw).toMatchObject({ allDay: false, task: true });
     expect(day.allDay).toBe(true);
     expect(mapVklassItems([{ title: "X", start: "2026-11-02T08:50:00", eventType: 1 }])[0].allDay).toBe(false);
+  });
+});
+
+describe("Vklass task attachments", () => {
+  const json = JSON.stringify([
+    { name: "Läxa v 45", nameWithExtension: "Läxa v 45.pdf", url: "https://files.vklass.se/F732.pdf", isFolder: false },
+    { name: "Ond", nameWithExtension: "ond.pdf", url: "https://evil.example/ond.pdf" },
+    { name: "Mapp", url: "https://files.vklass.se/x", isFolder: true },
+  ]).replace(/"/g, "&quot;");
+  it("reads the files of a task page and keeps only Vklass addresses", () => {
+    expect(parseAssignmentFiles(`<files-in-flat-list class="x" files.bind="${json}"></files-in-flat-list>`)).toEqual([{ name: "Läxa v 45.pdf", url: "https://files.vklass.se/F732.pdf" }]);
+  });
+  it("gives nothing for a page without files or with broken data", () => {
+    expect(parseAssignmentFiles("<p>ingen bilaga</p>")).toEqual([]);
+    expect(parseAssignmentFiles('<x files.bind="[trasig"></x>')).toEqual([]);
   });
 });

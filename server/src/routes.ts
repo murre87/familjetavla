@@ -25,6 +25,7 @@ import { ICA_LIST, SHOW, icaRun } from "./providers/grocery.js";
 import { addOwnEvent, markNewsSeen, removeOwnEvent } from "./news.js";
 import { vklassFile, vklassLogin } from "./connectors/vklass.js";
 import { saveTravel } from "./travel.js";
+import { allowedToTurnOn } from "./quiet.js";
 import {
   deletePhoto,
   getSecret,
@@ -260,6 +261,9 @@ export const configSchema = z
       lights: z.array(z.object({ name: label(40), entityId: entity })).max(16),
       temps: z.array(z.object({ name: label(40), entityId: entity })).max(8),
       lightGroups: z.array(z.object({ name: label(40), entities: z.array(entity).max(40) })).max(12),
+      quietLights: z
+        .object({ entities: z.array(entity).max(20), from: z.string().regex(/^\d{2}:\d{2}$/), to: z.string().regex(/^\d{2}:\d{2}$/) })
+        .optional(),
       buttons: z
         .array(z.object({ name: label(40), entityId: entity.regex(/^(scene|script|button|input_button|automation)\./), style: z.enum(["accent", "blue", "amber", "plain"]) }))
         .max(12),
@@ -1410,8 +1414,10 @@ export async function registerRoutes(app: FastifyInstance) {
     const group = loadConfig().entities.lightGroups?.[Number(index)];
     const conn = haConnection();
     if (!group || !conn) return fail(reply, new Error(group ? "Home Assistant är inte anslutet." : "Okänd grupp"));
-    if (group.entities.length) {
-      await ha.service(conn, "homeassistant", on ? "turn_on" : "turn_off", { entity_id: group.entities });
+    // At night the quiet lamps (a sleeping child's room) are left out of "Tänd alla"; switching off is always allowed.
+    const entities = on ? allowedToTurnOn(group.entities, loadConfig().entities.quietLights, new Date()) : group.entities;
+    if (entities.length) {
+      await ha.service(conn, "homeassistant", on ? "turn_on" : "turn_off", { entity_id: entities });
     }
     invalidate("ha:states");
     return { ok: true };
