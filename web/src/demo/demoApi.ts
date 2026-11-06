@@ -39,6 +39,8 @@ if (firstRun) {
 
 const wait = <T>(v: T, ms = 180) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), ms));
 const d = fx.dashboard;
+// Show the Hemmet card in the demo (the fixtures predate it).
+for (const home of [d.home, fx.config.config.dashboard.home]) if (!home.some((w) => w.id === "homestatus")) home.splice(home.findIndex((w) => w.id === "lights") + 1, 0, { id: "homestatus", on: true });
 // "?tema=eink" shows the demo as on an e-ink screen.
 const forcedTheme = typeof location !== "undefined" ? new URLSearchParams(location.search).get("tema") : null;
 // Calendar events in the demo can be struck ("Utgår") like real ones.

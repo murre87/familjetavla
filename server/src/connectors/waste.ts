@@ -11,17 +11,21 @@ import { addDays, isoWeek, startOfDay } from "../time.js";
  * For any other provider: use an ICS link, or a Waste Collection Schedule calendar in HA.
  */
 export const EDP_PROVIDERS: Record<string, { title: string; apiUrl: string }> = {
+  boden: { title: "Boden", apiUrl: "https://edpmobile.boden.se/FutureWeb/SimpleWastePickup" },
   boras: { title: "Borås Energi och Miljö", apiUrl: "https://kundportal.borasem.se/EDPFutureWeb/SimpleWastePickup" },
   danderyd: { title: "Danderyd", apiUrl: "https://future.danderyd.se/Danderyd/EDPFutureweb/SimpleWastePickup" },
   falkenberg: { title: "Falkenberg (VIVAB)", apiUrl: "https://minasidor.vivab.info/FutureWebFalken/SimpleWastePickup" },
   "herrljunga-vargarda": { title: "Herrljunga & Vårgårda", apiUrl: "https://edpfuture.remondis.se/EDPFutureWeb/SimpleWastePickup" },
   june: { title: "June Avfall (Jönköping, Habo, Mullsjö)", apiUrl: "https://minasidor.juneavfall.se/FutureWebJuneBasic/SimpleWastePickup" },
+  kiruna: { title: "Kiruna – Tekniska Verken", apiUrl: "https://kund.tekniskaverkenikiruna.se/FutureWebBasic/SimpleWastePickup" },
   "kretslopp-sydost": { title: "Kretslopp Sydost", apiUrl: "https://kundportal.kretsloppsydost.se/FutureWeb/SimpleWastePickup" },
   kungalv: { title: "Kungälv", apiUrl: "https://minasidor-va-avfall.kungalv.se/FutureWeb/SimpleWastePickup" },
+  lidkoping: { title: "Lidköping", apiUrl: "https://futureweb.lidkoping.se/FutureWebBasic/SimpleWastePickup" },
   ljungby: { title: "Ljungby", apiUrl: "https://edpwebb.ljungby.se/FutureWeb/SimpleWastePickup" },
   lund: { title: "Lund", apiUrl: "https://eservice431601.lund.se/Lund/FutureWeb/SimpleWastePickup" },
   lycksele: { title: "Lycksele", apiUrl: "https://future.lycksele.se/FutureWeb/SimpleWastePickup" },
   mark: { title: "Marks kommun", apiUrl: "https://va-renhallning.mark.se/FutureWeb/SimpleWastePickup" },
+  nvoa: { title: "Nacka (NVOA)", apiUrl: "https://futureweb.nvoa.se/EDP/FutureWebBasic/SimpleWastePickup" },
   orebro: { title: "Örebro", apiUrl: "https://futureweb.orebro.se/FutureWeb/SimpleWastePickup" },
   orust: { title: "Orust", apiUrl: "https://va-renhallning-minasidor.orust.se/FutureWebBasic/SimpleWastePickup" },
   partille: { title: "Partille", apiUrl: "https://vatjanst.partille.se/FutureWeb/SimpleWastePickup" },
@@ -34,17 +38,13 @@ export const EDP_PROVIDERS: Record<string, { title: string; apiUrl: string }> = 
 };
 
 /**
- * Companies that did not answer in the live check (e2e/sources.mjs, 2026-10-19). Not offered in
+ * Companies that did not answer in the live check (e2e/sources.mjs, 2026-10-19; Boden, Kiruna, Lidköping and Nacka back on 2026-11-07). Not offered in
  * the wizard; the weekly check keeps trying them and says when one can be moved back.
  */
 export const EDP_PARKED: Record<string, { title: string; apiUrl: string; reason: string }> = {
-  boden: { title: "Boden", apiUrl: "https://edpmobile.boden.se/FutureWeb/SimpleWastePickup", reason: "svarar inte (tidsgräns)" },
   gotland: { title: "Gotland", apiUrl: "https://edpfuture.gotland.se/FutureWeb/SimpleWastePickup", reason: "söker bara på id, inte adress" },
-  kiruna: { title: "Kiruna – Tekniska Verken", apiUrl: "https://kund.tekniskaverkenikiruna.se/FutureWebBasic/SimpleWastePickup", reason: "svarar inte (tidsgräns)" },
   lerum: { title: "Lerum", apiUrl: "https://vatjanst.lerum.se/FutureWeb/SimpleWastePickup", reason: "spärrar anrop (403)" },
-  lidkoping: { title: "Lidköping", apiUrl: "https://futureweb.lidkoping.se/FutureWebBasic/SimpleWastePickup", reason: "svarar inte (tidsgräns)" },
   molndal: { title: "Mölndal", apiUrl: "https://future.molndal.se/FutureWeb/SimpleWastePickup", reason: "söker bara på id, inte adress" },
-  nvoa: { title: "Nacka (NVOA)", apiUrl: "https://futureweb.nvoa.se/EDP/FutureWebBasic/SimpleWastePickup", reason: "tjänsten svarar med en webbsida i stället för data" },
   roslagsvatten: { title: "Roslagsvatten (Österåker, Vaxholm m.fl.)", apiUrl: "https://edpmypage.roslagsvatten.se/FutureWebOS/SimpleWastePickup", reason: "tjänsten finns inte längre på adressen (404)" },
 };
 

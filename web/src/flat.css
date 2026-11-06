@@ -506,6 +506,12 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
   grid-column: 1 / -1;
 }
 @media (max-width: 899px) {
+  /* Telefon: en ruta per rad i naturlig höjd och sidan rullar. Surfplattans växande mittrad sträckte annars ut
+     den ruta som råkade hamna i rad 2 (Idag blev över 1 000 pixlar hög). */
+  .hf {
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+  }
   .hf > .hf-now,
   .hf > .hf-idag,
   .hf > .meals-card,
@@ -1218,8 +1224,10 @@ html[data-design="flat"] .board-header .sub {
 }
 
 /* Övre raden får högst ~46 % av höjden; korten krymper sitt innehåll (aldrig scroll, aldrig något utanför rutan). */
-html[data-design="flat"] .hf {
-  grid-template-rows: fit-content(26%) minmax(46%, 1fr) fit-content(14%);
+@media (min-width: 900px) {
+  html[data-design="flat"] .hf {
+    grid-template-rows: fit-content(26%) minmax(46%, 1fr) fit-content(14%);
+  }
 }
 html[data-design="flat"] .hf > .hf-now,
 html[data-design="flat"] .hf > .hf-idag,
@@ -1229,11 +1237,15 @@ html[data-design="flat"] .hf > .meals-card {
   min-height: 0;
   overflow: hidden;
 }
-html[data-design="flat"] .hf-fit {
-  flex: 1;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+/* Rutorna krymper sin text bara i surfplattans fasta rutnät. På telefon (en ruta per rad, sidan rullar) har korten
+   automatisk höjd: där skulle krympningen mäta sig själv i en loop (Idag blev över 1 000 px hög). */
+@media (min-width: 900px) {
+  html[data-design="flat"] .hf-fit {
+    flex: 1;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
 }
 /* Planera-knappen: egen rad över kolumnrubrikerna när det är trångt, så att den aldrig ligger över en rubrik. */
 html[data-design="flat"] .hf > .area-week > .card-head {
@@ -1381,4 +1393,12 @@ html[data-design="flat"] .area-week .fit.fit-overflow,
 html[data-design="flat"] .person-fit.fit-overflow {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+
+/* Telefon: veckan har ingen kolumnrubrikrad att lägga Planera-knappen i, så den får en egen rad i stället för att ligga över "Idag". */
+@media (max-width: 899px) {
+  html[data-design="flat"] .hf > .area-week > .card-head {
+    position: static;
+    margin: 0 0 6px;
+  }
 }

@@ -1,5 +1,14 @@
 # Ändringar
 
+## 0.22.0
+
+- **Hembatteri räknas in i huset.** Nytt fält **Hembatteri – effekt** under Inställningar → Energi. Med det räknar tavlan in batteriet i husets förbrukning (det saknades förut, så "Huset nu" kunde visa flera kW för lite på kvällen) och visar om batteriet laddar eller laddar ur. Batterier som räknar laddning som plus (till exempel Sigenergy) har en egen brytare. Under *Dagens kWh* finns också **Laddat i hembatteriet** och **Urladdat ur hembatteriet**, och självförsörjningen räknar då med det batteriet gav tillbaka. Tack v3r1t4s82 (#59).
+- **Ny ruta Hemmet** för den klassiska designen: lampor ("2 av 3 tända" och **Släck allt**), lås (läget och en **Lås**-knapp för olåsta, upplåsning stannar på Säkerhet) och tvätt, tork och disk med "klar 16:42". Av som standard, slås på under Inställningar → Startskärm. Tack SanSebb (#45).
+- **Varning om ett annat program tagit tavlans port.** Svarar något annat än tavlan på `localhost` loggas det vid start, med hur man hittar programmet eller byter port. Tack androidand (#30).
+- **Startsidan på telefon:** rutan Idag blev över 1 000 pixlar hög och veckan hoptryckt. Nu har varje ruta sin naturliga höjd och sidan rullar.
+- **Sophämtning:** Boden, Kiruna, Lidköping och Nacka svarar igen och går att välja. Ger adressökningen ingen träff säger tavlan också att renhållarens sökning kan vara nere. June Avfalls adressökning svarar just nu tomt för alla adresser, men den som redan valt sin adress får fortfarande hämtdagar.
+- **Radio:** Mix Megapol hittas igen (katalogen kallar den nu "Mix Megapol 104,3").
+
 ## 0.21.1
 
 - **Håll in en ruta fungerar på iPad.** Safari avbröt fingret när det hölls still (iPadens egen långtrycksgest), och när fingret lyftes stängdes bladet direkt igen. Nu räcker knappt en halv sekund, och bladet stannar öppet.
