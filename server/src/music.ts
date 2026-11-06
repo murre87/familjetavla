@@ -176,7 +176,11 @@ export interface DirStation extends RadioStation {
 const SR = /^(sr|sveriges radio)\b[\s:–-]*/i;
 /** "SR P4 Jönköping" and "Sveriges Radio - P3" read as "P4 Jönköping" and "P3". */
 export function cleanName(name: string): { name: string; sr: boolean } {
-  const n = name.trim().replace(/\s+/g, " ");
+  let n = name.trim().replace(/\s+/g, " ");
+  // "Mix Megapol 104,3" / "RIX FM 105.5 FM": the frequency is not part of the name (and differs per city).
+  // Only when a real name is left: two stations called "Radio 107,5" and "Radio 106,9" must stay apart.
+  const noFreq = n.replace(/\s+\d{2,3}[.,]\d(\s*(fm|mhz))?$/i, "").trim();
+  if (noFreq !== n && noFreq.length >= 6 && !/^radio$/i.test(noFreq)) n = noFreq;
   if (SR.test(n)) {
     const rest = n.replace(SR, "").trim();
     if (rest) return { name: rest.slice(0, 40), sr: true };

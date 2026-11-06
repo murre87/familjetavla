@@ -53,7 +53,10 @@ export const wasteEdp: WasteProvider = {
       const address = ctx.str("address");
       if (address.length < 3) throw new Error("Skriv gatuadress och nummer.");
       const found = await edpSearch(url, address);
-      if (!found.length) throw new Error(`Hittade ingen adress som matchar "${address}".`);
+      // No match can also mean the company's search is down (June Avfall, November 2026: every search came back empty while
+      // the schedule for an address already chosen still worked). The search only matches the start of a street name, so there is
+      // no safe test street for every town: say both.
+      if (!found.length) throw new Error(`Hittade ingen adress som börjar med "${address}". Börja med gatunamnet, t.ex. "Storgatan 12". Hittar du ändå inget kan renhållarens sökning vara nere, prova då igen senare. En adress du redan valt fortsätter att ge hämtdagar.`);
       // The service only answers with its first ten matches: a street without a number then shows 1–9 and not your house.
       const capped = found.length >= 10 && !/\d/.test(address);
       return {

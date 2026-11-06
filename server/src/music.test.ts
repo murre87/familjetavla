@@ -143,6 +143,9 @@ describe("all Swedish stations", () => {
     expect(cleanName("Sveriges Radio - P3")).toEqual({ name: "P3", sr: true });
     expect(cleanName("P4 Östergötland")).toEqual({ name: "P4 Östergötland", sr: true });
     expect(cleanName("Mix Megapol")).toEqual({ name: "Mix Megapol", sr: false });
+    expect(cleanName("Mix Megapol 104,3")).toEqual({ name: "Mix Megapol", sr: false });
+    expect(cleanName("RIX FM 105.5 FM")).toEqual({ name: "RIX FM", sr: false });
+    expect(cleanName("Radio 107,5")).toEqual({ name: "Radio 107,5", sr: false });
     expect(cleanName("Sr")).toEqual({ name: "Sr", sr: false });
   });
 
