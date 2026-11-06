@@ -21,6 +21,8 @@ export interface SourcedEvent extends CalEvent {
   task?: boolean;
   /** Attachments of that task. */
   files?: { name: string; url: string }[];
+  /** What the platform itself calls the task. */
+  taskKind?: "läxa" | "prov" | "inlämning" | "uppgift";
   /** The item on the school platform. */
   url?: string;
   /** Name of the calendar (helps pick an icon: "Fotboll F14" → ball). */

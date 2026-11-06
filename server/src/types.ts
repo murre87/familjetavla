@@ -428,6 +428,8 @@ export interface DashEvent {
   /** Barnets händelse: kan markeras sjuk den dagen (on = det här är "Sjuk"-markeringen). */
   sick?: { personId: string; date: string; on: boolean };
   description?: string;
+  /** Bilagor (läxpapper som PDF eller bild) från skolplattformen, hämtade via tavlans egen filväg. */
+  files?: { name: string; url: string }[];
 }
 
 export interface MealDay {

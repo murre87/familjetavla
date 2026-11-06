@@ -1,3 +1,4 @@
+import { boardFiles } from "./files.js";
 import { audience } from "./audience.js";
 import { buildAppliances } from "./appliances.js";
 import { buildRobots, buildSecurity } from "./security.js";
@@ -176,6 +177,8 @@ function toDash(ev: SourcedEvent, people: Map<string, Person>, travel?: TravelCt
     icon: ev.gym ? "gym" : activityIcon(`${ev.title} ${ev.sourceName ?? ""}`, ev.category),
     location: ev.location,
     description: cleanDescription(ev.description, ev.title),
+    // The homework sheet of a school task (PDF or picture) opens right in the event's sheet.
+    ...(boardFiles(ev.files) ? { files: boardFiles(ev.files) } : {}),
     ...(ev.sourceId === "own" && ev.uid ? { ownId: ev.uid } : ev.sourceId !== "sick" ? { cancelKey: travelKey(ev) } : {}),
     ...(p?.kind === "child" ? { sick: { personId: p.id, date: dayKey(ev.start), on: ev.sourceId === "sick" } } : {}),
   };

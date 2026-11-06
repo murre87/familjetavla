@@ -42,36 +42,41 @@ export function Fit({
       const lo = document.documentElement.dataset.design === "flat" ? FLAT_MIN : min;
       const kids = [...i.children] as HTMLElement[];
       kids.forEach((k) => (k.style.display = ""));
-      i.style.zoom = "1";
+      i.style.transform = "";
+      i.style.width = "";
       o.classList.remove("fit-overflow", "fit-tight");
       let cut = 0;
       if (getComputedStyle(o).overflowY === "auto") {
         const avail = o.clientHeight;
-        // The page can be zoomed as a whole (skärmstorlek): the rectangle is then in screen pixels while the area's height is in the page's own.
-        const pageZoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-        const height = () => i.getBoundingClientRect().height / pageZoom;
+        // Shrinking is done with transform + a wider box (not CSS zoom): Safari and Chrome measure a zoomed box differently,
+        // while offsetHeight (the layout height, in the page's own pixels) is the same everywhere. The visible height is that times the scale.
+        let scale = 1;
+        const apply = (s: number) => {
+          scale = s;
+          i.style.transform = s === 1 ? "" : `scale(${s})`;
+          i.style.transformOrigin = "0 0";
+          i.style.width = s === 1 ? "" : `${100 / s}%`;
+        };
+        const height = () => i.offsetHeight * scale;
         if (avail) {
           let h = height();
-          let scale = 1;
           // Scaling changes line breaks, so measure again and adjust once more.
           // (A few more passes and a hair of margin: text re-wraps as it shrinks, so one step rarely lands exactly.)
           for (let pass = 0; pass < 6 && h > avail + 1 && scale > lo; pass++) {
-            scale = Math.max(lo, scale * (avail / h) * 0.99);
-            i.style.zoom = String(scale);
+            apply(Math.max(lo, scale * (avail / h) * 0.99));
             h = height();
           }
           // Text re-wraps as it shrinks, so the first fit is often smaller than needed: find the largest scale that still fits.
           if (h <= avail + 1 && scale < 1) {
-            let lo = scale;
-            let hi = 1;
+            let good = scale;
+            let bad = 1;
             for (let k = 0; k < 6; k++) {
-              const mid = (lo + hi) / 2;
-              i.style.zoom = String(mid);
-              if (height() <= avail + 1) lo = mid;
-              else hi = mid;
+              const mid = (good + bad) / 2;
+              apply(mid);
+              if (height() <= avail + 1) good = mid;
+              else bad = mid;
             }
-            scale = lo;
-            i.style.zoom = String(scale);
+            apply(good);
             h = height();
           }
           if (h > avail + 1 && more) {
@@ -91,8 +96,7 @@ export function Fit({
               h = height();
               // Still in the way of the button (one big card): shrink it a little more rather than let the button cover it.
               for (let pass = 0; pass < 4 && h > avail - HINT && scale > FLOOR; pass++) {
-                scale = Math.max(FLOOR, scale * ((avail - HINT) / h) * 0.99);
-                i.style.zoom = String(scale);
+                apply(Math.max(FLOOR, scale * ((avail - HINT) / h) * 0.99));
                 h = height();
               }
             }

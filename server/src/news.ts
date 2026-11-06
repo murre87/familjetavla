@@ -1,6 +1,7 @@
 import type { SchoolData, SourcedEvent } from "./sources.js";
 import { loadLocal, saveLocal, type OwnEvent } from "./store.js";
 import { addDays } from "./time.js";
+import { schoolFileUrl } from "./files.js";
 import type { Person, Reminder, SchoolNews } from "./types.js";
 
 const SHORT_MONTHS = ["jan", "feb", "mars", "apr", "maj", "juni", "juli", "aug", "sep", "okt", "nov", "dec"];
@@ -26,7 +27,7 @@ export function buildSchoolNews(news: SchoolData["news"], people: Map<string, Pe
         published: n.published,
         date: d ? `${d.getDate()} ${SHORT_MONTHS[d.getMonth()]}` : undefined,
         // Vklass's own files need the family's login, so the board fetches them; other links open as they are.
-        files: n.files.map((f) => ({ name: f.name, url: /^https:\/\/[a-z0-9.-]*vklass\.se\//i.test(f.url) ? `api/school/file?u=${encodeURIComponent(f.url)}` : f.url })),
+        files: n.files.map((f) => ({ name: f.name, url: schoolFileUrl(f.url) })),
         seen: seen.has(n.id),
       };
     });

@@ -24,8 +24,10 @@ export interface SchoolEvent extends CalEvent {
   gym?: boolean;
   /** Homework, test or hand-in (the provider says so, whatever the title). */
   task?: boolean;
-  /** Attachments of a task on the school platform (the homework sheet as a PDF or picture). */
+  /** Attachments of a task on the school platform (the homework sheet as a PDF, Word file or picture). */
   files?: { name: string; url: string }[];
+  /** What the platform itself calls the task (Läxa, Prov, Uppgift), when it says. */
+  taskKind?: "läxa" | "prov" | "inlämning" | "uppgift";
   /** The item on the school platform. */
   url?: string;
 }

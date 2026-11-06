@@ -1,6 +1,6 @@
 {
   "name": "@familjetavla/web",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,6 +10,7 @@
     "build:demo": "VITE_DEMO=1 vite build && node ../dev/inline-demo.mjs"
   },
   "dependencies": {
+    "pdfjs-dist": "^6.4.299",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

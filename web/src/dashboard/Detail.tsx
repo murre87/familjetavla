@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import type { Dashboard } from "../../../server/src/types";
 import { api } from "../api";
 import { Icon } from "../Icon";
+import { Attachments } from "./Attachments";
+import { PdfView } from "../PdfView";
 import { goBack, goHome } from "../route";
 import type { Actions } from "./Dashboard";
 import { Week, renderWidget } from "./Home";
@@ -123,25 +125,8 @@ export function TaskSheet({ task, child, onClose }: { task: Task; child: string;
           </span>
         </div>
         {task.detail ? <div className="task-detail">{task.detail}</div> : !task.files?.length && <p className="muted">Ingen beskrivning från skolan.</p>}
-        {/* The homework sheet right here: pictures as pictures, a PDF as a page to read, so nobody has to go to Vklass. */}
-        {task.files?.map((f) =>
-          /\.(png|jpe?g|gif|webp)$/i.test(f.name) ? (
-            <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="news-image">
-              <img src={f.url} alt={f.name} loading="lazy" />
-            </a>
-          ) : /\.pdf$/i.test(f.name) ? (
-            <div key={f.url} className="task-pdf">
-              <a className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
-                <Icon name="link" size={18} /> Öppna {f.name} i helskärm
-              </a>
-              <iframe title={f.name} src={`${f.url}#view=FitH&toolbar=0`} />
-            </div>
-          ) : (
-            <a key={f.url} className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
-              <Icon name="link" size={18} /> Öppna {f.name}
-            </a>
-          ),
-        )}
+        {/* The homework sheet right here: a PDF is read in the sheet, so nobody has to go to Vklass. */}
+        <Attachments files={task.files} />
         {task.url && (
           <a className="btn" href={task.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
             Öppna i Vklass <Icon name="chevronRight" size={18} />
@@ -215,7 +200,9 @@ export function NewsSheet({ n, data, actions, onClose }: { n: News; data: Dashbo
         {n.text ? <div className="news-text">{n.text}</div> : <p className="muted">Ingen text – se bilagan.</p>}
         {n.files.map((f) =>
           // PDFs, documents and web links are buttons; pictures show right here.
-          broken.includes(f.url) || !isPicture(f) ? (
+          /\.pdf$/i.test(f.name) ? (
+            <PdfView key={f.url} url={f.url} name={f.name} />
+          ) : broken.includes(f.url) || !isPicture(f) ? (
             <a key={f.url} className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
               <Icon name={/\.pdf$/i.test(f.name) ? "event" : "link"} size={18} /> Öppna {f.name}
             </a>
