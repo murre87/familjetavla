@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import type { Dashboard } from "../../../server/src/types";
 import { api } from "../api";
 import { Icon } from "../Icon";
-import { Attachments } from "./Attachments";
-import { PdfView } from "../PdfView";
+import { Attachments, isBoardFile } from "./Attachments";
+import { RichText } from "./RichText";
 import { goBack, goHome } from "../route";
 import type { Actions } from "./Dashboard";
 import { Week, renderWidget } from "./Home";
@@ -124,7 +124,7 @@ export function TaskSheet({ task, child, onClose }: { task: Task; child: string;
             {task.time ? ` ${task.time}` : ""}
           </span>
         </div>
-        {task.detail ? <div className="task-detail">{task.detail}</div> : !task.files?.length && <p className="muted">Ingen beskrivning från skolan.</p>}
+        {task.detail ? <RichText className="task-detail" text={task.detail} /> : !task.files?.length && <p className="muted">Ingen beskrivning från skolan.</p>}
         {/* The homework sheet right here: a PDF is read in the sheet, so nobody has to go to Vklass. */}
         <Attachments files={task.files} />
         {task.url && (
@@ -147,23 +147,12 @@ const todayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-const PICTURE = /\.(jpe?g|png|gif|webp|heic|svg)$/i;
-/** A picture is shown in the news; a PDF, a document or a web link is a button to open it. */
-const isPicture = (f: { name: string; url: string }) => PICTURE.test(f.name.trim()) || /^bild$/i.test(f.name.trim()) || f.url.startsWith("data:image/") || PICTURE.test(safeDecode(f.url).split(/[?#]/)[0]!);
-const safeDecode = (u: string) => {
-  try {
-    return decodeURIComponent(u);
-  } catch {
-    return u;
-  }
-};
 
 /** A news item from the school: all the text, pictures shown right in the sheet, and "Lägg i veckan". */
 export function NewsSheet({ n, data, actions, onClose }: { n: News; data: Dashboard; actions: Actions; onClose: () => void }) {
   const [adding, setAdding] = useState(false);
   const kids = data.people.filter((p) => p.kind === "child");
   const [form, setForm] = useState({ date: todayKey(), time: "", end: "", title: n.title.slice(0, 80), who: n.who ?? "" });
-  const [broken, setBroken] = useState<string[]>([]);
   const set = (k: keyof typeof form, v: string) => setForm({ ...form, [k]: v });
   const save = () =>
     actions.run("Lägg i veckan", async () => {
@@ -198,20 +187,13 @@ export function NewsSheet({ n, data, actions, onClose }: { n: News; data: Dashbo
           {n.date && <span>{n.date}</span>}
         </div>
         {n.text ? <div className="news-text">{n.text}</div> : <p className="muted">Ingen text – se bilagan.</p>}
-        {n.files.map((f) =>
-          // PDFs, documents and web links are buttons; pictures show right here.
-          /\.pdf$/i.test(f.name) ? (
-            <PdfView key={f.url} url={f.url} name={f.name} />
-          ) : broken.includes(f.url) || !isPicture(f) ? (
-            <a key={f.url} className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
-              <Icon name={/\.pdf$/i.test(f.name) ? "event" : "link"} size={18} /> Öppna {f.name}
-            </a>
-          ) : (
-            <a key={f.url} href={f.url} target="_blank" rel="noreferrer" className="news-image">
-              <img src={f.url} alt={f.name} loading="lazy" onError={() => setBroken((b) => [...b, f.url])} />
-            </a>
-          ),
-        )}
+        {/* Files the board serves open inside it (a link would leave the app, which has no back button); only web addresses are links. */}
+        <Attachments files={n.files.filter(isBoardFile)} />
+        {n.files.filter((f) => !isBoardFile(f)).map((f) => (
+          <a key={f.url} className="btn" href={f.url} target="_blank" rel="noreferrer" style={{ alignSelf: "flex-start" }}>
+            <Icon name="link" size={18} /> Öppna {f.name}
+          </a>
+        ))}
         {!adding ? (
           <button className="btn primary" style={{ alignSelf: "flex-start" }} onClick={() => setAdding(true)}>
             <Icon name="plus" size={18} /> Lägg i veckan

@@ -9,6 +9,7 @@ import { Avatar, EventIcon } from "./bits";
 import { PersonPage } from "./Person";
 import { HomeFlat } from "./HomeFlat";
 import { Attachments } from "./Attachments";
+import { RichText } from "./RichText";
 import { ScaleSheet } from "./ScaleSheet";
 import { applyScale, readScale, scaleChosen, screensaverOff, useDesign } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
@@ -625,7 +626,7 @@ function EventSheet({
               </a>
             </div>
           )}
-          {e.description && <EventText text={e.description} />}
+          {e.description && (/ \| /.test(e.description) ? <RichText className="event-text" text={e.description} /> : <EventText text={e.description} />)}
           <Attachments files={e.files} />
           {e.leave && (
             <button
@@ -1034,6 +1035,13 @@ export function Dashboard() {
   // The new flat design has a light and a dark look; e-ink and mirror keep their own.
   const design = useDesign(data?.design ?? "glass");
   const flat = design === "flat" && (theme === "light" || theme === "dark");
+  // On a tablet the board never scrolls: lock the page so it cannot be dragged around (a home-screen app on an iPad can otherwise be pulled in any direction).
+  useEffect(() => {
+    if (window.innerWidth < 700) return;
+    const el = document.documentElement;
+    el.classList.add("board-lock");
+    return () => el.classList.remove("board-lock");
+  }, []);
   // The new design is made to fit at 100 %: the tablet default of 85 % only applies to the classic one.
   useEffect(() => {
     if (!scaleChosen()) applyScale(flat ? 1 : readScale());
