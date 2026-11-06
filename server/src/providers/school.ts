@@ -5,6 +5,7 @@ import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connect
 import { groupsOfClass, skola24Host, skola24Lessons, skola24Selection, skola24Units } from "../connectors/skola24.js";
 import { isGymLesson, vklassAssignmentInfo, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
 import { addDays, hhmm, shortDate, shortWeekday } from "../time.js";
+import { menuDishes, splitMenuEvents } from "../mealwords.js";
 import type { ProviderCtx, SchoolEvent, SchoolProvider } from "./types.js";
 
 const preview = (e: { start: Date; allDay: boolean; title: string }) =>
@@ -216,7 +217,7 @@ export const skolmatHa: SchoolProvider = {
     const conn = haConnection();
     if (!conn) throw new Error("Home Assistant är inte anslutet.");
     const evs = await ha.calendarEvents(conn, ctx.str("entityId"), from, to);
-    return { events: [], food: evs.map((e) => ({ child: "", day: foodDay(e.start), dishes: [e.title, ...(e.description ? [e.description] : [])].slice(0, 2) })) };
+    return { events: [], food: evs.map((e) => ({ child: "", day: foodDay(e.start), dishes: menuDishes(e.title, e.description) })) };
   },
 };
 
@@ -235,7 +236,7 @@ export const schoolIcs: SchoolProvider = {
       "Leta efter Prenumerera, Synka kalender eller Exportera schema i skolans app eller webb.",
       "Kopiera länken (börjar ofta med webcal:// eller slutar på .ics) och klistra in här.",
       "Lägg till en länk per barn och välj vilket barn den gäller.",
-      "Matsedeln kommer inte med kalenderlänken. Lägg till Skolmaten.se eller Skolmat från Home Assistant för lunchen.",
+      "Matsedeln kommer med om skolan har den i kalendern (SchoolSoft: slå på Lunch menu när du exporterar). Annars: lägg till Skolmaten.se eller Skolmat från Home Assistant för lunchen.",
     ],
   },
   async test(ctx) {
@@ -243,13 +244,16 @@ export const schoolIcs: SchoolProvider = {
     if (!url) throw new Error("Klistra in kalenderlänken.");
     const now = new Date();
     const evs = await fetchIcs(url, now, new Date(now.getTime() + 21 * 86_400_000));
-    return { ok: true, message: `${evs.length} händelser kommande tre veckor.`, preview: evs.slice(0, 5).map(preview) };
+    const { events, food } = splitMenuEvents(evs, (d) => foodDay(d));
+    return { ok: true, message: `${events.length} händelser kommande tre veckor${food.length ? ` och matsedel för ${food.length} dagar` : ""}.`, preview: [...events.slice(0, 4).map(preview), ...food.slice(0, 2).map((f) => `${f.day}: ${f.dishes.join(" · ")}`)] };
   },
   async fetch(ctx, from, to) {
     const url = ctx.secret("url");
     if (!url) return { events: [] };
     const evs = await fetchIcs(url, from, to);
-    return { events: evs.map((e) => ({ ...e, gym: isGymLesson(e) })) };
+    // "Matsedel" days in the calendar (SchoolSoft with "Lunch menu" on) are lunch, not calendar events.
+    const { events, food } = splitMenuEvents(evs, (d) => foodDay(d));
+    return { events: events.map((e) => ({ ...e, gym: isGymLesson(e) })), food };
   },
 };
 
