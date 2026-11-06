@@ -1,4 +1,5 @@
 import type { SourcedEvent } from "./sources.js";
+import { boardFiles } from "./files.js";
 import type { Dashboard, Person, SchoolChild } from "./types.js";
 
 const DAY = 86_400_000;
@@ -115,12 +116,13 @@ export function buildSchoolWeek(
           dayKey: dayKey(d),
           label,
           title: e.title,
-          kind: taskKind(e.title),
+          // The platform's own word (Läxa, Prov, Uppgift) wins over a guess from the title.
+          kind: e.taskKind ?? taskKind(e.title),
           time: e.allDay ? undefined : hm(e.start),
           detail: detail && detail !== e.title ? detail.slice(0, 4000) : undefined,
           url: e.url,
           // Through the board's own file route (it logs in to the school platform for you).
-          ...(e.files?.length ? { files: e.files.map((f) => ({ name: f.name, url: `api/school/file?u=${encodeURIComponent(f.url)}` })) } : {}),
+          ...(boardFiles(e.files) ? { files: boardFiles(e.files) } : {}),
         };
       });
     if (!days.some((d) => d.lessons.length) && !tasks.length) continue;

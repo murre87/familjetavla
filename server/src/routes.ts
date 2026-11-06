@@ -26,6 +26,8 @@ import { addOwnEvent, markNewsSeen, removeOwnEvent } from "./news.js";
 import { vklassFile, vklassLogin } from "./connectors/vklass.js";
 import { saveTravel } from "./travel.js";
 import { allowedToTurnOn } from "./quiet.js";
+import { docxToHtml, downloadHeader, isDocx, safeFileName } from "./docview.js";
+import { docxToPdf } from "./docpdf.js";
 import {
   deletePhoto,
   getSecret,
@@ -1603,7 +1605,8 @@ export async function registerRoutes(app: FastifyInstance) {
   // An attachment of a news item, fetched with the integration's own login. Only addresses that
   // were in the latest news are allowed, so the board cannot be used to fetch anything else.
   app.get("/api/school/file", async (req, reply) => {
-    const u = String((req.query as { u?: string }).u ?? "");
+    const q = req.query as { u?: string; dl?: string; n?: string; view?: string; as?: string };
+    const u = String(q.u ?? "");
     const integId = newsFiles.get(u);
     const integ = integId ? loadConfig().integrations.find((i) => i.id === integId) : undefined;
     if (!integ || integ.provider !== "vklass") return reply.code(404).send({ error: "Hittades inte" });
@@ -1616,8 +1619,23 @@ export async function registerRoutes(app: FastifyInstance) {
       if (buf.length > 20 * 1024 * 1024) throw new Error("Filen är för stor");
       const type = res.headers.get("content-type") ?? "application/octet-stream";
       reply.header("cache-control", "private, max-age=3600");
+      const name = safeFileName(q.n, "bilaga");
+      // A Word file as a PDF (to read in the PDF viewer or to download): made with the image's own browser.
+      if (q.as === "pdf" && isDocx(name, type)) {
+        const pdf = await docxToPdf(buf);
+        reply.header("content-disposition", q.dl ? downloadHeader(name.replace(/\.docx$/i, ".pdf")) : "inline");
+        reply.type("application/pdf");
+        return reply.send(pdf);
+      }
+      // A Word file read on the board: converted to a plain page (shown in a frame without scripts).
+      if (q.view === "html" && isDocx(name, type)) {
+        reply.header("content-security-policy", "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline'");
+        reply.type("text/html; charset=utf-8");
+        return reply.send(await docxToHtml(buf));
+      }
       const disp = res.headers.get("content-disposition");
-      if (disp) reply.header("content-disposition", disp.replace(/^attachment/i, "inline"));
+      if (q.dl) reply.header("content-disposition", downloadHeader(name));
+      else if (disp) reply.header("content-disposition", disp.replace(/^attachment/i, "inline"));
       reply.type(type);
       return reply.send(buf);
     } catch (e) {

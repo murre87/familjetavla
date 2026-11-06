@@ -8,6 +8,7 @@ import { INNER_NAME } from "../IpadFrame";
 import { Avatar, EventIcon } from "./bits";
 import { PersonPage } from "./Person";
 import { HomeFlat } from "./HomeFlat";
+import { Attachments } from "./Attachments";
 import { ScaleSheet } from "./ScaleSheet";
 import { applyScale, readScale, scaleChosen, screensaverOff, useDesign } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
@@ -625,6 +626,7 @@ function EventSheet({
             </div>
           )}
           {e.description && <EventText text={e.description} />}
+          <Attachments files={e.files} />
           {e.sick && (
             <button
               className={`btn small ${e.sick.on ? "" : "ghost"}`}

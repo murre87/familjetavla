@@ -534,20 +534,40 @@ export function parseAssignmentFiles(html: string): { name: string; url: string 
   }
 }
 
-const assignmentFiles = new Map<string, { at: number; files: { name: string; url: string }[] }>();
+export type TaskKind = "läxa" | "prov" | "inlämning" | "uppgift";
 
-/** Attachments of one task, remembered for six hours (a failed look is not remembered). */
-export async function vklassAssignmentFiles(s: VklassSession, taskUrl: string): Promise<{ name: string; url: string }[]> {
-  const hit = assignmentFiles.get(taskUrl);
-  if (hit && Date.now() - hit.at < 6 * 3_600_000) return hit.files;
+/** What Vklass itself calls the item: the line above the title on a task page ("Läxa, Svenska" -> läxa). */
+export function parseAssignmentKind(html: string): TaskKind | undefined {
+  const m = /<div class="text-tags">\s*([^<,]+?)\s*(?:,[^<]*)?<\/div>/.exec(html);
+  const word = m?.[1]?.toLowerCase();
+  if (!word) return undefined;
+  if (word.startsWith("läx")) return "läxa";
+  if (word.startsWith("prov") || word.startsWith("test")) return "prov";
+  if (word.startsWith("inlämn") || word.startsWith("redovis")) return "inlämning";
+  if (word.startsWith("uppgift")) return "uppgift";
+  return undefined;
+}
+
+export interface AssignmentInfo {
+  files: { name: string; url: string }[];
+  kind?: TaskKind;
+}
+
+const assignmentInfo = new Map<string, { at: number; info: AssignmentInfo }>();
+
+/** Attachments and the real kind of one task, remembered for six hours (a failed look is not remembered). */
+export async function vklassAssignmentInfo(s: VklassSession, taskUrl: string): Promise<AssignmentInfo> {
+  const hit = assignmentInfo.get(taskUrl);
+  if (hit && Date.now() - hit.at < 6 * 3_600_000) return hit.info;
   try {
     const res = await vklassFile(s, taskUrl);
-    if (!res.ok) return [];
-    const files = parseAssignmentFiles(await res.text());
-    assignmentFiles.set(taskUrl, { at: Date.now(), files });
-    return files;
+    if (!res.ok) return { files: [] };
+    const html = await res.text();
+    const info: AssignmentInfo = { files: parseAssignmentFiles(html), kind: parseAssignmentKind(html) };
+    assignmentInfo.set(taskUrl, { at: Date.now(), info });
+    return info;
   } catch {
-    return [];
+    return { files: [] };
   }
 }
 

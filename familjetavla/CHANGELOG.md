@@ -1,5 +1,12 @@
 # Ändringar
 
+## 0.18.0
+
+- **Bilagor till läxor och uppgifter syns på tavlan.** Läxpappret från Vklass (PDF, Word eller bild) visas direkt i händelsen och uppgiften, så att man inte behöver gå in i Vklass. En PDF visas som hel sida med sidbyte, och ett tryck öppnar den i helskärm för att läsa. Ett Word-dokument görs om till PDF på tavlan (med webbläsaren som redan finns i imagen) och visas på samma sätt, med reserv som läsbar sida. Varje bilaga har **Öppna** och **Ladda ner** (Word både som PDF och som original).
+- **Rätt etikett på uppgifterna.** Tavlan gissade om något var läxa, prov eller uppgift från titeln. Nu används det ord Vklass själv skriver ("Läxa, Svenska"), så Nyhetsuppläsare är en läxa och inte en uppgift. En uppgift som är idag får bilagan även på kvällen.
+- **Krympningen fungerar i Safari.** På en iPad kunde veckan skäras av efter tre dagar och texter klippas, eftersom krympningen byggde på CSS `zoom` som Safari och Chrome tolkar olika. Den använder nu `transform`, som beter sig likadant överallt. Det gäller både den nya och den klassiska designen.
+- Testerna provas nu även i Safaris motor (WebKit) och mot riktig data.
+
 ## 0.17.0
 
 - **Den nya designen finns nu på alla sidor** (Bil, Hus, Ljus, Energi, Mat, Grafer, Musik, Säkerhet, Hushåll, personvyn och Skolan), inte bara startsidan. Den klassiska designen är oförändrad och fortfarande standard. Den nya designen är byggd för skärmar på tvären; stående skärmar stöds inte där tills vidare.

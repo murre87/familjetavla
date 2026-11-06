@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { boardFiles, schoolFileUrl } from "./files.js";
 import { newsReminders } from "./news.js";
 import type { SchoolNews } from "./types.js";
 
@@ -34,5 +35,17 @@ describe("utflykt och matsäck från skolans nyheter", () => {
     const n = { id: "2", who: "Ella", title: "Friluftsdag", text: "På måndag är det friluftsdag. Ta med matsäck.", published: "2026-10-23T08:00:00", files: [], seen: true };
     // Sunday 25 October 2026 is the day Sweden goes back to winter time: midnight + 24 h is still the same date.
     expect(newsTripReminders([n], new Date(2026, 9, 25, 18)).map((r) => r.title)).toEqual(["Ella · friluftsdag imorgon – ta med matsäck"]);
+  });
+});
+
+describe("bilagor från skolplattformen", () => {
+  it("Vklass-filer går via tavlans egen filväg, andra länkar öppnas som de är", () => {
+    expect(schoolFileUrl("https://files.vklass.se/F73282DB.pdf")).toBe("api/school/file?u=https%3A%2F%2Ffiles.vklass.se%2FF73282DB.pdf");
+    expect(schoolFileUrl("https://example.com/a.pdf")).toBe("https://example.com/a.pdf");
+  });
+  it("ger inget när det inte finns några bilagor", () => {
+    expect(boardFiles(undefined)).toBeUndefined();
+    expect(boardFiles([])).toBeUndefined();
+    expect(boardFiles([{ name: "Läxa v 45.pdf", url: "https://files.vklass.se/x.pdf" }])).toEqual([{ name: "Läxa v 45.pdf", url: "api/school/file?u=https%3A%2F%2Ffiles.vklass.se%2Fx.pdf" }]);
   });
 });
