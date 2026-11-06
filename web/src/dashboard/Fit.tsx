@@ -24,6 +24,7 @@ export function Fit({
   more,
   min = MIN,
   base = 1,
+  noShrink = false,
 }: {
   className?: string;
   children: React.ReactNode;
@@ -33,6 +34,8 @@ export function Fit({
   min?: number;
   /** Wanted text size (0.7–1.6): starts here and shrinks only if the box is too small, so it never overflows. */
   base?: number;
+  /** Never below `base`: the area scrolls instead (the schedules, where readable text matters more than seeing every day at once). */
+  noShrink?: boolean;
 }) {
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
@@ -42,7 +45,7 @@ export function Fit({
     const i = inner.current;
     if (!o || !i) return;
     const fit = () => {
-      const lo = document.documentElement.dataset.design === "flat" ? FLAT_MIN : min;
+      const lo = noShrink ? base : document.documentElement.dataset.design === "flat" ? FLAT_MIN : min;
       const kids = [...i.children] as HTMLElement[];
       kids.forEach((k) => (k.style.display = ""));
       i.style.transform = "";
@@ -122,7 +125,7 @@ export function Fit({
       window.removeEventListener("resize", fit);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, base]);
+  }, [...deps, base, noShrink]);
   return (
     <div ref={outer} className={`fit ${className}`}>
       <div ref={inner} className="fit-inner">

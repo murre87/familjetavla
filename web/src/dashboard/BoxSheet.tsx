@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
 import { BOX_SIZE_MAX, BOX_SIZE_MIN, type BoxId, type BoxPref } from "../../../server/src/boxprefs";
@@ -34,6 +35,19 @@ function Seg<T extends string | number | undefined>({ label, value, options, onC
 /** `names`: the people who have a column in the week now; `all`: everyone on the board. */
 export function BoxSheet({ id, names = [], all = names, onClose }: { id: BoxId; names?: string[]; all?: string[]; onClose: () => void }) {
   const { prefs, setPref, resetPref } = useBoxPrefs();
+  // The finger that held the box is still coming up when the sheet appears: a tap on the backdrop just then is not "close".
+  const opened = useRef(0);
+  useEffect(() => {
+    opened.current = Date.now();
+  }, []);
+  const settling = () => Date.now() - opened.current < 600;
+  // Nothing in the sheet reacts to that lifting finger, neither the backdrop nor a button that happens to lie under it.
+  const swallow = (e: React.MouseEvent) => {
+    if (settling()) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  };
   const p: BoxPref = prefs[id] ?? {};
   const pct = Math.round((p.size ?? 1) * 100);
   const week = id === "vecka" || id === "person";
@@ -48,7 +62,7 @@ export function BoxSheet({ id, names = [], all = names, onClose }: { id: BoxId; 
     setPref(id, { people: allOn || noneOn ? undefined : next });
   };
   return createPortal(
-    <div className="overlay" onClick={onClose}>
+    <div className="overlay" onClickCapture={swallow} onClick={onClose}>
       <div className="sheet box-sheet" role="dialog" aria-modal="true" aria-label={`Inställningar för ${BOX_TITLE[id]}`} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 560 }}>
         <div className="row gap">
           <h2 className="grow" style={{ fontSize: 24 }}>

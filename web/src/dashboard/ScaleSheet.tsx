@@ -1,20 +1,22 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
-import { BOX_TITLE, HIDEABLE } from "./BoxSheet";
+import { BOX_TITLE, BoxSheet, HIDEABLE } from "./BoxSheet";
+import { BOX_IDS, type BoxId } from "../../../server/src/boxprefs";
 import { useBoxPrefs } from "../boxprefs";
 import { SCALE_MAX, SCALE_MIN, getDesignOverride, readScale, saveScale, screensaverOff, setDesignOverride, setScreensaverOff, type Design } from "../uiscale";
 
 const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
 
 /** "Skärmstorlek": gör allt mindre eller större på just den här skärmen. Syns direkt medan man drar. */
-export function ScaleSheet({ onClose }: { onClose: () => void }) {
+export function ScaleSheet({ onClose, names = [], all = names }: { onClose: () => void; names?: string[]; all?: string[] }) {
   const [z, setZ] = useState(readScale);
   const [saverOff, setSaverOff] = useState(screensaverOff);
   const [design, setDesign] = useState<Design | null>(getDesignOverride);
   const set = (v: number) => setZ(saveScale(v));
   const pct = Math.round(z * 100);
   const { prefs, setPref, resetAll } = useBoxPrefs();
+  const [box, setBox] = useState<BoxId | null>(null);
   const hiddenBoxes = HIDEABLE.filter((id) => prefs[id]?.hidden);
   const anyBoxPrefs = Object.keys(prefs).length > 0;
   return createPortal(
@@ -69,7 +71,14 @@ export function ScaleSheet({ onClose }: { onClose: () => void }) {
         </div>
         <div className="design-row boxes-row">
           <b>Rutor</b>
-          <small className="muted">Håll fingret på en ruta en stund för att ändra just den: textstorlek, täthet, antal dagar, vad som visas eller dölja den.</small>
+          <small className="muted">Håll fingret på en ruta en stund, eller välj den här, för att ändra just den: textstorlek, täthet, antal dagar, vad som visas eller dölja den.</small>
+          <div className="seg-btns">
+            {BOX_IDS.map((id) => (
+              <button key={id} className="btn small" onClick={() => setBox(id)}>
+                {BOX_TITLE[id]}
+              </button>
+            ))}
+          </div>
           {hiddenBoxes.length > 0 && (
             <div className="seg-btns">
               {hiddenBoxes.map((id) => (
@@ -87,6 +96,7 @@ export function ScaleSheet({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
+        {box && <BoxSheet id={box} names={names} all={all} onClose={() => setBox(null)} />}
         <label className="saver-row">
           <input
             type="checkbox"

@@ -11,6 +11,7 @@ import type { Actions } from "./Dashboard";
 import type { BoxProps } from "../boxprefs";
 import { passesShow, type BoxPref } from "../../../server/src/boxprefs";
 import { widget } from "../widgets";
+import { navigate } from "../route";
 
 const SKY_LABEL: Record<string, string> = { clear: "Klart", partly: "Halvklart", cloudy: "Mulet", rain: "Regn", snow: "Snö", fog: "Dimma" };
 const SKY_ICON: Record<string, IconName> = { clear: "sun", partly: "partly", cloudy: "cloud", rain: "rain", snow: "snow", fog: "cloud" };
@@ -198,16 +199,24 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
         </div>
       </div>
       {cols.length > 1 && (
-        <div className={`wk-head ${full ? "" : "compact"}`} aria-hidden="true" style={{ ["--cols" as string]: cols.length }}>
-          {cols.map((c) => (
-            <span className="wk-who" key={c.key} title={c.name}>
-              <i className="wk-dot" style={{ background: c.color }} />
-              <b>{c.name}</b>
-            </span>
-          ))}
+        <div className={`wk-head ${full ? "" : "compact"}`} style={{ ["--cols" as string]: cols.length }}>
+          {/* A name opens that person's own week: schedule, homework and the rest. */}
+          {cols.map((c) =>
+            c.family ? (
+              <span className="wk-who" key={c.key} title={c.name}>
+                <i className="wk-dot" style={{ background: c.color }} />
+                <b>{c.name}</b>
+              </span>
+            ) : (
+              <button type="button" className="wk-who wk-who-btn" key={c.key} title={`${c.name}s vecka`} aria-label={`Visa ${c.name}s vecka`} onClick={() => navigate(`/person/${c.key}`)}>
+                <i className="wk-dot" style={{ background: c.color }} />
+                <b>{c.name}</b>
+              </button>
+            ),
+          )}
         </div>
       )}
-      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data, pref]} base={box?.base} min={flat ? 0.55 : 0.7} more={full || flat ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
+      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data, pref]} base={box?.base} noShrink={flat} min={flat ? 0.55 : 0.7} more={full || flat ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
         {cols.length > 1
           ? shownDays.map((d, di) => (
               <div key={d.key} className={`day wk-row ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
