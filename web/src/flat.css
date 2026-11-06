@@ -485,16 +485,16 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
 .hf > .hf-now {
   grid-area: auto;
   grid-row: 1;
-  grid-column: 1 / span 5;
+  grid-column: span var(--span, 5);
 }
 .hf > .hf-idag {
   grid-area: auto;
   grid-row: 1;
-  grid-column: 6 / span 3;
+  grid-column: span var(--span, 3);
 }
 .hf > .meals-card {
   grid-row: 1;
-  grid-column: 9 / span 4;
+  grid-column: span var(--span, 4);
 }
 .hf > .area-week {
   grid-area: auto;
@@ -1262,4 +1262,97 @@ html[data-design="flat"] .hf > .area-week .plan-btn .plan-word {
 html[data-design="flat"] .hf .wk-head,
 html[data-design="flat"] .hf .wk-head .wk-who {
   font-size: 15px;
+}
+
+/* ---------- Inställningar per ruta (håll in en ruta) ---------- */
+/* Håll-in ska inte markera text eller öppna Safaris meny för länkar/bilder. */
+.has-prefs,
+.person-days {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Kompakt: tätare rader, mer plats åt texten. */
+html[data-design] .dens-compact .hf-row {
+  min-height: 38px;
+  gap: 8px;
+}
+html[data-design] .dens-compact .wk-row {
+  padding-top: 3px;
+  padding-bottom: 3px;
+  gap: 6px;
+}
+/* Dagens namn och datum på en rad: raden blir lägre och texten kan bli större. */
+html[data-design] .dens-compact .wk-row .day-name {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 4px;
+  width: 116px;
+  flex: none;
+  white-space: nowrap;
+}
+html[data-design] .dens-compact .wk-evt {
+  min-height: 20px;
+  padding: 0 6px;
+}
+html[data-design] .dens-compact .meal-line {
+  min-height: 26px;
+}
+html[data-design] .dens-compact .hf-pill {
+  min-height: 36px;
+}
+html[data-design] .dens-compact .person-day {
+  padding: 4px 10px;
+  gap: 2px 6px;
+}
+html[data-design] .dens-compact .p-line {
+  padding: 1px 8px;
+}
+html[data-design] .person-days.dens-compact {
+  gap: 6px;
+}
+/* Luftig: mer luft mellan raderna (texten krymper i stället om rutan blir för liten). */
+html[data-design] .dens-airy .hf-row {
+  min-height: 60px;
+}
+html[data-design] .dens-airy .wk-row {
+  padding-top: 13px;
+  padding-bottom: 13px;
+}
+html[data-design] .dens-airy .wk-evt {
+  min-height: 30px;
+  padding: 4px 10px;
+}
+html[data-design] .dens-airy .meal-line {
+  min-height: 46px;
+}
+html[data-design] .dens-airy .person-day {
+  padding: 14px 16px;
+  gap: 8px 10px;
+}
+html[data-design] .dens-airy .p-line {
+  padding: 6px 12px;
+}
+html[data-design] .person-days.dens-airy {
+  gap: 18px;
+}
+/* Bladet för en ruta och avsnittet Rutor i Aa-bladet. */
+.box-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.box-sheet .seg-btn {
+  min-height: 44px;
+}
+.boxes-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.boxes-row .seg-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }

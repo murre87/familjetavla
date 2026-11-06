@@ -8,6 +8,8 @@ import { Fit } from "./Fit";
 import { Icon, type IconName } from "../Icon";
 import { AnimatedNumber, Avatar, EventIcon, eventLabel, TravelBadge, travelText } from "./bits";
 import type { Actions } from "./Dashboard";
+import type { BoxProps } from "../boxprefs";
+import { passesShow, type BoxPref } from "../../../server/src/boxprefs";
 import { widget } from "../widgets";
 
 const SKY_LABEL: Record<string, string> = { clear: "Klart", partly: "Halvklart", cloudy: "Mulet", rain: "Regn", snow: "Snö", fog: "Dimma" };
@@ -135,13 +137,35 @@ function schoolEnd(data: Dashboard, name: string, dayKey: string): { end: string
   return { end: lessons[lessons.length - 1]!.end, gym: lessons.some((l) => l.gym) };
 }
 
-export function Week({ data, actions, full = false, edit }: { data: Dashboard; actions: Actions; full?: boolean; edit?: EditProps }) {
+export function Week({ data, actions, full = false, edit, box, pref }: { data: Dashboard; actions: Actions; full?: boolean; edit?: EditProps; box?: BoxProps; pref?: BoxPref }) {
   // The new design never hides a day behind "+N": the week shrinks to fit instead.
   const flat = useDesign(data.design) === "flat";
-  const cols = weekColumns(data);
+  // Settings for just this box: how many days, whose, and what (homework / activities only).
+  const allCols = weekColumns(data);
   const known = new Set(data.people.map((p) => p.name));
+  type Day = Dashboard["days"][number];
+  type Col = ReturnType<typeof weekColumns>[number];
+  // Homework, tests and hand-ins from the school are marked in their own colour.
+  const taskOf = (d: Day, c: Col, e: WeekEvent) => (c.family ? undefined : data.school?.find((k) => k.name === c.name)?.tasks.find((t) => t.dayKey === d.key && t.title === e.title));
+  /** What one cell shows: the column's events that day, after the box's "show only …". */
+  const cellEvents = (d: Day, c: Col) => {
+    const evs = d.events.filter((e) => {
+      const who = eventPeople(e, known);
+      return c.family ? who.length !== 1 : who[0] === c.name;
+    });
+    return pref?.show ? evs.filter((e) => passesShow(pref.show, e, Boolean(taskOf(d, c, e)))) : evs;
+  };
+  const chosenDays = pref?.days ? data.days.slice(0, pref.days) : data.days;
+  let cols = pref?.people ? allCols.filter((c) => c.family || pref.people!.includes(c.name)) : allCols;
+  let shownDays = chosenDays;
+  // "Show only …": columns and days with nothing to show give their room to the rest (today always stays).
+  if (pref?.show) {
+    const hit = cols.filter((c) => chosenDays.some((d) => cellEvents(d, c).length));
+    if (hit.length) cols = hit;
+    shownDays = chosenDays.filter((d) => d.isToday || cols.some((c) => cellEvents(d, c).length));
+  }
   return (
-    <section className={`card area-week week-swipe ${edit?.className ?? ""}`} {...edit?.handlers}>
+    <section className={`card area-week week-swipe ${edit?.className ?? ""} ${box?.className ?? ""}`} style={box?.style} {...edit?.handlers} {...box?.handlers}>
       {edit?.bar}
       <div className="card-head" style={{ flexWrap: "wrap" }}>
         {/* On its own page the page title already says it – the room goes to the days. */}
@@ -183,9 +207,9 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
           ))}
         </div>
       )}
-      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data]} min={flat ? 0.55 : 0.7} more={full || flat ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
+      <Fit className={`${full ? "week-full" : "week-body"} ${cols.length > 1 ? "wk-matrix" : ""}`} deps={[data, pref]} base={box?.base} min={flat ? 0.55 : 0.7} more={full || flat ? undefined : (n) => <MoreButton n={n} what={n === 1 ? "dag" : "dagar"} label="visa hela veckan" onClick={() => actions.openPage("veckan")} />}>
         {cols.length > 1
-          ? data.days.map((d, di) => (
+          ? shownDays.map((d, di) => (
               <div key={d.key} className={`day wk-row ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
                 <div className="day-name">
                   <b>{d.name}</b>
@@ -193,15 +217,10 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                 </div>
                 <div className="wk-cells" style={{ ["--cols" as string]: cols.length }}>
                   {cols.map((c) => {
-                    const evs = d.events.filter((e) => {
-                      const who = eventPeople(e, known);
-                      return c.family ? who.length !== 1 : who[0] === c.name;
-                    });
-                    const sch = c.family ? undefined : schoolEnd(data, c.name, d.key);
+                    // With "show only …" the school day's end is left out: it is not what was asked for and takes room.
+                    const sch = c.family || pref?.show ? undefined : schoolEnd(data, c.name, d.key);
                     // Everything is shown: a cell never hides things behind "+N".
-                    const shown = evs;
-                    // Homework, tests and hand-ins from the school are marked in their own colour.
-                    const taskOf = (e: WeekEvent) => (c.family ? undefined : data.school?.find((k) => k.name === c.name)?.tasks.find((t) => t.dayKey === d.key && t.title === e.title));
+                    const shown = cellEvents(d, c);
                     return (
                       <div className="wk-cell" key={c.key} data-who={c.name}>
                         {sch && (
@@ -211,9 +230,9 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                           </span>
                         )}
                         {shown.map((e, i) => (
-                          <button className={`wk-evt ${taskOf(e) ? `wk-task kind-${taskOf(e)!.kind}` : ""}`} key={i} style={taskOf(e) ? undefined : { borderLeftColor: e.color }} onClick={() => actions.openEvent({ ...e, dayLabel: d.name.toLowerCase() })} aria-label={eventLabel(e)}>
+                          <button className={`wk-evt ${taskOf(d, c, e) ? `wk-task kind-${taskOf(d, c, e)!.kind}` : ""}`} key={i} style={taskOf(d, c, e) ? undefined : { borderLeftColor: e.color }} onClick={() => actions.openEvent({ ...e, dayLabel: d.name.toLowerCase() })} aria-label={eventLabel(e)}>
                             {e.time && <span className="t">{e.time}</span>}
-                            {taskOf(e) && <span className="wk-kind">{{ läxa: "Läxa", prov: "Prov", inlämning: "Inlämning", uppgift: "Uppgift" }[taskOf(e)!.kind]}</span>}
+                            {taskOf(d, c, e) && <span className="wk-kind">{{ läxa: "Läxa", prov: "Prov", inlämning: "Inlämning", uppgift: "Uppgift" }[taskOf(d, c, e)!.kind]}</span>}
                             <span className="ti">{e.title}</span>
                             {flat && <TravelBadge t={e.travel} />}
                             {c.family && eventPeople(e, known).length > 1 && (
@@ -231,15 +250,19 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                 </div>
               </div>
             ))
-          : data.days.map((d, di) => (
+          : shownDays.map((d, di) => {
+          // "Show only homework / activities" applies here too (a homework is a school task with the same title that day).
+          const isTask = (e: WeekEvent) => Boolean(data.school?.some((k) => k.tasks.some((t) => t.dayKey === d.key && t.title === e.title)));
+          const dayEvents = pref?.show ? d.events.filter((e) => passesShow(pref.show, e, isTask(e))) : d.events;
+          return (
           <div key={d.key} className={`day ${d.isToday ? "today" : ""} ${di < 2 ? "big" : ""}`}>
             <div className="day-name">
               <b>{d.name}</b>
               <small>{d.date}</small>
             </div>
             <div className="events">
-              {d.events.length === 0 && <span className="empty-day">Inget inplanerat</span>}
-              {d.events.slice(0, full ? undefined : 3).map((e, i) => (
+              {dayEvents.length === 0 && <span className="empty-day">Inget inplanerat</span>}
+              {dayEvents.slice(0, full ? undefined : 3).map((e, i) => (
                 <button className="event" key={i} onClick={() => actions.openEvent({ ...e, dayLabel: d.name.toLowerCase() })} aria-label={eventLabel(e)}>
                   <EventIcon icon={e.icon} color={e.color} size={di < 2 ? 17 : 15} />
                   {e.time && <span className="t">{e.time}</span>}
@@ -248,14 +271,15 @@ export function Week({ data, actions, full = false, edit }: { data: Dashboard; a
                   {e.who && e.initial && <Avatar initial={e.initial} color={e.color} name={e.who} />}
                 </button>
               ))}
-              {!full && d.events.length > 3 && (
-                <button className="more-chip" aria-label={`${d.events.length - 3} till – visa hela veckan`} onClick={() => actions.openPage("veckan")}>
-                  +{d.events.length - 3}
+              {!full && dayEvents.length > 3 && (
+                <button className="more-chip" aria-label={`${dayEvents.length - 3} till – visa hela veckan`} onClick={() => actions.openPage("veckan")}>
+                  +{dayEvents.length - 3}
                 </button>
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </Fit>
     </section>
   );
