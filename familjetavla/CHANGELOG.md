@@ -1,5 +1,11 @@
 # Ändringar
 
+## 0.20.1
+
+- **Bilagor öppnas i tavlan och du kommer alltid tillbaka.** "Öppna" tog dig tidigare bort från tavlan till själva filen, och på en iPad i helskärmsläge finns då ingen knapp tillbaka. Nu öppnas PDF, Word (som PDF) och bilder i en helskärmsvy med en tydlig **Stäng**. **Ladda ner** använder iPadens delningsruta ("Spara i Filer") så att du inte lämnar tavlan.
+- **Glosor som tabell.** Ord och översättning står bredvid varandra i två kolumner, som i Vklass, i stället för ett ord per rad. I listan skrivs de som "ord – översättning".
+- **Sidan går inte att dra eller nypa-zooma på en surfplatta.** En inzoomad eller flyttad tavla skars av i kanten och gick att dra åt alla håll. Nu är sidan låst i tavlans vyer.
+
 ## 0.20.0
 
 - **Lov.** Ny flik **Lov** under "Lägg till på tavlan": välj barnen och från–till-datum, så utgår skola, förskola, fritids och hämtning/lämning de dagarna, medan träningar och matcher finns kvar. Dagarna märks "Lov – ledig" och går att ta bort från händelsen. Tack Freland (#52).

@@ -89,7 +89,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
                     <b>{KIND_LABEL[t.kind] ?? "Uppgift"}:</b> {t.title}
                     {t.time ? ` · ${t.time}` : ""}
                     {t.files?.length ? <small className="p-more p-file">📎 {t.files.map((f) => f.name).join(", ")}</small> : null}
-                    {t.detail && <small className="p-more">{t.detail.replace(/\s*\n\s*/g, " ").slice(0, 240)}</small>}
+                    {t.detail && <small className="p-more">{t.detail.split("\n").map((l) => l.trim().replace(/ \| /g, " – ")).filter(Boolean).join(" · ").slice(0, 240)}</small>}
                   </span>
                   <Icon name="chevronRight" size={18} />
                 </button>

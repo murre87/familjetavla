@@ -472,6 +472,22 @@ type VklassItem = { title?: string; text?: string; start: string; end?: string; 
 export function htmlToText(html: string): string {
   if (!/<[a-z]/i.test(html)) return html.trim();
   const $ = cheerio.load(html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h\d|ul|ol)>/gi, "\n\n").replace(/<li[^>]*>/gi, "\n• "));
+  // A table (the glossary of a homework) keeps its rows: "shame | synd/ skam", one line per row.
+  $("table").each((_, t) => {
+    const rows = $(t)
+      .find("tr")
+      .map((_i, tr) =>
+        $(tr)
+          .find("th,td")
+          .map((_j, c) => $(c).text().replace(/\s+/g, " ").trim())
+          .get()
+          .filter(Boolean)
+          .join(" | "),
+      )
+      .get()
+      .filter(Boolean);
+    $(t).replaceWith(`\n${rows.join("\n")}\n`);
+  });
   return $.root()
     .text()
     .replace(/[ \t\u00a0]+/g, " ")

@@ -115,3 +115,31 @@ describe("lov (issue 52)", () => {
     expect(expandDays("2026-10-30", "2026-11-02")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02"]);
   });
 });
+
+import { htmlToText } from "./connectors/vklass.js";
+describe("glosor som tabell (en lista med ord blev ett ord per rad)", () => {
+  it("behåller varje tabellrad som 'ord | översättning'", () => {
+    const html = '<p>Läxa</p><table><tr><td><p>shame</p></td><td><p>synd/ skam</p></td></tr><tr><td>any</td><td>någon/ några</td></tr></table>';
+    // A blank line after the paragraph is a normal paragraph break; every table row stays one line.
+    expect(htmlToText(html)).toBe("Läxa\n\nshame | synd/ skam\nany | någon/ några");
+  });
+  it("lämnar vanlig text som den är", () => {
+    expect(htmlToText("<p>Se bifogade läxpappret.</p>")).toBe("Se bifogade läxpappret.");
+  });
+});
+
+import { textBlocks } from "./textblocks.js";
+describe("text med tabellrader", () => {
+  it("gör rader med 'a | b' i följd till en tabell och resten till text", () => {
+    expect(textBlocks("Läxa till tisdag\nshame | synd/ skam\nany | någon/ några\nKlart")).toEqual([
+      { kind: "text", text: "Läxa till tisdag" },
+      { kind: "table", rows: [["shame", "synd/ skam"], ["any", "någon/ några"]] },
+      { kind: "text", text: "Klart" },
+    ]);
+  });
+  it("låter en ensam rad med | vara text och tål text utan tabell", () => {
+    expect(textBlocks("a | b")).toEqual([{ kind: "text", text: "a | b" }]);
+    expect(textBlocks("Bara text\nPå två rader")).toEqual([{ kind: "text", text: "Bara text\nPå två rader" }]);
+    expect(textBlocks("")).toEqual([]);
+  });
+});

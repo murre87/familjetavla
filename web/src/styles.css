@@ -5221,3 +5221,57 @@ html:not([data-design="flat"]) .wk-kind {
   align-self: flex-start;
   border-radius: 10px;
 }
+
+/* Inget nypa-zoom på surfplatta: en inzoomad tavla skärs av i kanten och går att dra i sidled. */
+@media (min-width: 600px) and (min-height: 600px) {
+  html {
+    touch-action: pan-x pan-y;
+  }
+}
+
+/* Glosor och andra tabeller från skolan: kolumner i stället för en lång lista. */
+.glossary {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 6px 0;
+}
+.glossary td {
+  padding: 5px 10px;
+  border: 1px solid var(--card-border, rgba(127, 127, 127, 0.35));
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.glossary tr:nth-child(odd) td {
+  background: color-mix(in srgb, currentColor 5%, transparent);
+}
+.rich-p {
+  margin: 4px 0;
+  white-space: pre-line;
+}
+
+/* Bild i helskärm (med Stäng) och miniatyr: ett tryck öppnar den utan att lämna tavlan. */
+.pic-box {
+  flex: 1;
+  height: auto;
+  overflow: auto;
+  cursor: auto;
+  background: #11161f;
+}
+.pic-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.pic-thumb {
+  all: unset;
+  display: block;
+  cursor: zoom-in;
+}
+
+/* Surfplatta, tavlans vyer: sidan går inte att dra i någon riktning (allt ryms, inget scrollar). */
+html.board-lock,
+html.board-lock body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+}

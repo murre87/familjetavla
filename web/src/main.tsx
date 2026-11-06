@@ -10,3 +10,9 @@ import "./flat.css";
 applyScale(readScale());
 
 createRoot(document.getElementById("root")!).render(<StrictMode>{wantsIpadFrame() ? <IpadFrame /> : <App />}</StrictMode>);
+
+
+// A tablet board is not pinch-zoomed (it has its own "Storlek"): on an iPad a zoomed page is cut off at the edge and can be dragged sideways.
+document.addEventListener("gesturestart", (e) => {
+  if (Math.min(window.innerWidth, window.innerHeight) >= 600) e.preventDefault();
+});

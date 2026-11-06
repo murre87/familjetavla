@@ -38,7 +38,7 @@ function openDoc(url: string): Promise<PdfDoc> {
 /** The page zoom of the whole board ("Storlek"): a canvas is drawn in screen pixels, the layout is measured in zoomed CSS pixels. */
 const pageZoom = () => parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
 
-function Pane({ url, name, downloadHref, extra, onError, big, onZoom, onClose }: { url: string; name: string; downloadHref?: string; extra?: React.ReactNode; onError?: () => void; big?: boolean; onZoom?: () => void; onClose?: () => void }) {
+function Pane({ url, name, onDownload, extra, onError, big, onZoom, onClose }: { url: string; name: string; onDownload?: () => void; extra?: React.ReactNode; onError?: () => void; big?: boolean; onZoom?: () => void; onClose?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const [doc, setDoc] = useState<PdfDoc | null>(null);
@@ -135,13 +135,16 @@ function Pane({ url, name, downloadHref, extra, onError, big, onZoom, onClose }:
             <Icon name={wide ? "minus" : "plus"} size={18} /> {wide ? "Hela sidan" : "Förstora"}
           </button>
         )}
-        <a className="btn small" href={url} target="_blank" rel="noreferrer">
-          <Icon name="link" size={18} /> Öppna
-        </a>
-        {downloadHref && (
-          <a className="btn small" href={downloadHref} download={name}>
+        {/* "Öppna" is the full-screen view inside the board (a link would leave it, and a home-screen app has no back button). */}
+        {!big && (
+          <button className="btn small" onClick={onZoom}>
+            <Icon name="link" size={18} /> Öppna
+          </button>
+        )}
+        {onDownload && (
+          <button className="btn small" onClick={onDownload}>
             <Icon name="plus" size={18} /> Ladda ner
-          </a>
+          </button>
         )}
         {extra}
         {big && (
@@ -159,15 +162,15 @@ function Pane({ url, name, downloadHref, extra, onError, big, onZoom, onClose }:
 }
 
 /** A PDF shown right in the sheet: the whole page, ‹ › between pages, and a full-screen view to read it. */
-export function PdfView({ url, name, downloadHref, extra, onError }: { url: string; name: string; downloadHref?: string; extra?: React.ReactNode; onError?: () => void }) {
+export function PdfView({ url, name, onDownload, extra, onError }: { url: string; name: string; onDownload?: () => void; extra?: React.ReactNode; onError?: () => void }) {
   const [big, setBig] = useState(false);
   return (
     <>
-      <Pane url={url} name={name} downloadHref={downloadHref} extra={extra} onError={onError} onZoom={() => setBig(true)} />
+      <Pane url={url} name={name} onDownload={onDownload} extra={extra} onError={onError} onZoom={() => setBig(true)} />
       {big &&
         createPortal(
           <div className="pdf-overlay" role="dialog" aria-label={name}>
-            <Pane url={url} name={name} downloadHref={downloadHref} extra={extra} big onClose={() => setBig(false)} />
+            <Pane url={url} name={name} onDownload={onDownload} extra={extra} big onClose={() => setBig(false)} />
           </div>,
           document.body,
         )}
