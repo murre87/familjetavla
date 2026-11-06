@@ -176,7 +176,7 @@ const calendarSchema = z.object({
   entityId: z.string().optional(),
   personId: z.string().optional(),
   personIds: z.array(z.string().regex(ID)).max(12).optional(),
-  category: z.enum(["family", "sport", "school", "work", "other"]),
+  category: z.enum(["family", "sport", "school", "work", "dinner", "other"]),
   include: z.array(z.string().max(60)).max(20).optional(),
   exclude: z.array(z.string().max(60)).max(20).optional(),
   visibility: z.enum(["custody", "always"]).optional(),

@@ -32,7 +32,7 @@ import {
 } from "./sources.js";
 import { listPhotos, loadConfig, loadLocal, loadLocalList } from "./store.js";
 import { buildPlan, careAt, needsAttention } from "./plan.js";
-import { buildMeals, loadDinners, loadShelf, mealFavorites, sameAsLunch } from "./meals.js";
+import { buildMeals, dinnersFromEvents, loadDinners, loadShelf, mealFavorites, sameAsLunch } from "./meals.js";
 import { isCare, knownDrivers, travelKey, loadTravel, resolveTravel, travelOptions, travelSummary, wantsTravel } from "./travel.js";
 import {
   addDays,
@@ -242,6 +242,8 @@ export interface Family {
   /** `all` plus generated förskola/fritids days. */
   withCare: SourcedEvent[];
   travelCtx: TravelCtx;
+  /** The week's dinners from calendars of the type "Middag" (a dinner set on the board itself wins). */
+  calendarDinners: Record<string, string>;
 }
 
 export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[]): Promise<Family & { schoolFood: SchoolData["food"]; schoolNews: SchoolData["news"]; hiddenSick: SourcedEvent[] }> {
@@ -254,13 +256,15 @@ export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[]
   // "Utgår": events the family struck on the board are gone everywhere – week, Nu, reminders, phone.
   const cancelled = loadLocal().cancelled ?? {};
   const kept = (e: SourcedEvent) => !cancelled[travelKey(e)];
-  const all = [...calEvents.filter((e) => e.sourceId !== swapCal), ...school.events, ...ownCalendarEvents()].filter(kept);
+  // A calendar of the type "Middag" holds the week's dinners: they become the day's dinner, not calendar events.
+  const calendarDinners = dinnersFromEvents(calEvents.filter((e) => e.category === "dinner" && e.sourceId !== swapCal && kept(e)));
+  const all = [...calEvents.filter((e) => e.sourceId !== swapCal && e.category !== "dinner"), ...school.events, ...ownCalendarEvents()].filter(kept);
   const careEvents = buildCareEvents([...people.values()], school.care, all, today, 7).filter(kept);
   const travelCtx: TravelCtx = { saved: loadTravel(), calendars: new Map([...cfg.calendars.map((c) => [c.id, c] as const), ...careCalendars([...people.values()])]) };
   // A sick child's förskola, lessons and training are struck that day (one "Sjuk" marker instead).
   const sick = loadSick();
   const withCare = applySick([...all, ...careEvents], sick);
-  return { people, children, all: applySick(all, sick).kept, withCare: withCare.kept, hiddenSick: withCare.hidden, travelCtx, schoolFood: school.food, schoolNews: school.news };
+  return { people, children, all: applySick(all, sick).kept, withCare: withCare.kept, hiddenSick: withCare.hidden, travelCtx, calendarDinners, schoolFood: school.food, schoolNews: school.news };
 }
 
 /** `allReminders`: the morning notification wants every reminder, the board shows the first five. */
@@ -294,7 +298,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
   const { people, children, all, withCare, travelCtx } = family;
   const energySeries = conn ? await todaySeries(conn, cfg.entities.energy ?? {}, now).catch(() => ({})) : {};
   const plan = buildPlan(withCare, people, travelCtx, now, (e) => toDash(e, people, travelCtx));
-  const dinners = loadDinners();
+  const dinners = { ...family.calendarDinners, ...loadDinners() };
   const meals = buildMeals(family.schoolFood, dinners, now);
   const schoolNews = buildSchoolNews(family.schoolNews, people);
 

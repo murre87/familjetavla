@@ -82,7 +82,8 @@ export interface CareSchedule {
   notes?: Record<string, string>;
 }
 
-export type CalendarCategory = "family" | "sport" | "school" | "work" | "other";
+/** "dinner": en kalender med veckans middagar (t.ex. Paprika via Home Assistant) – händelserna blir dagens middag, inte kalenderhändelser. */
+export type CalendarCategory = "family" | "sport" | "school" | "work" | "dinner" | "other";
 
 export type CalendarProvider = "google" | "icloud" | "laget" | "sportadmin" | "svenskalag" | "infomentor" | "outlook" | "ics" | "ha";
 

@@ -41,6 +41,18 @@ function dateOfIsoWeek(week: number, isoDay: number, near: Date): Date {
   return best!;
 }
 
+/** Dinners from a calendar of the week's menu (Paprika, a meal planner): one text per day, "Middag: " in front is dropped. */
+export function dinnersFromEvents(evs: { title: string; start: Date }[]): Record<string, string> {
+  const out: Record<string, string[]> = {};
+  for (const e of evs) {
+    const t = e.title.replace(/^\s*middag\s*[:\-–]\s*/i, "").replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!t) continue;
+    const list = (out[dayKey(e.start)] ??= []);
+    if (!list.some((x) => x.toLowerCase() === t.toLowerCase())) list.push(t);
+  }
+  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.join(" · ")]));
+}
+
 export function loadDinners(): Record<string, string> {
   return loadLocal().dinners ?? {};
 }

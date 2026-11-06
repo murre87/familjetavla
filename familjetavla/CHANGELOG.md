@@ -1,5 +1,11 @@
 # Ändringar
 
+## 0.19.0
+
+- **Skolmat från Home Assistant visas inte längre dubbelt.** Skolmat-integrationen skickar samma rätter både i rubriken och i beskrivningen ("A | B" och "[Lunch] • A • B"), och tavlan visade bägge. Nu visas varje rätt en gång. Tack frelev (#60).
+- **Matsedel från en kalenderlänk (SchoolSoft m.fl.).** Står matsedeln i kalendern som heldagshändelser som heter "Matsedel" (SchoolSoft med Lunch menu påslaget, eller "Lunch") blir de lunch på tavlan i stället för kalenderhändelser. Rubrikraden ("Huvudrätt", "Vegetariskt", "Lunch") tas bort, och dagens två Matsedel-händelser (vanlig och vegetarisk) slås ihop. Tack CrallH (#66).
+- **Middag från en kalender.** Ny kalendertyp **Middag (veckans meny)**, till exempel Paprika via Home Assistant: kalenderns händelser blir dagens middag på Maten och i veckan, och visas inte som vanliga händelser. En middag man själv skriver in på tavlan går före. Tack et05hk6 (#61).
+
 ## 0.18.0
 
 - **Bilagor till läxor och uppgifter syns på tavlan.** Läxpappret från Vklass (PDF, Word eller bild) visas direkt i händelsen och uppgiften, så att man inte behöver gå in i Vklass. En PDF visas som hel sida med sidbyte, och ett tryck öppnar den i helskärm för att läsa. Ett Word-dokument görs om till PDF på tavlan (med webbläsaren som redan finns i imagen) och visas på samma sätt, med reserv som läsbar sida. Varje bilaga har **Öppna** och **Ladda ner** (Word både som PDF och som original).

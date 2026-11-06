@@ -986,6 +986,7 @@ function CalendarEditor({
             { value: "sport", label: "Sport/aktivitet" },
             { value: "school", label: "Skola" },
             { value: "work", label: "Jobb" },
+            { value: "dinner", label: "Middag (veckans meny)" },
             { value: "other", label: "Övrigt" },
           ]}
         />
