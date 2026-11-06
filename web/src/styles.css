@@ -5223,7 +5223,7 @@ html:not([data-design="flat"]) .wk-kind {
 }
 
 /* Inget nypa-zoom på surfplatta: en inzoomad tavla skärs av i kanten och går att dra i sidled. */
-@media (min-width: 700px) {
+@media (min-width: 600px) and (min-height: 600px) {
   html {
     touch-action: pan-x pan-y;
   }

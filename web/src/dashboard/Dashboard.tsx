@@ -1037,7 +1037,8 @@ export function Dashboard() {
   const flat = design === "flat" && (theme === "light" || theme === "dark");
   // On a tablet the board never scrolls: lock the page so it cannot be dragged around (a home-screen app on an iPad can otherwise be pulled in any direction).
   useEffect(() => {
-    if (window.innerWidth < 700) return;
+    // A real tablet only (both sides at least 600 px): a phone on its side still scrolls above the tab bar.
+    if (Math.min(window.innerWidth, window.innerHeight) < 600) return;
     const el = document.documentElement;
     el.classList.add("board-lock");
     return () => el.classList.remove("board-lock");
