@@ -1,11 +1,12 @@
 import type { Dashboard } from "../../../server/src/types";
 import { Icon } from "../Icon";
 import { Fit } from "../dashboard/Fit";
+import type { BoxProps } from "../boxprefs";
 import type { WidgetModule } from "./types";
 
 /** Today's school lunch per child (tomorrow's after 14) and tonight's dinner – big enough for the kids. */
 /** `fit`: the new start page lets the content shrink to the card instead of overflowing it. */
-export function Meals({ data, fit = false }: { data: Dashboard; fit?: boolean }) {
+export function Meals({ data, fit = false, box }: { data: Dashboard; fit?: boolean; box?: BoxProps }) {
   const h = new Date().getHours();
   const start = h >= 14 ? 1 : 0;
   // The next school day with a menu: after Friday lunch that is Monday.
@@ -13,10 +14,10 @@ export function Meals({ data, fit = false }: { data: Dashboard; fit?: boolean })
   const dinnerDay = h < 20 ? data.meals[0] : data.meals[1];
   const dinner = dinnerDay?.dinner;
   if (!lunch && !dinner) return null;
-  const wrap = (body: React.ReactNode) => (fit ? <Fit className="hf-fit" deps={[data]}>{body}</Fit> : body);
+  const wrap = (body: React.ReactNode) => (fit ? <Fit className="hf-fit" deps={[data]} base={box?.base}>{body}</Fit> : body);
   const when = (label: string) => (label === "idag" || label === "imorgon" ? label : `på ${label.split(" ")[0]}`);
   return (
-    <section className="card meals-card">
+    <section className={`card meals-card ${box?.className ?? ""}`} style={box?.style} {...box?.handlers}>
       <h2>Maten</h2>
       {wrap(<>
       {lunch && (

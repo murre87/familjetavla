@@ -143,3 +143,51 @@ describe("text med tabellrader", () => {
     expect(textBlocks("")).toEqual([]);
   });
 });
+
+import { BOX_SIZE_MAX, BOX_SIZE_MIN, boxSpans, normalizePref, parsePrefs, passesShow, withPref } from "./boxprefs.js";
+describe("rutinställningar (håll in en ruta)", () => {
+  it("rensar och begränsar värden, och lämnar standard utanför", () => {
+    expect(normalizePref({ size: 1 })).toEqual({});
+    expect(normalizePref({ size: 9 }).size).toBe(BOX_SIZE_MAX);
+    expect(normalizePref({ size: 0.1 }).size).toBe(BOX_SIZE_MIN);
+    expect(normalizePref({ size: 1.23 }).size).toBe(1.25);
+    expect(normalizePref({ density: "kaos", days: 99, people: [], show: "alla", hidden: false })).toEqual({ days: 8 });
+    expect(normalizePref({ days: 1 }).days).toBe(3);
+    expect(normalizePref({ people: ["Esther", 7, ""], hidden: true })).toEqual({ people: ["Esther"], hidden: true });
+    expect(normalizePref(null)).toEqual({});
+  });
+  it("läser sparade inställningar och tål trasig text", () => {
+    expect(parsePrefs(null)).toEqual({});
+    expect(parsePrefs("{trasig")).toEqual({});
+    expect(parsePrefs(JSON.stringify({ vecka: { days: 5, show: "tasks" }, okänd: { size: 2 }, nu: { size: 1 } }))).toEqual({ vecka: { days: 5, show: "tasks" } });
+  });
+  it("ändrar en ruta i taget och tar bort den när inget är kvar", () => {
+    let p = withPref({}, "vecka", { days: 5 });
+    p = withPref(p, "vecka", { show: "activities" });
+    expect(p).toEqual({ vecka: { days: 5, show: "activities" } });
+    p = withPref(p, "vecka", { days: undefined });
+    expect(p).toEqual({ vecka: { show: "activities" } });
+    p = withPref(p, "nu", { hidden: true });
+    expect(Object.keys(p).sort()).toEqual(["nu", "vecka"]);
+    expect(withPref(p, "vecka", null)).toEqual({ nu: { hidden: true } });
+    expect(withPref({ nu: { hidden: true } }, "nu", { hidden: false })).toEqual({});
+  });
+  it("delar upp 12 kolumner efter vikt, alltid summa 12", () => {
+    const sum = (s: Record<string, number | undefined>) => Object.values(s).reduce((a, b) => a! + b!, 0);
+    expect(boxSpans([{ id: "nu", w: 5 }, { id: "idag", w: 3 }, { id: "mat", w: 4 }])).toEqual({ nu: 5, idag: 3, mat: 4 });
+    expect(boxSpans([{ id: "idag", w: 3 }, { id: "mat", w: 4 }])).toEqual({ idag: 5, mat: 7 });
+    expect(boxSpans([{ id: "mat", w: 4 }])).toEqual({ mat: 12 });
+    expect(boxSpans([])).toEqual({});
+    for (const items of [[5, 3, 4], [5, 3], [3, 4], [1, 1, 1], [7, 1, 1]]) expect(sum(boxSpans(items.map((w, i) => ({ id: (["nu", "idag", "mat"] as const)[i]!, w }))))).toBe(12);
+  });
+  it("visar bara läxor eller bara träningar och matcher när det är valt", () => {
+    const sport = { category: "sport" };
+    const other = { category: "family" };
+    expect(passesShow(undefined, other, false)).toBe(true);
+    expect(passesShow("tasks", other, true)).toBe(true);
+    expect(passesShow("tasks", sport, false)).toBe(false);
+    expect(passesShow("activities", sport, false)).toBe(true);
+    expect(passesShow("activities", other, false)).toBe(false);
+    expect(passesShow("activities", sport, true)).toBe(false);
+  });
+});

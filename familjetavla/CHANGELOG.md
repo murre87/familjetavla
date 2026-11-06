@@ -1,5 +1,17 @@
 # Ändringar
 
+## 0.21.0
+
+- **Ställ in varje ruta för sig.** Håll fingret en stund på en ruta på startsidan (Nu, Idag, Maten, Veckan, raden längst ner) eller på veckan i personvyn, så öppnas inställningar för just den rutan på just den skärmen:
+  - **Textstorlek** – större eller mindre text. Texten blir så stor som rutan har plats för, så inget hamnar utanför.
+  - **Täthet** – kompakt, normal eller luftig.
+  - **Antal dagar** i veckan (3–7 eller alla).
+  - **Visa** allt, bara läxor eller bara träningar och matcher.
+  - **Personer** – vilka som syns i veckan.
+  - **Dölj rutan.** De andra rutorna i raden breddas. Under **Aa → Rutor** får du tillbaka dolda rutor och kan återställa alla.
+  
+  Färre dagar eller en dold ruta ger mer plats, och då kan texten bli större. Veckan går inte att dölja.
+
 ## 0.20.1
 
 - **Bilagor öppnas i tavlan och du kommer alltid tillbaka.** "Öppna" tog dig tidigare bort från tavlan till själva filen, och på en iPad i helskärmsläge finns då ingen knapp tillbaka. Nu öppnas PDF, Word (som PDF) och bilder i en helskärmsvy med en tydlig **Stäng**. **Ladda ner** använder iPadens delningsruta ("Spara i Filer") så att du inte lämnar tavlan.

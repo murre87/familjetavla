@@ -5,6 +5,9 @@ import { navigate } from "../route";
 import { Avatar } from "./bits";
 import { PageBar, TaskSheet, type Task } from "./Detail";
 import { Fit } from "./Fit";
+import { BoxSheet } from "./BoxSheet";
+import { boxClass, useBoxPrefs } from "../boxprefs";
+import { useLongPress } from "../longpress";
 
 // "Personvyn": tryck på ett namn i toppen och se allt som gäller just den personen de kommande sju dagarna –
 // skolans start och sluttid, gympadagar, läxor och prov, träningar och matcher (med tider och skjuts) samt maten.
@@ -31,10 +34,16 @@ const KIND_LABEL: Record<string, string> = { läxa: "Läxa", prov: "Prov", inlä
 
 export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; personId: string; onOpenEvent?: (e: DashEvent & { dayLabel?: string }) => void }) {
   const [openTask, setOpenTask] = useState<Task | null>(null);
+  const [sheet, setSheet] = useState(false);
+  // Hold the week for its own settings (text size, days, only homework / activities, density) on this screen.
+  const { prefs } = useBoxPrefs();
+  const pref = prefs.person;
+  const hold = useLongPress(() => setSheet(true));
   const person = data.people.find((p) => p.id === personId);
   const kid = (data.school ?? []).find((k) => k.personId === personId);
-  const days = data.days;
-  const shown = useMemo(() => new Set(days.map((d) => d.key)), [days]);
+  const show = pref?.show;
+  const chosen = useMemo(() => (pref?.days ? data.days.slice(0, pref.days) : data.days), [data.days, pref?.days]);
+  const shown = useMemo(() => new Set(chosen.map((d) => d.key)), [chosen]);
   if (!person) {
     return (
       <main className="detail-page">
@@ -43,7 +52,12 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
       </main>
     );
   }
-  const later = (kid?.tasks ?? []).filter((t) => !shown.has(t.dayKey)).slice(0, 6);
+  // Homework on days that are not shown (fewer days chosen) moves to "Längre fram" instead of vanishing.
+  // "Show only …": days with nothing of that kind give their room to the others (today always stays).
+  const hasHit = (d: (typeof chosen)[number]) =>
+    show === "tasks" ? (kid?.tasks ?? []).some((t) => t.dayKey === d.key) : personEvents(d.events, person).mine.some((e) => e.category === "sport");
+  const days = show ? chosen.filter((d) => d.isToday || hasHit(d)) : chosen;
+  const later = show === "activities" ? [] : (kid?.tasks ?? []).filter((t) => !shown.has(t.dayKey)).slice(0, 6);
   return (
     <main className="detail-page person-page">
       <PageBar title={`${person.name}s vecka`} />
@@ -54,17 +68,19 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
           </button>
         ))}
       </div>
-      <Fit className="detail-body person-fit" deps={[data, personId]} min={0.55}>
-      <div className="person-days">
+      <Fit className="detail-body person-fit" deps={[data, personId, pref]} min={0.55} base={pref?.size}>
+      <div className={`person-days ${boxClass(pref)}`} {...hold}>
         {days.map((d) => {
-          const { mine: allEvents, family: famEvents } = personEvents(d.events, person);
+          const { mine: allEvents, family: allFam } = personEvents(d.events, person);
           const sd = kid?.days.find((x) => x.dayKey === d.key);
-          const span = sd ? schoolSpan(sd.lessons) : null;
+          // "Bara läxor" shows only the school's tasks, "Bara träningar och matcher" only sport: nothing else that day.
+          const span = sd && !show ? schoolSpan(sd.lessons) : null;
           const gym = sd?.lessons.some((l) => l.gym);
-          const tasks = (kid?.tasks ?? []).filter((t) => t.dayKey === d.key);
+          const tasks = show === "activities" ? [] : (kid?.tasks ?? []).filter((t) => t.dayKey === d.key);
           // A homework that is also an all-day item in the calendar is shown once (as the homework).
-          const events = allEvents.filter((e) => !tasks.some((t) => t.title === e.title));
-          const meal = (data.meals ?? []).find((m) => m.dayKey === d.key);
+          const events = show === "tasks" ? [] : allEvents.filter((e) => !tasks.some((t) => t.title === e.title) && (show !== "activities" || e.category === "sport"));
+          const famEvents = show ? [] : allFam;
+          const meal = show ? undefined : (data.meals ?? []).find((m) => m.dayKey === d.key);
           const lunch = meal?.lunch.filter((l) => !l.child || l.child === person.name) ?? [];
           const dinnerTwice = Boolean(meal?.dinner && famEvents.some((e) => e.title === `Middag: ${meal.dinner}`));
           const empty = !span && !events.length && !famEvents.length && !tasks.length && !lunch.length;
@@ -153,6 +169,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
           ))}
         </section>
       )}
+      {sheet && <BoxSheet id="person" onClose={() => setSheet(false)} />}
       {openTask && <TaskSheet task={openTask} child={person.name} onClose={() => setOpenTask(null)} />}
     </main>
   );

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
+import { BOX_TITLE, HIDEABLE } from "./BoxSheet";
+import { useBoxPrefs } from "../boxprefs";
 import { SCALE_MAX, SCALE_MIN, getDesignOverride, readScale, saveScale, screensaverOff, setDesignOverride, setScreensaverOff, type Design } from "../uiscale";
 
 const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
@@ -12,6 +14,9 @@ export function ScaleSheet({ onClose }: { onClose: () => void }) {
   const [design, setDesign] = useState<Design | null>(getDesignOverride);
   const set = (v: number) => setZ(saveScale(v));
   const pct = Math.round(z * 100);
+  const { prefs, setPref, resetAll } = useBoxPrefs();
+  const hiddenBoxes = HIDEABLE.filter((id) => prefs[id]?.hidden);
+  const anyBoxPrefs = Object.keys(prefs).length > 0;
   return createPortal(
     <div className="overlay" onClick={onClose}>
       <div className="sheet scale-sheet" role="dialog" aria-modal="true" aria-label="Skärm" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
@@ -61,6 +66,26 @@ export function ScaleSheet({ onClose }: { onClose: () => void }) {
               </button>
             ))}
           </div>
+        </div>
+        <div className="design-row boxes-row">
+          <b>Rutor</b>
+          <small className="muted">Håll fingret på en ruta en stund för att ändra just den: textstorlek, täthet, antal dagar, vad som visas eller dölja den.</small>
+          {hiddenBoxes.length > 0 && (
+            <div className="seg-btns">
+              {hiddenBoxes.map((id) => (
+                <button key={id} className="btn small" onClick={() => setPref(id, { hidden: undefined })}>
+                  Visa {BOX_TITLE[id].toLowerCase()}
+                </button>
+              ))}
+            </div>
+          )}
+          {anyBoxPrefs && (
+            <div>
+              <button className="btn small" onClick={resetAll}>
+                Återställ alla rutor
+              </button>
+            </div>
+          )}
         </div>
         <label className="saver-row">
           <input

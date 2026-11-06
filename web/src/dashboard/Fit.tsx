@@ -23,6 +23,7 @@ export function Fit({
   deps = [],
   more,
   min = MIN,
+  base = 1,
 }: {
   className?: string;
   children: React.ReactNode;
@@ -30,6 +31,8 @@ export function Fit({
   more?: (hidden: number) => React.ReactNode;
   /** Smallest scale for this area; where items can be hidden behind "+N", keep text bigger. */
   min?: number;
+  /** Wanted text size (0.7–1.6): starts here and shrinks only if the box is too small, so it never overflows. */
+  base?: number;
 }) {
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
@@ -59,6 +62,7 @@ export function Fit({
         };
         const height = () => i.offsetHeight * scale;
         if (avail) {
+          if (base !== 1) apply(base);
           let h = height();
           // Scaling changes line breaks, so measure again and adjust once more.
           // (A few more passes and a hair of margin: text re-wraps as it shrinks, so one step rarely lands exactly.)
@@ -67,9 +71,9 @@ export function Fit({
             h = height();
           }
           // Text re-wraps as it shrinks, so the first fit is often smaller than needed: find the largest scale that still fits.
-          if (h <= avail + 1 && scale < 1) {
+          if (h <= avail + 1 && scale < base) {
             let good = scale;
-            let bad = 1;
+            let bad = base;
             for (let k = 0; k < 6; k++) {
               const mid = (good + bad) / 2;
               apply(mid);
@@ -118,7 +122,7 @@ export function Fit({
       window.removeEventListener("resize", fit);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, base]);
   return (
     <div ref={outer} className={`fit ${className}`}>
       <div ref={inner} className="fit-inner">

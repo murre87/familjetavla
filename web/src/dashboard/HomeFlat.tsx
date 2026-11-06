@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useState, type CSSProperties } from "react";
 import { Fit } from "./Fit";
 import type { Dashboard } from "../../../server/src/types";
 import { api } from "../api";
@@ -7,7 +7,11 @@ import { Meals } from "../widgets/meals";
 import type { Actions } from "./Dashboard";
 import { Avatar, travelText } from "./bits";
 import { insideGroups, setGroups } from "./lightGroups";
-import { Week } from "./Home";
+import { Week, weekColumns } from "./Home";
+import { BoxSheet } from "./BoxSheet";
+import { boxClass, useBoxPrefs, type BoxProps } from "../boxprefs";
+import { useLongPress } from "../longpress";
+import { boxSpans, type BoxId } from "../../../server/src/boxprefs";
 
 const SKY_LABEL: Record<string, string> = { clear: "Klart", partly: "Halvklart", cloudy: "Mulet", rain: "Regn", snow: "Snö", fog: "Dimma" };
 const REMINDER_ICON: Record<string, IconName> = { rain: "umbrella", bag: "bag", gym: "gym", trash: "trash", kids: "kids", info: "info", school: "school", food: "food" };
@@ -16,14 +20,14 @@ const REMINDER_ICON: Record<string, IconName> = { rain: "umbrella", bag: "bag", 
 const shortTemp = (n: string) => n.replace(/^Smartbox\s*/i, "").replace(/\s*temperatur$/i, "").trim() || n;
 
 /** What is next, as at most two plain rows: time, what, where, who. */
-function Nu({ data, actions }: { data: Dashboard; actions: Actions }) {
+function Nu({ data, actions, box }: { data: Dashboard; actions: Actions; box: BoxProps }) {
   const rows = data.now.items.slice(0, 2);
   return (
-    <section className="card hf-now" aria-label="Nu">
+    <section className={`card hf-now ${box.className}`} style={box.style} aria-label="Nu" {...box.handlers}>
       <div className="hf-label">
         Nu{data.now.headline ? <span> · {data.now.headline}</span> : null}
       </div>
-      <Fit className="hf-fit" deps={[data]}>
+      <Fit className="hf-fit" deps={[data]} base={box.base}>
       {rows.length === 0 && <div className="hf-empty">Inget det närmaste.</div>}
       {rows.map((e, i) => (
         <button key={i} className="hf-row" onClick={() => actions.openEvent(e)}>
@@ -46,14 +50,14 @@ function Nu({ data, actions }: { data: Dashboard; actions: Actions }) {
 }
 
 /** Weather and the one or two things worth remembering today. */
-function Idag({ data, actions }: { data: Dashboard; actions: Actions }) {
+function Idag({ data, actions, box }: { data: Dashboard; actions: Actions; box: BoxProps }) {
   const { header } = data;
   // Care times and the dinner are already in Nu, the week and Maten.
   // The waste has its own line below.
   const tips = data.reminders.filter((r) => r.icon !== "kids" && r.icon !== "trash" && !(r.icon === "food" && r.tone === "neutral")).slice(0, 1);
   return (
-    <section className="card hf-idag" aria-label="Idag">
-      <Fit className="hf-fit" deps={[data]}>
+    <section className={`card hf-idag ${box.className}`} style={box.style} aria-label="Idag" {...box.handlers}>
+      <Fit className="hf-fit" deps={[data]} base={box.base}>
       <div className="hf-weather">
         {header.tempNow !== undefined && (
           <span className="hf-temp num">
@@ -105,7 +109,7 @@ function Idag({ data, actions }: { data: Dashboard; actions: Actions }) {
 }
 
 /** Temperature, lights and music in one row at the bottom: small buttons that open their own tab. */
-function Teknik({ data, actions }: { data: Dashboard; actions: Actions }) {
+function Teknik({ data, actions, box }: { data: Dashboard; actions: Actions; box: BoxProps }) {
   const lamps = new Map([...data.lights, ...data.lightGroups.flatMap((g) => g.lamps)].map((l) => [l.entityId, l]));
   const total = [...lamps.values()].filter((l) => !l.offline).length;
   const on = [...lamps.values()].filter((l) => l.on).length;
@@ -113,8 +117,8 @@ function Teknik({ data, actions }: { data: Dashboard; actions: Actions }) {
   const transport = (action: "play_pause" | "next" | "previous", label: string) => sp && actions.run(label, () => api.musicTransport(sp.entityId, action), { done: label, check: () => true });
   if (!data.temps.length && !total && !sp) return null;
   return (
-    <div className="hf-tech-wrap">
-    <Fit className="hf-fit hf-tech-fit" deps={[data]}>
+    <div className={`hf-tech-wrap ${box.className}`} style={box.style} {...box.handlers}>
+    <Fit className="hf-fit hf-tech-fit" deps={[data]} base={box.base}>
     <div className="hf-tech">
       {data.temps.slice(0, 3).map((t) => (
         <button key={t.name} className="hf-pill" onClick={() => actions.openTab("house")}>
@@ -183,13 +187,36 @@ function Teknik({ data, actions }: { data: Dashboard; actions: Actions }) {
 
 /** The new start page: a fixed grid, one line per thing, technology in a row at the bottom. */
 export function HomeFlat({ data, actions }: { data: Dashboard; actions: Actions }) {
+  const { prefs } = useBoxPrefs();
+  const [sheet, setSheet] = useState<BoxId | null>(null);
+  // One hold-to-open handler set per box (hooks cannot be made in a loop, so they are listed).
+  const hold: Record<BoxId, ReturnType<typeof useLongPress>> = {
+    nu: useLongPress(() => setSheet("nu")),
+    idag: useLongPress(() => setSheet("idag")),
+    mat: useLongPress(() => setSheet("mat")),
+    vecka: useLongPress(() => setSheet("vecka")),
+    teknik: useLongPress(() => setSheet("teknik")),
+    person: useLongPress(() => setSheet("person")),
+  };
+  // The top row shares its 12 columns between the boxes that are shown.
+  const spans = boxSpans(([["nu", 5], ["idag", 3], ["mat", 4]] as [BoxId, number][]).filter(([id]) => !prefs[id]?.hidden).map(([id, w]) => ({ id, w })));
+  const box = (id: BoxId): BoxProps => ({
+    className: boxClass(prefs[id]),
+    // A variable, not grid-column itself: an inline grid-column would beat the phone layout (one box per row).
+    style: spans[id] ? ({ "--span": spans[id] } as CSSProperties) : undefined,
+    handlers: hold[id] as unknown as Record<string, unknown>,
+    base: prefs[id]?.size,
+  });
+  const all = data.people.map((p) => p.name);
+  const names = weekColumns(data).filter((c) => !c.family).map((c) => c.name);
   return (
     <main className="hf">
-      <Nu data={data} actions={actions} />
-      <Idag data={data} actions={actions} />
-      <Week data={data} actions={actions} />
-      <Meals data={data} fit />
-      <Teknik data={data} actions={actions} />
+      {!prefs.nu?.hidden && <Nu data={data} actions={actions} box={box("nu")} />}
+      {!prefs.idag?.hidden && <Idag data={data} actions={actions} box={box("idag")} />}
+      <Week data={data} actions={actions} box={box("vecka")} pref={prefs.vecka} />
+      {!prefs.mat?.hidden && <Meals data={data} fit box={box("mat")} />}
+      {!prefs.teknik?.hidden && <Teknik data={data} actions={actions} box={box("teknik")} />}
+      {sheet && <BoxSheet id={sheet} names={names} all={all} onClose={() => setSheet(null)} />}
     </main>
   );
 }
