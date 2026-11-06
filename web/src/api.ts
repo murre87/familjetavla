@@ -181,6 +181,7 @@ const realApi = {
   backup: (password?: string) => post<unknown>("backup", { password }),
   restore: (backup: unknown, password?: string) => post<{ ok: true; secrets: boolean }>("restore", { backup, password }),
   setSick: (personId: string, date: string, sick: boolean) => post<{ ok: true }>("sick", { personId, date, sick }),
+  setLeave: (personId: string, from: string, to: string, on: boolean) => post<{ ok: true }>("leave", { personId, from, to, on }),
   newsSeen: (ids: string[]) => post<{ ok: true }>("news/seen", { ids }),
   addOwnEvent: (e: { date: string; time?: string; end?: string; title: string; personId?: string; note?: string }) => post<{ id: string }>("own-events", e),
   cancelEvent: (key: string, on: boolean) => post("events/cancel", { key, on }),

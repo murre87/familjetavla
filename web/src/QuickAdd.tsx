@@ -10,7 +10,7 @@ import { navigate } from "./route";
  * to buy, and it is on the board at once. Save it to the home screen for a one-tap shortcut.
  */
 export function QuickAdd({ people }: { people: Person[] }) {
-  const [tab, setTab] = useState<"event" | "shop" | "sick">("event");
+  const [tab, setTab] = useState<"event" | "shop" | "sick" | "leave">("event");
   const kids = people.filter((p) => p.kind === "child");
   // The phone's own light/dark, unless the board's theme button was used on this device.
   useEffect(() => {
@@ -47,8 +47,13 @@ export function QuickAdd({ people }: { people: Person[] }) {
             <Icon name="health" size={20} /> Sjuk
           </button>
         )}
+        {kids.length > 0 && (
+          <button className={`seg-btn ${tab === "leave" ? "on" : ""}`} role="tab" aria-selected={tab === "leave"} onClick={() => setTab("leave")}>
+            <Icon name="calendar" size={20} /> Lov
+          </button>
+        )}
       </div>
-      {tab === "event" ? <EventForm people={people} onAdded={added} /> : tab === "shop" ? <ShopForm onAdded={added} /> : <SickForm kids={kids} onAdded={added} />}
+      {tab === "event" ? <EventForm people={people} onAdded={added} /> : tab === "shop" ? <ShopForm onAdded={added} /> : tab === "leave" ? <LeaveForm kids={kids} onAdded={added} /> : <SickForm kids={kids} onAdded={added} />}
       {done.length > 0 && (
         <section className="card qa-done" aria-live="polite">
           {done.map((t, i) => (
@@ -275,6 +280,65 @@ function SickForm({ kids, onAdded }: { kids: Person[]; onAdded: (t: string) => v
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Lov: the children are off school for some days or weeks – school and pick-up/drop-off go, the training stays. */
+function LeaveForm({ kids, onAdded }: { kids: Person[]; onAdded: (t: string) => void }) {
+  const today = iso(new Date());
+  const [who, setWho] = useState<string[]>(kids.map((k) => k.id));
+  const [from, setFrom] = useState(today);
+  const [to, setTo] = useState(today);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const toggle = (id: string) => setWho((w) => (w.includes(id) ? w.filter((x) => x !== id) : [...w, id]));
+  const apply = async (on: boolean) => {
+    setError("");
+    setBusy(true);
+    try {
+      for (const id of who) await api.setLeave(id, from, to < from ? from : to, on);
+      const names = kids.filter((k) => who.includes(k.id)).map((k) => k.name).join(" och ");
+      const range = to > from ? `${dayLabel(from)} till ${dayLabel(to)}` : dayLabel(from);
+      onAdded(on ? `${names} har lov ${range}` : `Lov borttaget för ${names} ${range}`);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="card stack">
+      <div className="field">
+        <span>Vem har lov?</span>
+        <div className="seg">
+          {kids.map((k) => (
+            <button type="button" key={k.id} className={`seg-btn ${who.includes(k.id) ? "on" : ""}`} aria-pressed={who.includes(k.id)} onClick={() => toggle(k.id)}>
+              {k.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="grid-2">
+        <label className="field">
+          <span>Från</span>
+          <input type="date" value={from} onChange={(e) => (setFrom(e.target.value), e.target.value > to && setTo(e.target.value))} />
+        </label>
+        <label className="field">
+          <span>Till och med</span>
+          <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </label>
+      </div>
+      <p className="muted" style={{ margin: 0 }}>
+        Skola, förskola och fritids utgår de dagarna, så ingen behöver lämna eller hämta. Träningar och matcher finns kvar.
+      </p>
+      {error && <p className="error-text">{error}</p>}
+      <button className="btn primary big" disabled={!who.length || !from || busy} onClick={() => void apply(true)}>
+        Lägg till lov
+      </button>
+      <button className="btn" disabled={!who.length || !from || busy} onClick={() => void apply(false)}>
+        Ta bort lov de här dagarna
+      </button>
     </div>
   );
 }

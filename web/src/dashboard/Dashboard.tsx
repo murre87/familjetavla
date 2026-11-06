@@ -627,6 +627,19 @@ function EventSheet({
           )}
           {e.description && <EventText text={e.description} />}
           <Attachments files={e.files} />
+          {e.leave && (
+            <button
+              className="btn small ghost"
+              style={{ alignSelf: "flex-start" }}
+              onClick={async () => {
+                await api.setLeave(e.leave!.personId, e.leave!.date, e.leave!.date, false);
+                await onChanged();
+                onClose();
+              }}
+            >
+              <Icon name="x" size={18} /> Ta bort lov den här dagen
+            </button>
+          )}
           {e.sick && (
             <button
               className={`btn small ${e.sick.on ? "" : "ghost"}`}

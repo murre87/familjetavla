@@ -247,6 +247,8 @@ export interface LocalFile {
   ownEvents?: OwnEvent[];
   /** Sjuk/VAB per barn: dagar (YYYY-MM-DD) då förskola, skola och aktiviteter stryks. */
   sick?: Record<string, string[]>;
+  /** Lov/ledigt per barn: dagar (YYYY-MM-DD) då skola, förskola och hämtning/lämning utgår (träningar finns kvar). */
+  leave?: Record<string, string[]>;
 }
 
 export interface OwnEvent {

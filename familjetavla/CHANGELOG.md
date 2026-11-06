@@ -1,5 +1,10 @@
 # Ändringar
 
+## 0.20.0
+
+- **Lov.** Ny flik **Lov** under "Lägg till på tavlan": välj barnen och från–till-datum, så utgår skola, förskola, fritids och hämtning/lämning de dagarna, medan träningar och matcher finns kvar. Dagarna märks "Lov – ledig" och går att ta bort från händelsen. Tack Freland (#52).
+- **Egna entiteter.** I alla val av entitet (bil, laddning, värmestart, sensorer m.fl.) går det nu att skriva en egen `entity_id` om sökningen inte hittar den, till exempel en egen `input_boolean` eller `switch`. Tack Carlin75 (#62).
+
 ## 0.19.0
 
 - **Skolmat från Home Assistant visas inte längre dubbelt.** Skolmat-integrationen skickar samma rätter både i rubriken och i beskrivningen ("A | B" och "[Lunch] • A • B"), och tavlan visade bägge. Nu visas varje rätt en gång. Tack frelev (#60).

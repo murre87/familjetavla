@@ -428,6 +428,8 @@ export interface DashEvent {
   cancelKey?: string;
   /** Barnets händelse: kan markeras sjuk den dagen (on = det här är "Sjuk"-markeringen). */
   sick?: { personId: string; date: string; on: boolean };
+  /** Lov-markeringen för ett barn och en dag: kan tas bort från händelsen. */
+  leave?: { personId: string; date: string };
   description?: string;
   /** Bilagor (läxpapper som PDF eller bild) från skolplattformen, hämtade via tavlans egen filväg. */
   files?: { name: string; url: string }[];

@@ -14,7 +14,7 @@ import { ha, haConnection, type HaState } from "./connectors/ha.js";
 import { buildMusic } from "./music.js";
 import { libraryName } from "./musicAssistant.js";
 import { haSocket } from "./connectors/haws.js";
-import { applySick, loadSick } from "./sick.js";
+import { applyLeave, applySick, loadLeave, loadSick } from "./sick.js";
 import { coldestBetween, forecast, rainBetween, skyNow, sunToday, tempNow, weatherSummary, type Forecast } from "./connectors/weather.js";
 import { careTimesFor, custodyStatus, isHome } from "./custody.js";
 import {
@@ -179,8 +179,8 @@ function toDash(ev: SourcedEvent, people: Map<string, Person>, travel?: TravelCt
     description: cleanDescription(ev.description, ev.title),
     // The homework sheet of a school task (PDF or picture) opens right in the event's sheet.
     ...(boardFiles(ev.files) ? { files: boardFiles(ev.files) } : {}),
-    ...(ev.sourceId === "own" && ev.uid ? { ownId: ev.uid } : ev.sourceId !== "sick" ? { cancelKey: travelKey(ev) } : {}),
-    ...(p?.kind === "child" ? { sick: { personId: p.id, date: dayKey(ev.start), on: ev.sourceId === "sick" } } : {}),
+    ...(ev.sourceId === "own" && ev.uid ? { ownId: ev.uid } : ev.sourceId !== "sick" && ev.sourceId !== "leave" ? { cancelKey: travelKey(ev) } : {}),
+    ...(p?.kind === "child" && ev.sourceId === "leave" ? { leave: { personId: p.id, date: dayKey(ev.start) } } : p?.kind === "child" ? { sick: { personId: p.id, date: dayKey(ev.start), on: ev.sourceId === "sick" } } : {}),
   };
 }
 
@@ -264,7 +264,9 @@ export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[]
   // A sick child's förskola, lessons and training are struck that day (one "Sjuk" marker instead).
   const sick = loadSick();
   const withCare = applySick([...all, ...careEvents], sick);
-  return { people, children, all: applySick(all, sick).kept, withCare: withCare.kept, hiddenSick: withCare.hidden, travelCtx, calendarDinners, schoolFood: school.food, schoolNews: school.news };
+  // Lov: school and pick-up/drop-off go on those days, the training stays.
+  const leave = loadLeave();
+  return { people, children, all: applyLeave(applySick(all, sick).kept, leave), withCare: applyLeave(withCare.kept, leave), hiddenSick: withCare.hidden, travelCtx, calendarDinners, schoolFood: school.food, schoolNews: school.news };
 }
 
 /** `allReminders`: the morning notification wants every reminder, the board shows the first five. */

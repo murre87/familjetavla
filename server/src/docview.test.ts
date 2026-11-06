@@ -90,3 +90,28 @@ describe("middag från en kalender (issue 61: Paprika)", () => {
     expect(dinnersFromEvents([{ title: "  ", start: d(9) }, { title: "Middag:", start: d(9) }])).toEqual({});
   });
 });
+
+import { applyLeave, expandDays } from "./sick.js";
+import type { SourcedEvent } from "./sources.js";
+describe("lov (issue 52)", () => {
+  const ev = (over: Partial<SourcedEvent>): SourcedEvent => ({ sourceId: "x", title: "t", start: new Date(2026, 10, 9, 8), end: new Date(2026, 10, 9, 9), allDay: false, category: "family", personId: "k1", ...over }) as SourcedEvent;
+  it("tar bort skola, förskola och hämtning men låter träningen vara kvar, och lägger in ett Lov-märke", () => {
+    const out = applyLeave(
+      [ev({ title: "Matte", sourceId: "school:a", category: "school" }), ev({ title: "Fritids", sourceId: "care:k1", category: "school" }), ev({ title: "Träning", sourceId: "cal", category: "sport" }), ev({ title: "Skola andra dagen", sourceId: "school:a", category: "school", start: new Date(2026, 10, 10, 8), end: new Date(2026, 10, 10, 9) })],
+      { k1: ["2026-11-09"] },
+    );
+    expect(out.map((e) => e.title).sort()).toEqual(["Lov – ledig", "Skola andra dagen", "Träning"]);
+    expect(out.find((e) => e.title === "Lov – ledig")?.sourceId).toBe("leave");
+  });
+  it("rör inte ett annat barns dagar", () => {
+    const out = applyLeave([ev({ title: "Matte", sourceId: "school:a", category: "school", personId: "k2" })], { k1: ["2026-11-09"] });
+    expect(out.map((e) => e.title).sort()).toEqual(["Lov – ledig", "Matte"]);
+  });
+  it("gör ett datumspann till dagar, högst 60, och en bakvänd period blir en dag", () => {
+    expect(expandDays("2026-11-09", "2026-11-11")).toEqual(["2026-11-09", "2026-11-10", "2026-11-11"]);
+    expect(expandDays("2026-11-09", "2026-11-09")).toEqual(["2026-11-09"]);
+    expect(expandDays("2026-11-09", "2026-11-01")).toEqual(["2026-11-09"]);
+    expect(expandDays("2026-11-01", "2027-03-01")).toHaveLength(60);
+    expect(expandDays("2026-10-30", "2026-11-02")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02"]);
+  });
+});

@@ -154,6 +154,7 @@ export function EntityPicker({
   const [error, setError] = useState("");
   const [q, setQ] = useState("");
   const [every, setEvery] = useState(false);
+  const [own, setOwn] = useState("");
   // Sensors that answer with a value first, those saying "unknown"/"unavailable" last.
   const all = useMemo(() => {
     const fits = units && !every ? loaded.filter((e) => units.test(e.unit ?? "") || e.entityId === value) : loaded;
@@ -184,6 +185,8 @@ export function EntityPicker({
         }}
       >
         {optional && <option value="">– Ingen –</option>}
+        {/* An entity typed in by hand is not in the list: keep it selected (and visible). */}
+        {value && !shown.some((e) => e.entityId === value) && <option value={value}>{value} (egen)</option>}
         {shown.slice(0, 300).map((e) => (
           <option key={e.entityId} value={e.entityId}>
             {e.name} · {e.state}
@@ -191,6 +194,33 @@ export function EntityPicker({
           </option>
         ))}
       </select>
+      <details className="entity-own">
+        <summary>Hittar du inte din? Skriv egen entity_id</summary>
+        <div className="row gap" style={{ marginTop: 6 }}>
+          <input
+            className="grow"
+            placeholder="t.ex. input_boolean.keba_ladda"
+            value={own}
+            onChange={(e) => setOwn(e.target.value.trim().toLowerCase())}
+            aria-label={`Egen entity_id för ${label}`}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            className="btn small"
+            disabled={!/^[a-z0-9_]+\.[a-z0-9_]+$/.test(own)}
+            onClick={() => {
+              onChange(own, undefined);
+              setOwn("");
+            }}
+          >
+            Använd
+          </button>
+        </div>
+        {own && !/^[a-z0-9_]+\.[a-z0-9_]+$/.test(own) && <small className="faint">Formatet är domän.namn, till exempel switch.min_laddare.</small>}
+      </details>
       {units && loaded.length > all.length && (
         <button type="button" className="btn small ghost" style={{ alignSelf: "flex-start" }} onClick={() => setEvery(!every)}>
           {every ? "Visa bara de som passar" : `Visa alla (${loaded.length})`}
