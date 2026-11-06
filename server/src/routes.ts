@@ -47,7 +47,7 @@ import {
 } from "./store.js";
 import { readFileSync } from "node:fs";
 import { addDays, dayKey, hhmm, shortDate, shortWeekday, startOfDay } from "./time.js";
-import { setSick } from "./sick.js";
+import { setLeave, setSick } from "./sick.js";
 import { makeBackup, restoreBackup } from "./backup.js";
 import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
@@ -1591,6 +1591,16 @@ export async function registerRoutes(app: FastifyInstance) {
           .catch(() => {});
       }
     }
+    return { ok: true };
+  });
+
+  // Lov: school, förskola and pick-up/drop-off go for the days chosen (activities stay).
+  app.post("/api/leave", async (req, reply) => {
+    const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+    const body = z.object({ personId: z.string().regex(ID), from: day, to: day, on: z.boolean() }).safeParse(req.body);
+    const child = body.success ? loadConfig().people.find((p) => p.id === body.data.personId && p.kind === "child") : undefined;
+    if (!body.success || !child) return fail(reply, new Error("Okänt barn"));
+    setLeave(child.id, body.data.from, body.data.to, body.data.on);
     return { ok: true };
   });
 
