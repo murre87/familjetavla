@@ -1,5 +1,13 @@
 # Ändringar
 
+## 0.21.1
+
+- **Håll in en ruta fungerar på iPad.** Safari avbröt fingret när det hölls still (iPadens egen långtrycksgest), och när fingret lyftes stängdes bladet direkt igen. Nu räcker knappt en halv sekund, och bladet stannar öppet.
+- **Veckan i läsbar storlek, även när den inte ryms.** Schemat krympte tidigare tills alla dagar fick plats, och då blev texten för liten. Nu har schemat på startsidan, sidan Veckan och personvyn alltid full textstorlek, och man rullar ner för resten av dagarna. Nederkanten tonas när det finns mer.
+- **Tryck på ett namn ovanför schemat** så öppnas den personens vecka med schema, läxor och uppgifter.
+- **Rutorna går också att ställa in under Aa → Rutor**, med en knapp per ruta, om man inte vill hålla in.
+- **Tavlan laddar om sig själv när en ny version är installerad.** En tavla på väggen körde den gamla versionen tills någon tryckte på ladda om. Den väntar om ett blad är öppet.
+
 ## 0.21.0
 
 - **Ställ in varje ruta för sig.** Håll fingret en stund på en ruta på startsidan (Nu, Idag, Maten, Veckan, raden längst ner) eller på veckan i personvyn, så öppnas inställningar för just den rutan på just den skärmen:

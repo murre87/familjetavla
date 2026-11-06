@@ -1356,3 +1356,29 @@ html[data-design] .person-days.dens-airy {
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* Namnen ovanför veckan är knappar till personens vecka: ser ut som rubriken, men går att trycka på. */
+.wk-who-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  min-width: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  -webkit-tap-highlight-color: transparent;
+}
+.wk-who-btn:active {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.wk-who-btn:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* Veckan krymper inte längre i nya designen: den rullar, och nederkanten tonas som tecken på att det finns mer. */
+html[data-design="flat"] .area-week .fit.fit-overflow,
+html[data-design="flat"] .person-fit.fit-overflow {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}

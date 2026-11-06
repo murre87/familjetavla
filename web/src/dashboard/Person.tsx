@@ -68,7 +68,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
           </button>
         ))}
       </div>
-      <Fit className="detail-body person-fit" deps={[data, personId, pref]} min={0.55} base={pref?.size}>
+      <Fit className="detail-body person-fit" deps={[data, personId, pref]} min={0.55} base={pref?.size} noShrink>
       <div className={`person-days ${boxClass(pref)}`} {...hold}>
         {days.map((d) => {
           const { mine: allEvents, family: allFam } = personEvents(d.events, person);

@@ -13,7 +13,7 @@ import { RichText } from "./RichText";
 import { ScaleSheet } from "./ScaleSheet";
 import { applyScale, readScale, scaleChosen, screensaverOff, useDesign } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
-import { Home } from "./Home";
+import { Home, weekColumns } from "./Home";
 import { Fit } from "./Fit";
 import { DetailPage, PageBar, PAGE_TITLES, type PageId } from "./Detail";
 import { navigate, useHash } from "../route";
@@ -1043,6 +1043,31 @@ export function Dashboard() {
     el.classList.add("board-lock");
     return () => el.classList.remove("board-lock");
   }, []);
+  // A board on the wall is never reloaded by hand: when the server runs a newer version than this page was built as, load it.
+  // Once per version (a cached page must not loop) and not while a sheet is open.
+  const serverVersion = data?.version?.current;
+  useEffect(() => {
+    if (isDemo || !serverVersion || !/^\d+\.\d+\.\d+$/.test(serverVersion) || serverVersion === __APP_VERSION__) return;
+    const key = "familjetavla.reloadedFor";
+    try {
+      if (sessionStorage.getItem(key) === serverVersion) return;
+    } catch {
+      return;
+    }
+    const tryReload = () => {
+      if (document.querySelector(".overlay")) return false;
+      try {
+        sessionStorage.setItem(key, serverVersion);
+      } catch {
+        /* private mode */
+      }
+      location.reload();
+      return true;
+    };
+    if (tryReload()) return;
+    const t = window.setInterval(() => tryReload() && window.clearInterval(t), 30_000);
+    return () => window.clearInterval(t);
+  }, [serverVersion]);
   // The new design is made to fit at 100 %: the tablet default of 85 % only applies to the classic one.
   useEffect(() => {
     if (!scaleChosen()) applyScale(flat ? 1 : readScale());
@@ -1150,7 +1175,9 @@ export function Dashboard() {
     let dist = 0;
     const start = (e: TouchEvent) => {
       const t = e.target as HTMLElement;
-      y0 = window.scrollY <= 0 && e.touches.length === 1 && !t.closest("input, select, textarea, .bars, .chart, .overlay, .vol-overlay") ? e.touches[0]!.clientY : null;
+      // Not from inside an area scrolled down (the week scrolls): the finger then scrolls it back up instead of refreshing.
+      const scrolled = (t.closest(".fit") as HTMLElement | null)?.scrollTop ?? 0;
+      y0 = window.scrollY <= 0 && scrolled <= 0 && e.touches.length === 1 && !t.closest("input, select, textarea, .bars, .chart, .overlay, .vol-overlay") ? e.touches[0]!.clientY : null;
       dist = 0;
     };
     const move = (e: TouchEvent) => {
@@ -1342,7 +1369,7 @@ export function Dashboard() {
           </div>
         </header>
 
-        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} />}
+        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} names={data ? weekColumns(data).filter((c) => !c.family).map((c) => c.name) : []} all={data?.people.map((p) => p.name) ?? []} />}
 
         {error && (
           <div className="card result bad" role="status" style={{ padding: "12px 18px" }}>
