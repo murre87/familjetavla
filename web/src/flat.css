@@ -481,29 +481,12 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
   overflow: hidden;
 }
 
-/* Uttrycklig placering: Nu, Idag och Maten i översta raden, veckan i full bredd under (så att alla sju dagar ryms), tekniken längst ner. */
-.hf > .hf-now {
+/* Placeringen kommer från startsidans pussel (Ordna startsidan): rad, första kolumn och bredd av 12 per ruta.
+   Standard är som förut: Nu, Idag och Maten i översta raden, veckan i full bredd under, tekniken längst ner. */
+.hf > [data-box] {
   grid-area: auto;
-  grid-row: 1;
-  grid-column: span var(--span, 5);
-}
-.hf > .hf-idag {
-  grid-area: auto;
-  grid-row: 1;
-  grid-column: span var(--span, 3);
-}
-.hf > .meals-card {
-  grid-row: 1;
-  grid-column: span var(--span, 4);
-}
-.hf > .area-week {
-  grid-area: auto;
-  grid-row: 2;
-  grid-column: 1 / -1;
-}
-.hf > .hf-tech-wrap {
-  grid-row: 3;
-  grid-column: 1 / -1;
+  grid-row: var(--row, auto);
+  grid-column: var(--col, auto) / span var(--span, 12);
 }
 @media (max-width: 899px) {
   /* Telefon: en ruta per rad i naturlig höjd och sidan rullar. Surfplattans växande mittrad sträckte annars ut
@@ -512,13 +495,11 @@ html[data-design="flat"] .hf > .meals-card .eyebrow {
     grid-template-rows: none;
     grid-auto-rows: auto;
   }
-  .hf > .hf-now,
-  .hf > .hf-idag,
-  .hf > .meals-card,
-  .hf > .area-week,
-  .hf > .hf-tech-wrap {
+  .hf > [data-box] {
     grid-row: auto;
     grid-column: 1 / -1;
+    /* Samma ordning som på surfplattan, uppifrån och ner, vänster till höger. */
+    order: var(--order, 0);
   }
 }
 html[data-design="flat"] .hf .area-week .legend {
@@ -1226,7 +1207,7 @@ html[data-design="flat"] .board-header .sub {
 /* Övre raden får högst ~46 % av höjden; korten krymper sitt innehåll (aldrig scroll, aldrig något utanför rutan). */
 @media (min-width: 900px) {
   html[data-design="flat"] .hf {
-    grid-template-rows: fit-content(26%) minmax(46%, 1fr) fit-content(14%);
+    grid-template-rows: var(--hf-rows, fit-content(26%) minmax(46%, 1fr) fit-content(14%));
   }
 }
 html[data-design="flat"] .hf > .hf-now,
@@ -1464,4 +1445,145 @@ html[data-design="flat"] .hf > .area-week > .cal-btn {
   z-index: 3;
   min-height: 32px;
   padding: 0 10px;
+}
+
+/* ---------- Ordna startsidan (pusslet) ---------- */
+.hf-arranging > [data-box] {
+  position: relative;
+  outline: 2px dashed color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: -2px;
+}
+/* Rutornas eget innehåll går inte att trycka på medan man ordnar. */
+.hf-arranging > [data-box] > :not(.arr-cover) {
+  pointer-events: none;
+}
+.arr-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--f-bg, #0f1520) 72%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  touch-action: none;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.arr-cover.arr-drag {
+  cursor: grabbing;
+  opacity: 0.6;
+}
+.arr-cover.arr-over {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+.arr-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 16px;
+}
+.arr-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.arr-tools .btn.icon {
+  width: 40px;
+  min-height: 40px;
+}
+.arr-span {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+/* Strecket mellan två rutor: dra i sidled för att dela bredden. */
+.arr-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  cursor: ew-resize;
+  touch-action: none;
+}
+.arr-edge > span {
+  width: 6px;
+  height: min(60%, 80px);
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.arr-bar {
+  position: fixed;
+  left: 50%;
+  /* Överst, över datum och knappar (de går inte att ordna), så att ingen ruta skyms. */
+  top: max(10px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: min(960px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--f-card, #1a2230);
+  border: 1px solid var(--f-line, rgba(127, 127, 127, 0.3));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.arr-help {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.arr-help small {
+  opacity: 0.8;
+}
+
+/* Veckan i en smal ruta (pusslet kan göra den halvbred): samma staplade vy som på telefon, personerna under
+   varandra inom dagen, i stället för kolumner där texten blir en bokstav per rad. Styrs av rutans bredd, inte skärmens. */
+.area-week {
+  container-type: inline-size;
+  container-name: week;
+}
+@container week (max-width: 700px) {
+  .wk-head {
+    display: none;
+  }
+  .wk-cells {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wk-cell:empty {
+    display: none;
+  }
+  .wk-cell:not(:empty)::before {
+    content: attr(data-who);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+}
+@container week (max-width: 700px) {
+  /* Ingen kolumnrubrikrad att lägga Planera-knappen i: egen rad i stället för över "Idag". */
+  html[data-design="flat"] .hf > .area-week > .card-head {
+    position: static;
+    margin: 0 0 6px;
+  }
 }

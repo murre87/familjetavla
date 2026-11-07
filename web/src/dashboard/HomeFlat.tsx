@@ -11,7 +11,10 @@ import { Week, weekColumns } from "./Home";
 import { BOX_TITLE, BoxGear, BoxSheet } from "./BoxSheet";
 import { boxClass, useBoxPrefs, type BoxProps } from "../boxprefs";
 import { useLongPress } from "../longpress";
-import { boxSpans, type BoxId } from "../../../server/src/boxprefs";
+import type { BoxId } from "../../../server/src/boxprefs";
+import { gridOf, rowTemplate, LAYOUT_BOXES, type LayoutBox } from "../../../server/src/layout";
+import { useLayout } from "../layout";
+import { useArrange } from "./Arrange";
 
 const SKY_LABEL: Record<string, string> = { clear: "Klart", partly: "Halvklart", cloudy: "Mulet", rain: "Regn", snow: "Snö", fog: "Dimma" };
 const REMINDER_ICON: Record<string, IconName> = { rain: "umbrella", bag: "bag", gym: "gym", trash: "trash", kids: "kids", info: "info", school: "school", food: "food" };
@@ -120,6 +123,7 @@ function Teknik({ data, actions, box }: { data: Dashboard; actions: Actions; box
   if (!data.temps.length && !total && !sp) return null;
   return (
     <div className={`hf-tech-wrap ${box.className}`} style={box.style} {...box.handlers}>
+    {box.gear}
     <Fit className="hf-fit hf-tech-fit" deps={[data]} base={box.base}>
     <div className="hf-tech">
       {data.temps.slice(0, 3).map((t) => (
@@ -200,27 +204,35 @@ export function HomeFlat({ data, actions }: { data: Dashboard; actions: Actions 
     teknik: useLongPress(() => setSheet("teknik")),
     person: useLongPress(() => setSheet("person")),
   };
-  // The top row shares its 12 columns between the boxes that are shown.
-  const spans = boxSpans(([["nu", 5], ["idag", 3], ["mat", 4]] as [BoxId, number][]).filter(([id]) => !prefs[id]?.hidden).map(([id, w]) => ({ id, w })));
-  const box = (id: BoxId): BoxProps => ({
-    className: boxClass(prefs[id]),
-    // A variable, not grid-column itself: an inline grid-column would beat the phone layout (one box per row).
-    style: spans[id] ? ({ "--span": spans[id] } as CSSProperties) : undefined,
-    handlers: hold[id] as unknown as Record<string, unknown>,
-    base: prefs[id]?.size,
-    // The row at the bottom has no frame and no free corner: its settings are held or under Aa → Rutor.
-    gear: id === "teknik" ? undefined : <BoxGear title={BOX_TITLE[id]} onOpen={() => setSheet(id)} />,
-  });
+  // The page is a puzzle (Ordna startsidan): rows of boxes with widths out of 12. The week can never be hidden.
+  const hidden = LAYOUT_BOXES.filter((id) => id !== "vecka" && prefs[id]?.hidden);
+  const saved = useLayout();
+  const arrange = useArrange(saved, hidden);
+  const places = gridOf(arrange.layout, hidden);
+  const box = (id: LayoutBox): BoxProps => {
+    const p = places.find((x) => x.id === id);
+    return {
+      className: `${boxClass(prefs[id])} ${arrange.arranging ? "arranging" : ""}`,
+      // Variables, not grid-row/grid-column themselves: inline placement would beat the phone layout (one box per row).
+      style: p ? ({ "--row": p.row, "--col": p.col, "--span": p.span, "--order": p.order } as CSSProperties) : undefined,
+      handlers: { ...(arrange.arranging ? {} : hold[id]), "data-box": id } as unknown as Record<string, unknown>,
+      base: prefs[id]?.size,
+      // While arranging, the box's own controls give way to the puzzle's. The row at the bottom has no free corner
+      // for a cog: its settings are held or under Aa → Rutor.
+      gear: arrange.arranging ? arrange.coverFor(id) : id === "teknik" ? undefined : <BoxGear title={BOX_TITLE[id]} onOpen={() => setSheet(id)} />,
+    };
+  };
   const all = data.people.map((p) => p.name);
   const names = weekColumns(data).filter((c) => !c.family).map((c) => c.name);
   return (
-    <main className="hf">
+    <main className={`hf ${arrange.arranging ? "hf-arranging" : ""}`} style={{ ["--hf-rows" as string]: rowTemplate(arrange.layout, hidden) } as CSSProperties}>
       {!prefs.nu?.hidden && <Nu data={data} actions={actions} box={box("nu")} />}
       {!prefs.idag?.hidden && <Idag data={data} actions={actions} box={box("idag")} />}
       <Week data={data} actions={actions} box={box("vecka")} pref={prefs.vecka} />
       {!prefs.mat?.hidden && <Meals data={data} fit box={box("mat")} />}
       {!prefs.teknik?.hidden && <Teknik data={data} actions={actions} box={box("teknik")} />}
-      {sheet && <BoxSheet id={sheet} names={names} all={all} onClose={() => setSheet(null)} />}
+      {sheet && <BoxSheet id={sheet} names={names} all={all} onClose={() => setSheet(null)} arrange />}
+      {arrange.bar}
     </main>
   );
 }
