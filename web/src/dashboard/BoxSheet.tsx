@@ -13,6 +13,24 @@ export const BOX_TITLE: Record<BoxId, string> = {
   person: "Veckan för personen",
 };
 
+/** The small cog in a box's top right corner: opens the settings for just that box (the same as holding the box). */
+export function BoxGear({ title, onOpen, inline = false }: { title: string; onOpen: () => void; inline?: boolean }) {
+  return (
+    <button
+      type="button"
+      className={`box-gear ${inline ? "inline" : ""}`}
+      aria-label={`Inställningar för ${title}`}
+      title={`Inställningar för ${title}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen();
+      }}
+    >
+      <Icon name="gear" size={16} />
+    </button>
+  );
+}
+
 /** The boxes that can be hidden (the week is the main content and stays). */
 export const HIDEABLE: BoxId[] = ["nu", "idag", "mat", "teknik"];
 

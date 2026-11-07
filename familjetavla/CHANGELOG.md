@@ -1,5 +1,10 @@
 # Ändringar
 
+## 0.23.0
+
+- **Kalender längre fram än sju dagar.** Knappen **Kalender** i veckan öppnar kalendern. Med **Senare** och **Tidigare** bläddrar du vecka för vecka upp till åtta veckor fram, med datum och veckonummer överst. **Nu** tar dig tillbaka. Händelser, skjuts, barnvecka, middag och sophämtning visas som i veckan. Startsidan visar fortfarande de kommande sju dagarna. Tack jonssonc (#37).
+- **Kugghjul på varje ruta.** Ett litet kugghjul uppe till höger öppnar inställningarna för just den rutan (textstorlek, täthet, dagar, vad som visas, dölj). Det finns på Nu, Idag, Maten och Veckan, och bredvid namnen i personvyn. Raden längst ner (temperatur, ljus, musik) har ingen ruta att sätta det i: håll in den, eller välj den under Aa → Rutor. Att hålla in en ruta fungerar som förut.
+
 ## 0.22.0
 
 - **Hembatteri räknas in i huset.** Nytt fält **Hembatteri – effekt** under Inställningar → Energi. Med det räknar tavlan in batteriet i husets förbrukning (det saknades förut, så "Huset nu" kunde visa flera kW för lite på kvällen) och visar om batteriet laddar eller laddar ur. Batterier som räknar laddning som plus (till exempel Sigenergy) har en egen brytare. Under *Dagens kWh* finns också **Laddat i hembatteriet** och **Urladdat ur hembatteriet**, och självförsörjningen räknar då med det batteriet gav tillbaka. Tack v3r1t4s82 (#59).

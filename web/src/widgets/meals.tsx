@@ -18,6 +18,7 @@ export function Meals({ data, fit = false, box }: { data: Dashboard; fit?: boole
   const when = (label: string) => (label === "idag" || label === "imorgon" ? label : `på ${label.split(" ")[0]}`);
   return (
     <section className={`card meals-card ${box?.className ?? ""}`} style={box?.style} {...box?.handlers}>
+      {box?.gear}
       <h2>Maten</h2>
       {wrap(<>
       {lunch && (

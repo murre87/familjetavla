@@ -1402,3 +1402,66 @@ html[data-design="flat"] .person-fit.fit-overflow {
     margin: 0 0 6px;
   }
 }
+
+/* Kalendern: bläddra vecka för vecka (upp till åtta veckor fram). */
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cal-range {
+  text-align: center;
+  font-size: 18px;
+  min-width: 0;
+}
+
+/* Kugghjulet uppe till höger på varje ruta: öppnar inställningarna för just den rutan (samma som att hålla in). */
+.has-prefs,
+.area-week.has-prefs {
+  position: relative;
+}
+.box-gear {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted, currentColor);
+  opacity: 0.55;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.box-gear:hover,
+.box-gear:focus-visible {
+  opacity: 1;
+}
+.box-gear:active {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.box-gear:focus-visible {
+  outline: 2px solid var(--accent);
+}
+/* I raden längst ner och bland namnen i personvyn: en knapp i raden i stället för ovanpå något. */
+.box-gear.inline {
+  position: static;
+  flex: none;
+  align-self: center;
+}
+
+/* Veckans Kalender-knapp i högra hörnet, bredvid kugghjulet. */
+html[data-design="flat"] .hf > .area-week > .cal-btn {
+  position: absolute;
+  top: 4px;
+  right: 40px;
+  z-index: 3;
+  min-height: 32px;
+  padding: 0 10px;
+}

@@ -174,6 +174,8 @@ const realApi = {
     request<ConfigResponse>("config", { method: "PUT", body: JSON.stringify({ config, secrets }) }),
   checkPin: () => post<{ ok: boolean }>("auth/check"),
   dashboard: () => request<Dashboard>("dashboard"),
+  /** The week page further ahead (#37): page 1 = days 7–13, … page 8. */
+  calendar: (page: number) => request<{ days: Dashboard["days"] }>(`calendar?page=${page}`),
   secureUrl: () => request<{ url: string | null }>("secure-url"),
   travel: (key: string, choice: TravelChoice | null, forCalendar = false) => post<{ ok: true }>("travel", { key, choice, forCalendar }),
   dinner: (day: string, text: string, shopping?: string) => post<{ ok: true }>("dinner", { day, text, shopping }),

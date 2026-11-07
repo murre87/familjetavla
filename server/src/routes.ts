@@ -8,7 +8,7 @@ import { lookupPostcode } from "./connectors/geo.js";
 import { detectGroups, fetchIcs, filterEvents } from "./connectors/ics.js";
 import { ha, haConnection } from "./connectors/ha.js";
 import { geocode } from "./connectors/weather.js";
-import { buildDashboard, gatherFamily } from "./dashboard.js";
+import { buildCalendar, buildDashboard, gatherFamily } from "./dashboard.js";
 import { duties, dutiesIcs } from "./plan.js";
 import { loadShelf, saveDinner, saveShelf } from "./meals.js";
 import { carActions, carCharging, carRows, deviceEntities, discover, readRegistry } from "./discovery.js";
@@ -516,6 +516,17 @@ export async function registerRoutes(app: FastifyInstance) {
 
   // ---------- Dashboard ----------
   app.get("/api/dashboard", async () => buildDashboard());
+
+  /**
+   * Further ahead than the board's seven days (#37): page 1 is days 7–13, page 2 days 14–20 … up to eight weeks.
+   * The board itself stays at seven days; only the week page asks for this.
+   */
+  app.get("/api/calendar", async (req, reply) => {
+    const q = z.object({ page: z.coerce.number().int().min(1).max(8) }).safeParse(req.query);
+    if (!q.success) return reply.code(400).send({ error: "page måste vara 1–8" });
+    const page = q.data.page;
+    return cached(`calendar:${page}:${new Date().toDateString()}`, 3 * 60_000, () => buildCalendar(page * 7, 7));
+  });
 
   /**
    * Server-Sent Events: tells open boards to refresh when something on the board changes in HA

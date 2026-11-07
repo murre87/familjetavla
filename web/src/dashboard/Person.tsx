@@ -5,7 +5,7 @@ import { navigate } from "../route";
 import { Avatar } from "./bits";
 import { PageBar, TaskSheet, type Task } from "./Detail";
 import { Fit } from "./Fit";
-import { BoxSheet } from "./BoxSheet";
+import { BOX_TITLE, BoxGear, BoxSheet } from "./BoxSheet";
 import { boxClass, useBoxPrefs } from "../boxprefs";
 import { useLongPress } from "../longpress";
 
@@ -67,6 +67,8 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
             <Avatar initial={p.initial} color={p.color} name={p.name} /> {p.name}
           </button>
         ))}
+        <span className="grow" />
+        <BoxGear title={BOX_TITLE.person} onOpen={() => setSheet(true)} inline />
       </div>
       <Fit className="detail-body person-fit" deps={[data, personId, pref]} min={0.55} base={pref?.size} noShrink>
       <div className={`person-days ${boxClass(pref)}`} {...hold}>

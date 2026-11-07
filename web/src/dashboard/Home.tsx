@@ -144,6 +144,13 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
   // Settings for just this box: how many days, whose, and what (homework / activities only).
   const allCols = weekColumns(data);
   const known = new Set(data.people.map((p) => p.name));
+  // Further ahead than seven days: the calendar page, week by week (#37).
+  const calButton = (
+    <button className="btn small plan-btn cal-btn" aria-label="Kalender – fler veckor framåt" title="Kalender" onClick={() => actions.openPage("veckan")}>
+      <Icon name="calendar" size={18} />
+      <span className="plan-word">Kalender</span>
+    </button>
+  );
   type Day = Dashboard["days"][number];
   type Col = ReturnType<typeof weekColumns>[number];
   // Homework, tests and hand-ins from the school are marked in their own colour.
@@ -168,6 +175,9 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
   return (
     <section className={`card area-week week-swipe ${edit?.className ?? ""} ${box?.className ?? ""}`} style={box?.style} {...edit?.handlers} {...box?.handlers}>
       {edit?.bar}
+      {box?.gear}
+      {/* New design: top right corner, next to the cog (the top left already holds Planera, by the column names). */}
+      {!full && flat && calButton}
       <div className="card-head" style={{ flexWrap: "wrap" }}>
         {/* On its own page the page title already says it – the room goes to the days. */}
         {full || flat ? <h2 className="sr-only">Kommande 7 dagar</h2> : <h2>Kommande 7 dagar</h2>}
@@ -187,6 +197,7 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
             {data.plan.missing ? <span className="plan-count">{data.plan.missing}</span> : null}
           </span>
         </button>
+        {!full && !flat && calButton}
         <div className="legend">
           {data.legend
             .filter((l) => !data.people.some((p) => p.name === l.name))

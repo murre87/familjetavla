@@ -71,7 +71,7 @@ export function ScaleSheet({ onClose, names = [], all = names }: { onClose: () =
         </div>
         <div className="design-row boxes-row">
           <b>Rutor</b>
-          <small className="muted">Håll fingret på en ruta en stund, eller välj den här, för att ändra just den: textstorlek, täthet, antal dagar, vad som visas eller dölja den.</small>
+          <small className="muted">Tryck på kugghjulet uppe till höger i en ruta, håll fingret på rutan, eller välj den här, för att ändra just den: textstorlek, täthet, antal dagar, vad som visas eller dölja den.</small>
           <div className="seg-btns">
             {BOX_IDS.map((id) => (
               <button key={id} className="btn small" onClick={() => setBox(id)}>

@@ -246,9 +246,10 @@ export interface Family {
   calendarDinners: Record<string, string>;
 }
 
-export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[]): Promise<Family & { schoolFood: SchoolData["food"]; schoolNews: SchoolData["news"]; hiddenSick: SourcedEvent[] }> {
+/** `days`: how far ahead (7 for the board; the calendar page asks for more, see buildCalendar). */
+export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[], days = 7): Promise<Family & { schoolFood: SchoolData["food"]; schoolNews: SchoolData["news"]; hiddenSick: SourcedEvent[] }> {
   const today = startOfDay(now);
-  const horizon = addDays(today, 7);
+  const horizon = addDays(today, days);
   const [calEvents, school] = await Promise.all([collectCalendars(cfg, today, horizon, errors), collectSchool(cfg, today, horizon, errors)]);
   const swapCal = cfg.household.custodyCalendarId;
   const people = new Map(withSwapCalendar(cfg.people, calEvents.filter((e) => e.sourceId === swapCal)).map((p) => [p.id, p]));
@@ -259,7 +260,7 @@ export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[]
   // A calendar of the type "Middag" holds the week's dinners: they become the day's dinner, not calendar events.
   const calendarDinners = dinnersFromEvents(calEvents.filter((e) => e.category === "dinner" && e.sourceId !== swapCal && kept(e)));
   const all = [...calEvents.filter((e) => e.sourceId !== swapCal && e.category !== "dinner"), ...school.events, ...ownCalendarEvents()].filter(kept);
-  const careEvents = buildCareEvents([...people.values()], school.care, all, today, 7).filter(kept);
+  const careEvents = buildCareEvents([...people.values()], school.care, all, today, days).filter(kept);
   const travelCtx: TravelCtx = { saved: loadTravel(), calendars: new Map([...cfg.calendars.map((c) => [c.id, c] as const), ...careCalendars([...people.values()])]) };
   // A sick child's förskola, lessons and training are struck that day (one "Sjuk" marker instead).
   const sick = loadSick();
@@ -267,6 +268,63 @@ export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[]
   // Lov: school and pick-up/drop-off go on those days, the training stays.
   const leave = loadLeave();
   return { people, children, all: applyLeave(applySick(all, sick).kept, leave), withCare: applyLeave(withCare.kept, leave), hiddenSick: withCare.hidden, travelCtx, calendarDinners, schoolFood: school.food, schoolNews: school.news };
+}
+
+/**
+ * The days `offset` … `offset + count − 1` from today, as the week shows them (events, who comes and goes, dinner, waste).
+ * The board asks for the first seven; the calendar page for the weeks after (see buildCalendar).
+ */
+export function buildDays(
+  family: Pick<Family, "people" | "children" | "all" | "travelCtx">,
+  waste: { date: Date; type: string }[],
+  dinners: Record<string, string>,
+  today: Date,
+  offset: number,
+  count: number,
+): DashDay[] {
+  const { people, children, all, travelCtx } = family;
+  const days: DashDay[] = [];
+  for (let n = 0; n < count; n++) {
+    const i = offset + n;
+    const day = addDays(today, i);
+    const prev = addDays(day, -1);
+    const evs = eventsOnDay(all, day)
+      .filter((e) => visibleOn(e, people, day))
+      // School lessons are noise on a family board – keep only gym (packing matters) and all-day items.
+      .filter((e) => !e.sourceId.startsWith("school:") || e.gym || e.allDay)
+      .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.start.getTime() - b.start.getTime())
+      .map((e) => toDash(e, people, travelCtx));
+
+    const arriving = children.filter((c) => isHome(c.custody, day) && !isHome(c.custody, prev));
+    const leaving = children.filter((c) => !isHome(c.custody, day) && isHome(c.custody, prev));
+    const extra: DashEvent[] = [];
+    if (arriving.length) extra.push({ time: "", title: `${joinNames(arriving.map((c) => c.name))} kommer`, color: FAMILY_COLOR, who: "", category: "family", icon: "kids" });
+    if (leaving.length) extra.push({ time: "", title: `${joinNames(leaving.map((c) => c.name))} byter hem`, color: FAMILY_COLOR, who: "", category: "family", icon: "kids" });
+    if (dinners[dayKey(day)]) extra.push({ time: "", title: `Middag: ${dinners[dayKey(day)]}`, color: FAMILY_COLOR, who: "", category: "family", icon: "food" });
+    for (const w of waste.filter((p) => daysBetween(day, p.date) === 0)) {
+      extra.push({ time: "", title: w.type, color: WASTE_COLOR, who: "", category: "waste", icon: "trash" });
+    }
+
+    days.push({
+      key: dayKey(day),
+      name: i === 0 ? "Idag" : i === 1 ? "Imorgon" : shortWeekday(day),
+      date: i === 0 ? `${shortWeekday(day).toLowerCase()} ${day.getDate()}` : shortDate(day),
+      isToday: i === 0,
+      childrenHome: children.filter((c) => isHome(c.custody, day)).map((c) => c.name),
+      events: [...extra, ...evs],
+    });
+  }
+  return days;
+}
+
+/** The calendar page: `count` days from `offset` days ahead (whole weeks further on than the board's seven). */
+export async function buildCalendar(offset: number, count: number, now = new Date()): Promise<{ days: DashDay[]; errors: SourceError[] }> {
+  const cfg = loadConfig();
+  const errors: SourceError[] = [];
+  const today = startOfDay(now);
+  const [family, waste] = await Promise.all([gatherFamily(cfg, now, errors, offset + count), collectWaste(cfg, errors)]);
+  const dinners = { ...family.calendarDinners, ...loadDinners() };
+  return { days: buildDays(family, waste, dinners, today, offset, count), errors };
 }
 
 /** `allReminders`: the morning notification wants every reminder, the board shows the first five. */
@@ -305,36 +363,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
   const schoolNews = buildSchoolNews(family.schoolNews, people);
 
   // ---- Days ----
-  const days: DashDay[] = [];
-  for (let i = 0; i < 7; i++) {
-    const day = addDays(today, i);
-    const prev = addDays(day, -1);
-    const evs = eventsOnDay(all, day)
-      .filter((e) => visibleOn(e, people, day))
-      // School lessons are noise on a family board – keep only gym (packing matters) and all-day items.
-      .filter((e) => !e.sourceId.startsWith("school:") || e.gym || e.allDay)
-      .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.start.getTime() - b.start.getTime())
-      .map((e) => toDash(e, people, travelCtx));
-
-    const arriving = children.filter((c) => isHome(c.custody, day) && !isHome(c.custody, prev));
-    const leaving = children.filter((c) => !isHome(c.custody, day) && isHome(c.custody, prev));
-    const extra: DashEvent[] = [];
-    if (arriving.length) extra.push({ time: "", title: `${joinNames(arriving.map((c) => c.name))} kommer`, color: FAMILY_COLOR, who: "", category: "family", icon: "kids" });
-    if (leaving.length) extra.push({ time: "", title: `${joinNames(leaving.map((c) => c.name))} byter hem`, color: FAMILY_COLOR, who: "", category: "family", icon: "kids" });
-    if (dinners[dayKey(day)]) extra.push({ time: "", title: `Middag: ${dinners[dayKey(day)]}`, color: FAMILY_COLOR, who: "", category: "family", icon: "food" });
-    for (const w of waste.filter((p) => daysBetween(day, p.date) === 0)) {
-      extra.push({ time: "", title: w.type, color: WASTE_COLOR, who: "", category: "waste", icon: "trash" });
-    }
-
-    days.push({
-      key: dayKey(day),
-      name: i === 0 ? "Idag" : i === 1 ? "Imorgon" : shortWeekday(day),
-      date: i === 0 ? `${shortWeekday(day).toLowerCase()} ${day.getDate()}` : shortDate(day),
-      isToday: i === 0,
-      childrenHome: children.filter((c) => isHome(c.custody, day)).map((c) => c.name),
-      events: [...extra, ...evs],
-    });
-  }
+  const days = buildDays(family, waste, dinners, today, 0, 7);
 
   // ---- Custody card ----
   const custody = buildCustodyCard(children, now);

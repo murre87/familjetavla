@@ -8,7 +8,7 @@ import type { Actions } from "./Dashboard";
 import { Avatar, travelText } from "./bits";
 import { insideGroups, setGroups } from "./lightGroups";
 import { Week, weekColumns } from "./Home";
-import { BoxSheet } from "./BoxSheet";
+import { BOX_TITLE, BoxGear, BoxSheet } from "./BoxSheet";
 import { boxClass, useBoxPrefs, type BoxProps } from "../boxprefs";
 import { useLongPress } from "../longpress";
 import { boxSpans, type BoxId } from "../../../server/src/boxprefs";
@@ -24,6 +24,7 @@ function Nu({ data, actions, box }: { data: Dashboard; actions: Actions; box: Bo
   const rows = data.now.items.slice(0, 2);
   return (
     <section className={`card hf-now ${box.className}`} style={box.style} aria-label="Nu" {...box.handlers}>
+      {box.gear}
       <div className="hf-label">
         Nu{data.now.headline ? <span> · {data.now.headline}</span> : null}
       </div>
@@ -57,6 +58,7 @@ function Idag({ data, actions, box }: { data: Dashboard; actions: Actions; box: 
   const tips = data.reminders.filter((r) => r.icon !== "kids" && r.icon !== "trash" && !(r.icon === "food" && r.tone === "neutral")).slice(0, 1);
   return (
     <section className={`card hf-idag ${box.className}`} style={box.style} aria-label="Idag" {...box.handlers}>
+      {box.gear}
       <Fit className="hf-fit" deps={[data]} base={box.base}>
       <div className="hf-weather">
         {header.tempNow !== undefined && (
@@ -206,6 +208,8 @@ export function HomeFlat({ data, actions }: { data: Dashboard; actions: Actions 
     style: spans[id] ? ({ "--span": spans[id] } as CSSProperties) : undefined,
     handlers: hold[id] as unknown as Record<string, unknown>,
     base: prefs[id]?.size,
+    // The row at the bottom has no frame and no free corner: its settings are held or under Aa → Rutor.
+    gear: id === "teknik" ? undefined : <BoxGear title={BOX_TITLE[id]} onOpen={() => setSheet(id)} />,
   });
   const all = data.people.map((p) => p.name);
   const names = weekColumns(data).filter((c) => !c.family).map((c) => c.name);
