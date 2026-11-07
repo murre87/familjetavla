@@ -1,4 +1,4 @@
-import { useSyncExternalStore, type CSSProperties } from "react";
+import { useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { parsePrefs, withPref, type BoxId, type BoxPref, type BoxPrefs } from "../../server/src/boxprefs";
 
 /** Settings per box (text size, density, hidden, days …) for just this screen: the iPad and the hall screen want different things. */
@@ -52,6 +52,8 @@ export interface BoxProps {
   handlers: Record<string, unknown>;
   /** Text size for Fit (grows only as far as the box has room). */
   base?: number;
+  /** The cog that opens this box's settings. */
+  gear?: ReactNode;
 }
 
 export function boxClass(p: BoxPref | undefined): string {

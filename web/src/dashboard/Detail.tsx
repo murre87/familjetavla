@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Dashboard } from "../../../server/src/types";
+import { isoWeek } from "../../../server/src/time";
 import { api } from "../api";
 import { Icon } from "../Icon";
 import { Attachments, isBoardFile } from "./Attachments";
@@ -21,7 +22,7 @@ export const PAGE_TITLES: Record<PageId, string> = {
   komihag: "Kom ihåg",
   inkop: "Inköpslista",
   hososs: "Hos oss",
-  veckan: "Kommande 7 dagar",
+  veckan: "Kalender",
   kort: "Alla kort",
 };
 
@@ -50,7 +51,7 @@ export function DetailPage({ page, data, actions }: { page: PageId; data: Dashbo
         {page === "komihag" && <Reminders items={data.reminders} food={data.schoolFood} data={data} actions={actions} />}
         {page === "inkop" && <Shopping data={data} actions={actions} />}
         {page === "hososs" && <CustodyPage data={data} />}
-        {page === "veckan" && <Week data={data} actions={actions} full />}
+        {page === "veckan" && <CalendarPage data={data} actions={actions} />}
         {page === "kort" && (
           <div className="cards-grid">
             {data.home.filter((w) => w.on && w.id !== "now" && w.id !== "week").map((w) => renderWidget(w.id, data, actions, true))}
@@ -458,6 +459,66 @@ function CustodyPage({ data }: { data: Dashboard }) {
         </section>
       ))}
       </div>
+    </div>
+  );
+}
+
+/** How far ahead the calendar goes: the board's week plus eight more. */
+const MAX_PAGE = 8;
+
+/** "14–20 nov · v. 46–47" for a page of days. */
+function rangeLabel(days: Dashboard["days"]): string {
+  if (!days.length) return "";
+  const first = new Date(`${days[0]!.key}T12:00:00`);
+  const last = new Date(`${days[days.length - 1]!.key}T12:00:00`);
+  const month = (d: Date) => d.toLocaleDateString("sv-SE", { month: "short" }).replace(".", "");
+  const span = first.getMonth() === last.getMonth() ? `${first.getDate()}–${last.getDate()} ${month(last)}` : `${first.getDate()} ${month(first)} – ${last.getDate()} ${month(last)}`;
+  const w1 = isoWeek(first);
+  const w2 = isoWeek(last);
+  return `${span} · v. ${w1 === w2 ? w1 : `${w1}–${w2}`}`;
+}
+
+/**
+ * The week page: the coming seven days, and with Senare/Tidigare the weeks after – up to eight weeks ahead (#37).
+ * The days further on come from /api/calendar; the board itself keeps its seven days.
+ */
+export function CalendarPage({ data, actions }: { data: Dashboard; actions: Actions }) {
+  const [page, setPage] = useState(0);
+  const [later, setLater] = useState<Record<number, Dashboard["days"]>>({});
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (page === 0 || later[page]) return;
+    let alive = true;
+    setError(null);
+    api
+      .calendar(page)
+      .then((r) => alive && setLater((l) => ({ ...l, [page]: r.days })))
+      .catch((e) => alive && setError((e as Error).message || "Kunde inte hämta kalendern."));
+    return () => {
+      alive = false;
+    };
+  }, [page, later]);
+  const days = page === 0 ? data.days : later[page];
+  return (
+    <div className="stack cal-page">
+      <div className="cal-nav" role="group" aria-label="Bläddra i kalendern">
+        <button className="btn" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} aria-label="Tidigare vecka">
+          <Icon name="chevronLeft" size={22} /> Tidigare
+        </button>
+        <b className="grow cal-range" aria-live="polite">
+          {page === 0 ? "Kommande 7 dagar" : days ? rangeLabel(days) : "Hämtar …"}
+        </b>
+        {page > 0 && (
+          <button className="btn" onClick={() => setPage(0)} aria-label="Tillbaka till den här veckan">
+            Nu
+          </button>
+        )}
+        <button className="btn" onClick={() => setPage((p) => Math.min(MAX_PAGE, p + 1))} disabled={page === MAX_PAGE} aria-label="Senare vecka">
+          Senare <Icon name="chevronRight" size={22} />
+        </button>
+      </div>
+      {error && page > 0 && !days && <p className="muted">{error}</p>}
+      {days && <Week data={page === 0 ? data : { ...data, days }} actions={actions} full />}
     </div>
   );
 }

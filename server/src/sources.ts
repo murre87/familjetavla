@@ -51,7 +51,7 @@ export async function collectCalendars(cfg: Config, from: Date, to: Date, errors
   const results = await Promise.all(
     cfg.calendars.map(async (src) => {
       try {
-        const evs = await cached(`cal:${src.id}:${from.toDateString()}`, 15 * MIN, () => calendarEvents(src, from, to));
+        const evs = await cached(`cal:${src.id}:${from.toDateString()}:${to.toDateString()}`, 15 * MIN, () => calendarEvents(src, from, to));
         const always = (src.alwaysShow ?? []).map((s) => s.trim().toLowerCase()).filter(Boolean);
         return filterEvents(evs, src.include, src.exclude).map((e) => ({
           ...e,
@@ -95,7 +95,7 @@ export async function collectSchool(cfg: Config, from: Date, to: Date, errors: S
         const provider = findProvider("school", integ.provider);
         if (!provider) return;
         try {
-          const data = await cached(`school:${integ.id}:${from.toDateString()}`, 60 * MIN, () => provider.fetch(makeCtx(integ), from, to));
+          const data = await cached(`school:${integ.id}:${from.toDateString()}:${to.toDateString()}`, 60 * MIN, () => provider.fetch(makeCtx(integ), from, to));
           for (const e of data.events) {
             const personId = e.child ? integ.personMap?.[e.child] : integ.personId;
             out.events.push({ ...e, sourceId: `school:${integ.id}`, personId, category: "school" });
