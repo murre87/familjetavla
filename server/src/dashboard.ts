@@ -7,7 +7,7 @@ import { findAutoModes, findSmartCharging } from "./smartcharging.js";
 import { choresForToday } from "./chores.js";
 import { buildSchoolNews, newsReminders, newsTripReminders, ownCalendarEvents } from "./news.js";
 import { updateAvailable, versionInfo } from "./updates.js";
-import { buildSchoolDays, buildSchoolWeek } from "./schoolday.js";
+import { buildSchoolDays, buildSchoolWeek, schoolEndsOn } from "./schoolday.js";
 import { cached } from "./cache.js";
 import { cheapestBlock, priceLevel, type HourPrice } from "./connectors/elpris.js";
 import { ha, haConnection, type HaState } from "./connectors/ha.js";
@@ -246,11 +246,20 @@ export interface Family {
   calendarDinners: Record<string, string>;
 }
 
+/** How far ahead calendars and school are fetched: the calendar page's eight weeks after the board's one. */
+const FETCH_DAYS = 63;
+
 /** `days`: how far ahead (7 for the board; the calendar page asks for more, see buildCalendar). */
 export async function gatherFamily(cfg: Config, now: Date, errors: SourceError[], days = 7): Promise<Family & { schoolFood: SchoolData["food"]; schoolNews: SchoolData["news"]; hiddenSick: SourcedEvent[] }> {
   const today = startOfDay(now);
   const horizon = addDays(today, days);
-  const [calEvents, school] = await Promise.all([collectCalendars(cfg, today, horizon, errors), collectSchool(cfg, today, horizon, errors)]);
+  // Calendars and school are always fetched for the same nine weeks (the calendar page's reach) and cut to `days`
+  // here: one cache entry and one school login for the board, the calendar and a child's own view alike.
+  const window = addDays(today, FETCH_DAYS);
+  const within = <T extends { start: Date }>(e: T) => e.start < horizon;
+  const [calAll, schoolAll] = await Promise.all([collectCalendars(cfg, today, window, errors), collectSchool(cfg, today, window, errors)]);
+  const calEvents = calAll.filter(within);
+  const school = { ...schoolAll, events: schoolAll.events.filter(within) };
   const swapCal = cfg.household.custodyCalendarId;
   const people = new Map(withSwapCalendar(cfg.people, calEvents.filter((e) => e.sourceId === swapCal)).map((p) => [p.id, p]));
   const children = [...people.values()].filter((p) => p.kind === "child");
@@ -281,6 +290,8 @@ export function buildDays(
   today: Date,
   offset: number,
   count: number,
+  /** One child's own view: their events show on every day, also the days they are at the other home. */
+  opts: { allFor?: string } = {},
 ): DashDay[] {
   const { people, children, all, travelCtx } = family;
   const days: DashDay[] = [];
@@ -289,7 +300,7 @@ export function buildDays(
     const day = addDays(today, i);
     const prev = addDays(day, -1);
     const evs = eventsOnDay(all, day)
-      .filter((e) => visibleOn(e, people, day))
+      .filter((e) => visibleOn(e, people, day) || (opts.allFor !== undefined && (e.personId === opts.allFor || e.personIds?.includes(opts.allFor))))
       // School lessons are noise on a family board – keep only gym (packing matters) and all-day items.
       .filter((e) => !e.sourceId.startsWith("school:") || e.gym || e.allDay)
       .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.start.getTime() - b.start.getTime())
@@ -312,6 +323,7 @@ export function buildDays(
       isToday: i === 0,
       childrenHome: children.filter((c) => isHome(c.custody, day)).map((c) => c.name),
       events: [...extra, ...evs],
+      schoolEnds: schoolEndsOn(all, people, day, (p, d) => isHome(p.custody, d)),
     });
   }
   return days;
@@ -325,6 +337,16 @@ export async function buildCalendar(offset: number, count: number, now = new Dat
   const [family, waste] = await Promise.all([gatherFamily(cfg, now, errors, offset + count), collectWaste(cfg, errors)]);
   const dinners = { ...family.calendarDinners, ...loadDinners() };
   return { days: buildDays(family, waste, dinners, today, offset, count), errors };
+}
+
+/** One child's own week (page 0 = the coming seven days, 1 … 8 the weeks after): everything of theirs, every day. */
+export async function buildPersonDays(personId: string, page: number, now = new Date()): Promise<{ days: DashDay[]; errors: SourceError[] }> {
+  const cfg = loadConfig();
+  const errors: SourceError[] = [];
+  const today = startOfDay(now);
+  const [family, waste] = await Promise.all([gatherFamily(cfg, now, errors, page * 7 + 7), collectWaste(cfg, errors)]);
+  const dinners = { ...family.calendarDinners, ...loadDinners() };
+  return { days: buildDays(family, waste, dinners, today, page * 7, 7, { allFor: personId }), errors };
 }
 
 /** `allReminders`: the morning notification wants every reminder, the board shows the first five. */

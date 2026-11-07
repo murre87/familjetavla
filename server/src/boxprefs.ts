@@ -15,6 +15,10 @@ export interface BoxPref {
   people?: string[];
   /** Week: only homework, or only training and matches. */
   show?: "tasks" | "activities";
+  /** When school ends: every day (default), only the days the child is with us, or not at all. */
+  schoolEnd?: "home" | "off";
+  /** A child's own view: every day (default, also at the other home) or only the days with us. */
+  scope?: "home";
 }
 export type BoxPrefs = Partial<Record<BoxId, BoxPref>>;
 
@@ -38,6 +42,8 @@ export function normalizePref(p: unknown): BoxPref {
     if (names.length) out.people = names;
   }
   if (o.show === "tasks" || o.show === "activities") out.show = o.show;
+  if (o.schoolEnd === "home" || o.schoolEnd === "off") out.schoolEnd = o.schoolEnd;
+  if (o.scope === "home") out.scope = "home";
   return out;
 }
 

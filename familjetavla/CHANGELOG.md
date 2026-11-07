@@ -1,5 +1,11 @@
 # Ändringar
 
+## 0.25.0
+
+- **När barnen slutar skolan, varje dag.** Veckan visar "slutar 14:45" för varje barn och dag, också nästa vecka, längre fram i kalendern och de dagar barnet är hos den andra föräldern (då lite dämpat). Förut syntes det bara den här veckans måndag–fredag och bara de dagar barnet var här. Under veckans kugghjul, **När skolan slutar**, väljer du *Alla dagar*, *Bara dagar hos oss* eller *Visa inte*.
+- **Allt om ett barn på ett ställe.** Tryck på barnets namn så visas alla träningar, matcher, läxor, prov, idrott och när skolan slutar, även de veckor barnet är hos den andra föräldern (märkta "hos den andra föräldern"). Med **Senare** och **Tidigare** bläddrar du vecka för vecka upp till åtta veckor fram. Under kugghjulet i barnets vy, **Dagar**, väljer du *Alla, även hos den andra föräldern* eller *Bara dagar hos oss*.
+- Kalendrar och skola hämtas nu en gång för hela kalenderns nio veckor, i stället för en gång per sida. Det blir färre inloggningar mot Vklass och färre tidsgränser.
+
 ## 0.24.0
 
 - **Bygg startsidan som ett pussel.** Tryck på kugghjulet i en ruta och välj **Flytta och ändra storlek på rutorna**, eller välj **Ordna startsidan** under Aa → Rutor.

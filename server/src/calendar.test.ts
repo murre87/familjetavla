@@ -44,3 +44,42 @@ describe("buildDays further ahead", () => {
     expect(days[5]!.events.map((e) => e.title)).toEqual(["Middag: Tacos"]);
   });
 });
+
+// The child's own view and the school ends (Emil 2026-11-07: "när barnen slutar varje dag", "alla träningar oavsett vecka").
+describe("a child's every day", () => {
+  const today = new Date(2026, 10, 9); // måndag 9 november
+  const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m);
+  const alicia = {
+    id: "a",
+    name: "Alicia",
+    color: "#0f0",
+    kind: "child" as const,
+    // Here every day except Tuesday 10 and Wednesday 11 (at the other home).
+    custody: { mode: "always" as const, overrides: [{ from: "2026-11-10", to: "2026-11-11", home: false }] },
+  };
+  const ev = (title: string, start: Date, end: Date, extra: Partial<SourcedEvent>): SourcedEvent => ({ title, start, end, allDay: false, sourceId: "cal", category: "sport", personId: "a", ...extra });
+  const all = [
+    ev("Matte", at(9, 8), at(9, 12), { sourceId: "school:vk", category: "school" }),
+    ev("Svenska", at(9, 12), at(9, 14, 45), { sourceId: "school:vk", category: "school" }),
+    ev("Idrott", at(10, 13), at(10, 15, 10), { sourceId: "school:vk", category: "school", gym: true }),
+    ev("Glosor v.46", at(10, 15), at(10, 16), { sourceId: "school:vk", category: "school", task: true }),
+    ev("Träning F14", at(10, 17), at(10, 18, 30), {}),
+    ev("Match", at(9, 18), at(9, 19), {}),
+  ];
+  const family = { people: new Map([["a", alicia]]), children: [alicia], all, travelCtx: { saved: {}, calendars: new Map() } };
+
+  it("shows when school ends every day, also at the other home (marked so), from the last lesson and not a task", () => {
+    const days = buildDays(family, [], {}, today, 0, 3);
+    expect(days[0]!.schoolEnds).toEqual([{ name: "Alicia", end: "14:45", gym: false, home: true }]);
+    expect(days[1]!.schoolEnds).toEqual([{ name: "Alicia", end: "15:10", gym: true, home: false }]);
+    expect(days[2]!.schoolEnds).toEqual([]);
+  });
+
+  it("the board hides her training at the other home; her own view shows it", () => {
+    const board = buildDays(family, [], {}, today, 0, 2);
+    expect(board[1]!.events.map((e) => e.title)).not.toContain("Träning F14");
+    expect(board[0]!.events.map((e) => e.title)).toContain("Match");
+    const own = buildDays(family, [], {}, today, 0, 2, { allFor: "a" });
+    expect(own[1]!.events.map((e) => e.title)).toContain("Träning F14");
+  });
+});

@@ -479,6 +479,8 @@ export interface DashDay {
   isToday: boolean;
   childrenHome: string[];
   events: DashEvent[];
+  /** When each child's school day ends (all days, with `home` false on the other home's days). */
+  schoolEnds?: { name: string; end: string; gym: boolean; home: boolean }[];
 }
 
 export interface Reminder {

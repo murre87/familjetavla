@@ -467,7 +467,7 @@ function CustodyPage({ data }: { data: Dashboard }) {
 const MAX_PAGE = 8;
 
 /** "14–20 nov · v. 46–47" for a page of days. */
-function rangeLabel(days: Dashboard["days"]): string {
+export function rangeLabel(days: Dashboard["days"]): string {
   if (!days.length) return "";
   const first = new Date(`${days[0]!.key}T12:00:00`);
   const last = new Date(`${days[days.length - 1]!.key}T12:00:00`);

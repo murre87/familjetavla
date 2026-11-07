@@ -176,6 +176,8 @@ const realApi = {
   dashboard: () => request<Dashboard>("dashboard"),
   /** The week page further ahead (#37): page 1 = days 7–13, … page 8. */
   calendar: (page: number) => request<{ days: Dashboard["days"] }>(`calendar?page=${page}`),
+  /** One child's own days: everything of theirs, also at the other home (page 0 = the coming seven days). */
+  personDays: (id: string, page: number) => request<{ days: Dashboard["days"] }>(`person-days?id=${encodeURIComponent(id)}&page=${page}`),
   secureUrl: () => request<{ url: string | null }>("secure-url"),
   travel: (key: string, choice: TravelChoice | null, forCalendar = false) => post<{ ok: true }>("travel", { key, choice, forCalendar }),
   dinner: (day: string, text: string, shopping?: string) => post<{ ok: true }>("dinner", { day, text, shopping }),
