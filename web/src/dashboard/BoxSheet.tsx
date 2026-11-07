@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
 import { BOX_SIZE_MAX, BOX_SIZE_MIN, type BoxId, type BoxPref } from "../../../server/src/boxprefs";
 import { useBoxPrefs } from "../boxprefs";
+import { startArranging } from "../layout";
 
 export const BOX_TITLE: Record<BoxId, string> = {
   nu: "Nu",
@@ -51,7 +52,7 @@ function Seg<T extends string | number | undefined>({ label, value, options, onC
 
 /** Settings for just one box, opened by holding it: text size, density, days, people, what to show, hide. */
 /** `names`: the people who have a column in the week now; `all`: everyone on the board. */
-export function BoxSheet({ id, names = [], all = names, onClose }: { id: BoxId; names?: string[]; all?: string[]; onClose: () => void }) {
+export function BoxSheet({ id, names = [], all = names, onClose, arrange = false }: { id: BoxId; names?: string[]; all?: string[]; onClose: () => void; arrange?: boolean }) {
   const { prefs, setPref, resetPref } = useBoxPrefs();
   // The finger that held the box is still coming up when the sheet appears: a tap on the backdrop just then is not "close".
   const opened = useRef(0);
@@ -138,6 +139,17 @@ export function BoxSheet({ id, names = [], all = names, onClose }: { id: BoxId; 
               <small className="muted"> Du får tillbaka den under Aa-knappen, under Rutor.</small>
             </span>
           </label>
+        )}
+        {arrange && (
+          <button
+            className="btn"
+            onClick={() => {
+              onClose();
+              startArranging();
+            }}
+          >
+            <Icon name="move" size={18} /> Flytta och ändra storlek på rutorna
+          </button>
         )}
         <div className="row gap">
           <button className="btn" onClick={() => resetPref(id)}>

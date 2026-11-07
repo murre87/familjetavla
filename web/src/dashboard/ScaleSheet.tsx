@@ -4,6 +4,7 @@ import { Icon } from "../Icon";
 import { BOX_TITLE, BoxSheet, HIDEABLE } from "./BoxSheet";
 import { BOX_IDS, type BoxId } from "../../../server/src/boxprefs";
 import { useBoxPrefs } from "../boxprefs";
+import { startArranging } from "../layout";
 import { SCALE_MAX, SCALE_MIN, getDesignOverride, readScale, saveScale, screensaverOff, setDesignOverride, setScreensaverOff, type Design } from "../uiscale";
 
 const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
@@ -72,6 +73,17 @@ export function ScaleSheet({ onClose, names = [], all = names }: { onClose: () =
         <div className="design-row boxes-row">
           <b>Rutor</b>
           <small className="muted">Tryck på kugghjulet uppe till höger i en ruta, håll fingret på rutan, eller välj den här, för att ändra just den: textstorlek, täthet, antal dagar, vad som visas eller dölja den.</small>
+          <div>
+            <button
+              className="btn small primary"
+              onClick={() => {
+                onClose();
+                startArranging();
+              }}
+            >
+              <Icon name="move" size={16} /> Ordna startsidan
+            </button>
+          </div>
           <div className="seg-btns">
             {BOX_IDS.map((id) => (
               <button key={id} className="btn small" onClick={() => setBox(id)}>

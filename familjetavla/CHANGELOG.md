@@ -1,5 +1,15 @@
 # Ändringar
 
+## 0.24.0
+
+- **Bygg startsidan som ett pussel.** Tryck på kugghjulet i en ruta och välj **Flytta och ändra storlek på rutorna**, eller välj **Ordna startsidan** under Aa → Rutor.
+  - **Dra en ruta** och släpp den på en annan, så byter de plats.
+  - **Dra i strecket** mellan två rutor i samma rad, så blir den ena bredare och den andra smalare.
+  - **Pilarna** på varje ruta flyttar den åt vänster eller höger i raden, eller upp och ner till en annan rad (eller en ny rad). **Smalare/Bredare** ändrar bredden ett steg i taget.
+  - **Ångra**, **Återställ** (som startsidan såg ut från början), **Avbryt** och **Klar**. Inget sparas förrän du trycker Klar.
+  - Raden med Veckan växer i höjd, de andra tar den plats de behöver. Står Veckan i en smal ruta visas personerna under varandra inom varje dag, som på telefon.
+  - Gäller den här skärmen (iPaden och en annan skärm kan se olika ut). På telefon står rutorna i samma ordning, en per rad.
+
 ## 0.23.0
 
 - **Kalender längre fram än sju dagar.** Knappen **Kalender** i veckan öppnar kalendern. Med **Senare** och **Tidigare** bläddrar du vecka för vecka upp till åtta veckor fram, med datum och veckonummer överst. **Nu** tar dig tillbaka. Händelser, skjuts, barnvecka, middag och sophämtning visas som i veckan. Startsidan visar fortfarande de kommande sju dagarna. Tack jonssonc (#37).
