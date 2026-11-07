@@ -8,7 +8,7 @@ import { lookupPostcode } from "./connectors/geo.js";
 import { detectGroups, fetchIcs, filterEvents } from "./connectors/ics.js";
 import { ha, haConnection } from "./connectors/ha.js";
 import { geocode } from "./connectors/weather.js";
-import { buildCalendar, buildDashboard, gatherFamily } from "./dashboard.js";
+import { buildCalendar, buildDashboard, buildPersonDays, gatherFamily } from "./dashboard.js";
 import { duties, dutiesIcs } from "./plan.js";
 import { loadShelf, saveDinner, saveShelf } from "./meals.js";
 import { carActions, carCharging, carRows, deviceEntities, discover, readRegistry } from "./discovery.js";
@@ -526,6 +526,15 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!q.success) return reply.code(400).send({ error: "page måste vara 1–8" });
     const page = q.data.page;
     return cached(`calendar:${page}:${new Date().toDateString()}`, 3 * 60_000, () => buildCalendar(page * 7, 7));
+  });
+
+  /** One child's own view: everything of theirs, also on the days they are at the other home (page 0 … 8, a week each). */
+  app.get("/api/person-days", async (req, reply) => {
+    const q = z.object({ id: z.string().min(1).max(40), page: z.coerce.number().int().min(0).max(8) }).safeParse(req.query);
+    if (!q.success) return reply.code(400).send({ error: "id och page (0–8) behövs" });
+    if (!loadConfig().people.some((p) => p.id === q.data.id)) return reply.code(404).send({ error: "Personen finns inte" });
+    const { id, page } = q.data;
+    return cached(`person-days:${id}:${page}:${new Date().toDateString()}`, 3 * 60_000, () => buildPersonDays(id, page));
   });
 
   /**

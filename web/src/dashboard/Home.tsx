@@ -127,15 +127,24 @@ export function weekColumns(data: Dashboard): WeekCol[] {
       else family = true; // nobody named, or several: one shared entry instead of the same thing under each person
     }
   for (const k of data.school ?? []) if (k.days.some((d) => d.lessons.length)) used.add(k.name);
+  // A child with only school that week still gets a column: when school ends is shown every day.
+  for (const d of data.days) for (const s of d.schoolEnds ?? []) used.add(s.name);
   const people = data.people.filter((p) => used.has(p.name)).map((p) => ({ key: p.id, name: p.name, initial: p.initial, color: p.color }));
   return [...(family ? [{ key: "family", name: "Gemensamt", initial: "G", color: "var(--accent)", family: true }] : []), ...people];
 }
 
 /** When the child's school day ends (and whether there is gym), for the week's columns. */
-function schoolEnd(data: Dashboard, name: string, dayKey: string): { end: string; gym: boolean } | undefined {
-  const lessons = data.school?.find((k) => k.name === name)?.days.find((d) => d.dayKey === dayKey)?.lessons;
+/**
+ * When the child's school day ends that day: from the day itself (every day, also further on and at the other
+ * home), else from this week's school days (an older server). `mode` is the box setting "När skolan slutar".
+ */
+function schoolEnd(data: Dashboard, name: string, day: Dashboard["days"][number], mode?: BoxPref["schoolEnd"]): { end: string; gym: boolean; home: boolean } | undefined {
+  if (mode === "off") return undefined;
+  const fromDay = day.schoolEnds?.find((s) => s.name === name);
+  if (fromDay) return mode === "home" && !fromDay.home ? undefined : fromDay;
+  const lessons = data.school?.find((k) => k.name === name)?.days.find((d) => d.dayKey === day.key)?.lessons;
   if (!lessons?.length) return undefined;
-  return { end: lessons[lessons.length - 1]!.end, gym: lessons.some((l) => l.gym) };
+  return { end: lessons[lessons.length - 1]!.end, gym: lessons.some((l) => l.gym), home: true };
 }
 
 export function Week({ data, actions, full = false, edit, box, pref }: { data: Dashboard; actions: Actions; full?: boolean; edit?: EditProps; box?: BoxProps; pref?: BoxPref }) {
@@ -238,13 +247,13 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
                 <div className="wk-cells" style={{ ["--cols" as string]: cols.length }}>
                   {cols.map((c) => {
                     // With "show only …" the school day's end is left out: it is not what was asked for and takes room.
-                    const sch = c.family || pref?.show ? undefined : schoolEnd(data, c.name, d.key);
+                    const sch = c.family || pref?.show ? undefined : schoolEnd(data, c.name, d, pref?.schoolEnd);
                     // Everything is shown: a cell never hides things behind "+N".
                     const shown = cellEvents(d, c);
                     return (
                       <div className="wk-cell" key={c.key} data-who={c.name}>
                         {sch && (
-                          <span className="wk-school" title="När skoldagen slutar">
+                          <span className={`wk-school ${sch.home ? "" : "away"}`} title={sch.home ? "När skoldagen slutar" : "När skoldagen slutar (hos den andra föräldern)"}>
                             <Icon name="school" size={14} /> slutar {sch.end}
                             {sch.gym ? " · idrott" : ""}
                           </span>

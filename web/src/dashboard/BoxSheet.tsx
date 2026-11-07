@@ -119,6 +119,22 @@ export function BoxSheet({ id, names = [], all = names, onClose, arrange = false
         {week && (
           <Seg label="Visa" value={p.show} options={[[undefined, "Allt"], ["tasks", "Bara läxor"], ["activities", "Bara träningar och matcher"]]} onChange={(v) => setPref(id, { show: v })} />
         )}
+        {week && (
+          <Seg
+            label="När skolan slutar"
+            value={p.schoolEnd}
+            options={[[undefined, "Alla dagar"], ["home", "Bara dagar hos oss"], ["off", "Visa inte"]]}
+            onChange={(v) => setPref(id, { schoolEnd: v })}
+          />
+        )}
+        {id === "person" && (
+          <Seg
+            label="Dagar"
+            value={p.scope}
+            options={[[undefined, "Alla, även hos den andra föräldern"], ["home", "Bara dagar hos oss"]]}
+            onChange={(v) => setPref(id, { scope: v })}
+          />
+        )}
         {id === "vecka" && names.length > 1 && (
           <div className="field">
             <span>Personer</span>

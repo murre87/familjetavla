@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DashEvent, Dashboard } from "../../../server/src/types";
 import { Icon } from "../Icon";
 import { navigate } from "../route";
 import { Avatar } from "./bits";
-import { PageBar, TaskSheet, type Task } from "./Detail";
+import { PageBar, TaskSheet, rangeLabel, type Task } from "./Detail";
+import { api } from "../api";
 import { Fit } from "./Fit";
 import { BOX_TITLE, BoxGear, BoxSheet } from "./BoxSheet";
 import { boxClass, useBoxPrefs } from "../boxprefs";
@@ -42,7 +43,27 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
   const person = data.people.find((p) => p.id === personId);
   const kid = (data.school ?? []).find((k) => k.personId === personId);
   const show = pref?.show;
-  const chosen = useMemo(() => (pref?.days ? data.days.slice(0, pref.days) : data.days), [data.days, pref?.days]);
+  // Every day of theirs (default, also at the other home) or only the days with us; a week at a time up to eight ahead.
+  const everyDay = pref?.scope !== "home";
+  const [page, setPage] = useState(0);
+  const [fetched, setFetched] = useState<Record<string, Dashboard["days"]>>({});
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const fetchKey = `${personId}:${everyDay ? "all" : "home"}:${page}`;
+  const needsFetch = everyDay || page > 0;
+  useEffect(() => {
+    if (!needsFetch || fetched[fetchKey]) return;
+    let alive = true;
+    setLoadError(null);
+    (everyDay ? api.personDays(personId, page) : api.calendar(page))
+      .then((r) => alive && setFetched((f) => ({ ...f, [fetchKey]: r.days })))
+      .catch((e) => alive && setLoadError((e as Error).message || "Kunde inte hämta dagarna."));
+    return () => {
+      alive = false;
+    };
+  }, [fetchKey, needsFetch, everyDay, personId, page, fetched]);
+  // While the first fetch of every day is on its way the board's own days show (so the page is never empty).
+  const pageDays = needsFetch ? fetched[fetchKey] ?? (page === 0 ? data.days : undefined) : data.days;
+  const chosen = useMemo(() => (pageDays && pref?.days ? pageDays.slice(0, pref.days) : pageDays ?? []), [pageDays, pref?.days]);
   const shown = useMemo(() => new Set(chosen.map((d) => d.key)), [chosen]);
   if (!person) {
     return (
@@ -57,7 +78,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
   const hasHit = (d: (typeof chosen)[number]) =>
     show === "tasks" ? (kid?.tasks ?? []).some((t) => t.dayKey === d.key) : personEvents(d.events, person).mine.some((e) => e.category === "sport");
   const days = show ? chosen.filter((d) => d.isToday || hasHit(d)) : chosen;
-  const later = show === "activities" ? [] : (kid?.tasks ?? []).filter((t) => !shown.has(t.dayKey)).slice(0, 6);
+  const later = show === "activities" || page > 0 ? [] : (kid?.tasks ?? []).filter((t) => !shown.has(t.dayKey)).slice(0, 6);
   return (
     <main className="detail-page person-page">
       <PageBar title={`${person.name}s vecka`} />
@@ -70,14 +91,37 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
         <span className="grow" />
         <BoxGear title={BOX_TITLE.person} onOpen={() => setSheet(true)} inline />
       </div>
+      <div className="cal-nav" role="group" aria-label={`Bläddra i ${person.name}s veckor`}>
+        <button className="btn" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0} aria-label="Tidigare vecka">
+          <Icon name="chevronLeft" size={22} /> Tidigare
+        </button>
+        <b className="grow cal-range" aria-live="polite">
+          {page === 0 ? "Kommande 7 dagar" : pageDays ? rangeLabel(pageDays) : "Hämtar …"}
+          {everyDay ? "" : " · bara dagar hos oss"}
+        </b>
+        {page > 0 && (
+          <button className="btn" onClick={() => setPage(0)} aria-label="Tillbaka till den här veckan">
+            Nu
+          </button>
+        )}
+        <button className="btn" onClick={() => setPage((p) => Math.min(8, p + 1))} disabled={page === 8} aria-label="Senare vecka">
+          Senare <Icon name="chevronRight" size={22} />
+        </button>
+      </div>
+      {loadError && !pageDays && <p className="muted">{loadError}</p>}
       <Fit className="detail-body person-fit" deps={[data, personId, pref]} min={0.55} base={pref?.size} noShrink>
       <div className={`person-days ${boxClass(pref)}`} {...hold}>
         {days.map((d) => {
           const { mine: allEvents, family: allFam } = personEvents(d.events, person);
           const sd = kid?.days.find((x) => x.dayKey === d.key);
           // "Bara läxor" shows only the school's tasks, "Bara träningar och matcher" only sport: nothing else that day.
-          const span = sd && !show ? schoolSpan(sd.lessons) : null;
-          const gym = sd?.lessons.some((l) => l.gym);
+          // When school ends: from the day itself (every day, also further on and at the other home), as the box setting says.
+          const end = show || pref?.schoolEnd === "off" ? undefined : d.schoolEnds?.find((x) => x.name === person.name);
+          const endShown = end && !(pref?.schoolEnd === "home" && !end.home) ? end : undefined;
+          const span = endShown ? { end: endShown.end } : !d.schoolEnds && sd && !show && pref?.schoolEnd !== "off" ? schoolSpan(sd.lessons) : null;
+          const gym = endShown ? endShown.gym : sd?.lessons.some((l) => l.gym);
+          // A child's day at the other home is shown too (setting "Dagar"), marked so.
+          const away = person.kind === "child" && !d.childrenHome.includes(person.name);
           const tasks = show === "activities" ? [] : (kid?.tasks ?? []).filter((t) => t.dayKey === d.key);
           // A homework that is also an all-day item in the calendar is shown once (as the homework).
           const events = show === "tasks" ? [] : allEvents.filter((e) => !tasks.some((t) => t.title === e.title) && (show !== "activities" || e.category === "sport"));
@@ -90,6 +134,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
             <section className={`card person-day ${d.isToday ? "today" : ""}`} key={d.key}>
               <h2>
                 {cap(d.name)} <small className="muted">{d.date}</small>
+                {away && <small className="p-away">hos den andra föräldern</small>}
               </h2>
               {span && (
                 <div className="p-line">

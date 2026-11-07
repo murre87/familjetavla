@@ -191,3 +191,12 @@ describe("rutinställningar (håll in en ruta)", () => {
     expect(passesShow("activities", sport, true)).toBe(false);
   });
 });
+
+describe("rutinställningar: skolslut och barnets dagar", () => {
+  it("keeps only the known choices, and the defaults (every day) are not saved", async () => {
+    const { normalizePref } = await import("./boxprefs.js");
+    expect(normalizePref({ schoolEnd: "home", scope: "home" })).toEqual({ schoolEnd: "home", scope: "home" });
+    expect(normalizePref({ schoolEnd: "off" })).toEqual({ schoolEnd: "off" });
+    expect(normalizePref({ schoolEnd: "always", scope: "all" })).toEqual({});
+  });
+});

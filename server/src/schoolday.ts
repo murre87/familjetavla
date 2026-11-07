@@ -130,3 +130,32 @@ export function buildSchoolWeek(
   }
   return out;
 }
+
+/** When each child's school day ends on `day` (last lesson), whether there is gym, and whether the child is with us that day. */
+export interface SchoolEnd {
+  name: string;
+  end: string;
+  gym: boolean;
+  /** With this household that day (custody). The end is shown on the other days too, unless the screen says otherwise. */
+  home: boolean;
+}
+
+/**
+ * Every child's school end on one day, from the lessons themselves – not only this Monday–Friday and not only the
+ * days the child is here (the week and the calendar show days further on, and the other home's days too).
+ */
+export function schoolEndsOn(events: SourcedEvent[], people: Map<string, Person>, day: Date, isHome: (p: Person, day: Date) => boolean): SchoolEnd[] {
+  const from = startOfDay(day);
+  const to = plusDays(from, 1);
+  const out: SchoolEnd[] = [];
+  for (const p of people.values()) {
+    if (p.kind !== "child") continue;
+    const lessons = events.filter(
+      (e) => e.personId === p.id && (e.sourceId.startsWith("school:") || e.category === "school") && !e.allDay && !e.task && !TASK.test(e.title) && e.start >= from && e.start < to,
+    );
+    if (!lessons.length) continue;
+    const last = lessons.reduce((a, b) => (b.end > a.end ? b : a));
+    out.push({ name: p.name, end: hm(last.end), gym: lessons.some((l) => l.gym), home: isHome(p, day) });
+  }
+  return out;
+}
