@@ -11,6 +11,7 @@ import { HomeFlat } from "./HomeFlat";
 import { Attachments } from "./Attachments";
 import { RichText } from "./RichText";
 import { ScaleSheet } from "./ScaleSheet";
+import { usePagePrefs } from "../pageprefs";
 import { applyScale, readScale, scaleChosen, screensaverOff, useDesign } from "../uiscale";
 import { GroceryModal } from "./GroceryModal";
 import { Home, weekColumns } from "./Home";
@@ -1034,6 +1035,7 @@ export function Dashboard() {
   const theme = fixed ?? themeOverride ?? (data?.theme === "auto" || !data ? (phase === "dawn" || phase === "day" ? "light" : "dark") : data.theme);
   // The new flat design has a light and a dark look; e-ink and mirror keep their own.
   const design = useDesign(data?.design ?? "glass");
+  const { prefs: pagePrefs } = usePagePrefs();
   const flat = design === "flat" && (theme === "light" || theme === "dark");
   // On a tablet the board never scrolls: lock the page so it cannot be dragged around (a home-screen app on an iPad can otherwise be pulled in any direction).
   useEffect(() => {
@@ -1397,13 +1399,14 @@ export function Dashboard() {
         {personId ? (
           <PersonPage data={data} personId={personId} onOpenEvent={actions.openEvent} />
         ) : page ? (
-          <DetailPage page={page} data={data} actions={actions} />
+          <DetailPage page={page} data={data} actions={actions} flat={flat} />
         ) : (
         <div className="tab-page">
-          {tab !== "home" && <PageBar title={TABS.find((t) => t.id === tab)?.label ?? ""} />}
+          {tab !== "home" && <PageBar title={TABS.find((t) => t.id === tab)?.label ?? ""} gearId={`tab:${tab}`} />}
           {tab === "home" && (flat ? <HomeFlat data={data} actions={actions} /> : <Home data={data} actions={actions} />)}
           {tab !== "home" && (
-            <Fit className="tab-body view-in" key={tab} deps={[data, tab]}>
+            // The new design never shrinks a tab to make it fit (Mat's text got too small to read): it scrolls, at the size the tab's cog says.
+            <Fit className="tab-body view-in" key={tab} deps={[data, tab]} noShrink={flat} base={pagePrefs[`tab:${tab}`]?.size ?? 1}>
               {tab === "cars" && <CarsPage data={data} actions={actions} />}
               {tab === "lights" && <LightsPage data={data} actions={actions} />}
               {tab === "security" && <SecurityPage data={data} actions={actions} />}

@@ -245,10 +245,14 @@ for (const [name0, dev, tablet] of DEVICES) {
           if (w > 3 && h > 3 && w * h > 0.25 * Math.min(A.r.width * A.r.height, B.r.width * B.r.height)) out.overlap.push(`"${A.t}" / "${B.t}"`);
         }
       }
+      // In the new design tabs and pages scroll at full size instead of shrinking (Emil 2026-11-08: the shrunk text was
+      // unreadable), so their overflow is the intended scrolling there, not a fault. The classic design still fits.
+      const flatOn = document.documentElement.dataset.design === "flat";
       for (const f of document.querySelectorAll(".fit")) {
         const z = Number(f.firstElementChild?.style.zoom || 1);
         out.scales.push(Math.round(z * 100));
-        if (f.classList.contains("fit-overflow")) out.overflow.push(f.className.replace("fit", "").trim());
+        const scrollsByDesign = flatOn && (f.classList.contains("detail-body") || f.classList.contains("tab-body"));
+        if (f.classList.contains("fit-overflow") && !scrollsByDesign) out.overflow.push(f.className.replace("fit", "").trim());
       }
       for (const btn of document.querySelectorAll("button, a.btn")) {
         const r = btn.getBoundingClientRect();
@@ -265,7 +269,8 @@ for (const [name0, dev, tablet] of DEVICES) {
     if (m.overlap.length) issues.push(`text på text: ${[...new Set(m.overlap)].slice(0, 4).join(" | ")}`);
     if (m.cut.length) issues.push(`kapad text: ${[...new Set(m.cut)].slice(0, 4).join(" | ")}`);
     // "Alla kort" and "Kommande 7 dagar" are the show-everything pages: scrolling there is allowed as a last resort.
-    if (tablet && m.overflow.length && !["kort", "veckan"].includes(r)) issues.push(`ryms inte ens på 70 %: ${m.overflow.join(", ")}`);
+    // By the page (hash), not the route's name: "skjuts" is the week page with a sheet open.
+    if (tablet && m.overflow.length && !/#\/sida\/(kort|veckan)\b/.test(hash)) issues.push(`ryms inte ens på 70 %: ${m.overflow.join(", ")}`);
     const minScale = m.scales.length ? Math.min(...m.scales) : 100;
     const row = { device: name, route: r, issues, minScale, small: m.small, more: m.more };
     report.push(row);

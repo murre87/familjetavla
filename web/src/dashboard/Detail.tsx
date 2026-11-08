@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Dashboard } from "../../../server/src/types";
 import { isoWeek } from "../../../server/src/time";
+import { usePagePrefs } from "../pageprefs";
+import { PageGear } from "./PageSheet";
 import { api } from "../api";
 import { Icon } from "../Icon";
 import { Attachments, isBoardFile } from "./Attachments";
@@ -27,13 +29,15 @@ export const PAGE_TITLES: Record<PageId, string> = {
 };
 
 /** Every page and tab: back, the title, and home – always in the same place. */
-export function PageBar({ title }: { title: string }) {
+/** `gearId`: this page's settings (text size) under a cog next to Hem. */
+export function PageBar({ title, gearId }: { title: string; gearId?: string }) {
   return (
     <div className="page-bar">
       <button className="btn" onClick={goBack} aria-label="Tillbaka">
         <Icon name="chevronLeft" size={22} /> Tillbaka
       </button>
       <h1 className="grow">{title}</h1>
+      {gearId && <PageGear id={gearId} title={title} />}
       <button className="btn" onClick={goHome} aria-label="Till startsidan">
         <Icon name="home" size={22} /> Hem
       </button>
@@ -41,11 +45,14 @@ export function PageBar({ title }: { title: string }) {
   );
 }
 
-export function DetailPage({ page, data, actions }: { page: PageId; data: Dashboard; actions: Actions }) {
+/** `flat`: the new design is on (flat, and a light or dark theme – e-ink and mirror keep the old fitting). */
+export function DetailPage({ page, data, actions, flat = false }: { page: PageId; data: Dashboard; actions: Actions; flat?: boolean }) {
+  // The new design never shrinks a page to make it fit (the text got too small to read): it scrolls, at the size the page's cog says.
+  const { prefs } = usePagePrefs();
   return (
     <main className="detail-page">
-      <PageBar title={PAGE_TITLES[page]} />
-      <Fit className="detail-body" deps={[data, page]}>
+      <PageBar title={PAGE_TITLES[page]} gearId={`page:${page}`} />
+      <Fit className="detail-body" deps={[data, page]} noShrink={flat} base={prefs[`page:${page}`]?.size ?? 1}>
         {page === "maten" && <MealsPage data={data} actions={actions} />}
         {page === "skolan" && <SchoolPage data={data} actions={actions} />}
         {page === "komihag" && <Reminders items={data.reminders} food={data.schoolFood} data={data} actions={actions} />}

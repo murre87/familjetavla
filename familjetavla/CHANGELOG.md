@@ -1,5 +1,10 @@
 # Ändringar
 
+## 0.27.0
+
+- **Flikarna och sidorna har läsbar text.** Mat, Bil, Hus, Ljus, Energi, Kalendern och de andra krympte allt för att få plats, och på Mat blev texten bara några pixlar hög. I nya designen visas de nu i full storlek, och man rullar för resten.
+- **Kugghjul på varje flik och sida**, uppe till höger bredvid Hem: **Textstorlek** 70–200 % för just den sidan på just den skärmen. Köksplattan kan till exempel ha större text på Mat.
+
 ## 0.26.0
 
 - **Att göra på startsidan.** En ruta för odaterade saker (boka sotning, byta hallampa, beställa filter) från en todo-lista i Home Assistant, till exempel Todoist eller Home Assistants egen. Välj listan under Inställningar → *Mat & inköp* → **Att göra på startsidan**, och ge rutan en egen rubrik om du vill. Ett tryck bockar av en uppgift, och **Lägg till** skriver en ny, som hamnar i listan i Home Assistant (och därmed i Todoist). Uppgifter med datum står först. I nya designen står rutan till höger om veckan och kan flyttas, breddas eller döljas som de andra. I den klassiska slås den på under Startskärm. Tack pjdhub (#86).
