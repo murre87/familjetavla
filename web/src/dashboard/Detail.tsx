@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { Dashboard } from "../../../server/src/types";
 import { isoWeek } from "../../../server/src/time";
-import { useDesign } from "../uiscale";
 import { usePagePrefs } from "../pageprefs";
 import { PageGear } from "./PageSheet";
 import { api } from "../api";
@@ -46,9 +45,9 @@ export function PageBar({ title, gearId }: { title: string; gearId?: string }) {
   );
 }
 
-export function DetailPage({ page, data, actions }: { page: PageId; data: Dashboard; actions: Actions }) {
+/** `flat`: the new design is on (flat, and a light or dark theme – e-ink and mirror keep the old fitting). */
+export function DetailPage({ page, data, actions, flat = false }: { page: PageId; data: Dashboard; actions: Actions; flat?: boolean }) {
   // The new design never shrinks a page to make it fit (the text got too small to read): it scrolls, at the size the page's cog says.
-  const flat = useDesign(data.design) === "flat";
   const { prefs } = usePagePrefs();
   return (
     <main className="detail-page">

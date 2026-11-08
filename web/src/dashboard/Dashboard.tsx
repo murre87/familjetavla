@@ -1399,7 +1399,7 @@ export function Dashboard() {
         {personId ? (
           <PersonPage data={data} personId={personId} onOpenEvent={actions.openEvent} />
         ) : page ? (
-          <DetailPage page={page} data={data} actions={actions} />
+          <DetailPage page={page} data={data} actions={actions} flat={flat} />
         ) : (
         <div className="tab-page">
           {tab !== "home" && <PageBar title={TABS.find((t) => t.id === tab)?.label ?? ""} gearId={`tab:${tab}`} />}
