@@ -3,7 +3,7 @@
   "version": "0.27.0",
   "private": true,
   "description": "Familjetavla för surfplattan – kalendrar, barnvecka, Vklass, sophämtning, sport, Willys och elpris i en vy. Körs som Home Assistant-tillägg eller Docker.",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "workspaces": [
     "server",
     "web"

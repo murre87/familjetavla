@@ -189,7 +189,12 @@ Kopplingarna bygger på kartläggning från andra öppna projekt: [ha-ica-todo](
 
 ## Licens
 
-MIT
+Familjetavla är fri programvara under [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0), samma licens som EnergyWizard.
+Du får använda, ändra och sprida koden fritt. Den som sprider en ändrad version, eller kör den som en tjänst
+åt andra, ska dela sin källkod under samma licens.
+
+Versioner till och med 0.27.0 släpptes under MIT och gäller fortfarande under MIT. Kod som bygger på andra
+projekt (se *Tack* ovan) behåller sin egen licens och upphovsrätt.
 
 ## ❤️ Stöd projektet
 
