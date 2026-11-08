@@ -3,8 +3,8 @@
 import type { BoxId } from "./boxprefs.js";
 
 /** The boxes on the new start page that can be moved (the person view is its own page). */
-export type LayoutBox = Extract<BoxId, "nu" | "idag" | "mat" | "vecka" | "teknik">;
-export const LAYOUT_BOXES: LayoutBox[] = ["nu", "idag", "mat", "vecka", "teknik"];
+export type LayoutBox = Extract<BoxId, "nu" | "idag" | "mat" | "vecka" | "teknik" | "todo">;
+export const LAYOUT_BOXES: LayoutBox[] = ["nu", "idag", "mat", "vecka", "teknik", "todo"];
 
 /** One row: the boxes from left to right and their widths (columns out of 12, adding up to 12 among the boxes shown). */
 export interface LayoutRow {
@@ -21,11 +21,14 @@ export const MIN_SPAN = 2;
 /** Most boxes side by side. */
 export const MAX_PER_ROW = 4;
 
-/** As the page has always looked: Nu, Idag and Maten on top, the week under, the row of buttons at the bottom. */
+/**
+ * As the page has always looked: Nu, Idag and Maten on top, the week under, the row of buttons at the bottom.
+ * "Att göra" (#86) stands to the right of the week, and only when a list is chosen (else the week has the whole row).
+ */
 export const DEFAULT_LAYOUT: Layout = {
   rows: [
     { ids: ["nu", "idag", "mat"], spans: [5, 3, 4] },
-    { ids: ["vecka"], spans: [12] },
+    { ids: ["vecka", "todo"], spans: [9, 3] },
     { ids: ["teknik"], spans: [12] },
   ],
 };
@@ -79,8 +82,10 @@ export function normalizeLayout(raw: unknown): Layout {
     const defRow = DEFAULT_LAYOUT.rows.findIndex((r) => r.ids.includes(id));
     const target = rows.find((r) => r.ids.some((x) => DEFAULT_LAYOUT.rows[defRow]!.ids.includes(x)) && r.ids.length < MAX_PER_ROW);
     if (target) {
+      // Added with the width it has by default; the others keep theirs (and their proportions while it is hidden).
+      const defSpan = DEFAULT_LAYOUT.rows[defRow]!.spans[DEFAULT_LAYOUT.rows[defRow]!.ids.indexOf(id)]!;
       target.ids.push(id);
-      target.spans = fitSpans([...target.spans, COLS / target.ids.length]);
+      target.spans = [...target.spans, defSpan];
     } else rows.push({ ids: [id], spans: [COLS] });
   }
   return { rows };

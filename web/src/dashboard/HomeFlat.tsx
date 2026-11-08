@@ -4,6 +4,7 @@ import type { Dashboard } from "../../../server/src/types";
 import { api } from "../api";
 import { Icon, type IconName } from "../Icon";
 import { Meals } from "../widgets/meals";
+import { Todo } from "../widgets/todo";
 import type { Actions } from "./Dashboard";
 import { Avatar, travelText } from "./bits";
 import { insideGroups, setGroups } from "./lightGroups";
@@ -203,9 +204,11 @@ export function HomeFlat({ data, actions }: { data: Dashboard; actions: Actions 
     vecka: useLongPress(() => setSheet("vecka")),
     teknik: useLongPress(() => setSheet("teknik")),
     person: useLongPress(() => setSheet("person")),
+    todo: useLongPress(() => setSheet("todo")),
   };
   // The page is a puzzle (Ordna startsidan): rows of boxes with widths out of 12. The week can never be hidden.
-  const hidden = LAYOUT_BOXES.filter((id) => id !== "vecka" && prefs[id]?.hidden);
+  // "Att göra" only when a todo list is chosen in the settings.
+  const hidden = LAYOUT_BOXES.filter((id) => id !== "vecka" && (prefs[id]?.hidden || (id === "todo" && !data.todo)));
   const saved = useLayout();
   const arrange = useArrange(saved, hidden);
   const places = gridOf(arrange.layout, hidden);
@@ -231,6 +234,7 @@ export function HomeFlat({ data, actions }: { data: Dashboard; actions: Actions 
       <Week data={data} actions={actions} box={box("vecka")} pref={prefs.vecka} />
       {!prefs.mat?.hidden && <Meals data={data} fit box={box("mat")} />}
       {!prefs.teknik?.hidden && <Teknik data={data} actions={actions} box={box("teknik")} />}
+      {!prefs.todo?.hidden && data.todo && <Todo data={data} actions={actions} box={box("todo")} fit />}
       {sheet && <BoxSheet id={sheet} names={names} all={all} onClose={() => setSheet(null)} arrange />}
       {arrange.bar}
     </main>

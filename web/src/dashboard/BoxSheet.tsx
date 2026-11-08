@@ -12,6 +12,7 @@ export const BOX_TITLE: Record<BoxId, string> = {
   vecka: "Veckan",
   teknik: "Rutorna längst ner",
   person: "Veckan för personen",
+  todo: "Att göra",
 };
 
 /** The small cog in a box's top right corner: opens the settings for just that box (the same as holding the box). */
@@ -33,7 +34,7 @@ export function BoxGear({ title, onOpen, inline = false }: { title: string; onOp
 }
 
 /** The boxes that can be hidden (the week is the main content and stays). */
-export const HIDEABLE: BoxId[] = ["nu", "idag", "mat", "teknik"];
+export const HIDEABLE: BoxId[] = ["nu", "idag", "mat", "teknik", "todo"];
 
 function Seg<T extends string | number | undefined>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (

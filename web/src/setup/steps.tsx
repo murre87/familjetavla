@@ -1417,6 +1417,25 @@ export function ShoppingStep({ cfg, set, secrets, setSecrets, resp, haOk, saveNo
           <EntityPicker label="Lista" domains={["todo"]} value={cfg.shopping.entityId} onChange={(v) => set({ ...cfg, shopping: { ...cfg.shopping, entityId: v } })} optional={false} />
         )}
       </section>
+      <section className="card">
+        <h2>Att göra på startsidan</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          En lista för odaterade saker (boka sotning, byta hallampa). Välj en todo-lista i Home Assistant, till exempel Todoist eller HA:s egen. Uppgifterna syns i en ruta på startsidan, bockas av med ett tryck och kan läggas till där.
+        </p>
+        {haOk ? (
+          <>
+            <EntityPicker label="Lista" domains={["todo"]} value={cfg.todo?.entityId} onChange={(v) => set({ ...cfg, todo: { ...cfg.todo, entityId: v || undefined } })} />
+            {cfg.todo?.entityId && (
+              <label className="field">
+                <span>Rubrik på rutan</span>
+                <input className="input" maxLength={30} placeholder="Att göra" value={cfg.todo?.title ?? ""} onChange={(e) => set({ ...cfg, todo: { ...cfg.todo, title: e.target.value || undefined } })} />
+              </label>
+            )}
+          </>
+        ) : (
+          <p className="muted">Kräver Home Assistant.</p>
+        )}
+      </section>
       <h2 style={{ fontSize: 18 }}>Butiker</h2>
       <p className="muted" style={{ margin: 0 }}>Välj en eller flera. Varje butik får egna erbjudanden, vanliga varor och recept under fliken Mat.</p>
       <div className="tiles">

@@ -83,3 +83,20 @@ describe("a child's every day", () => {
     expect(own[1]!.events.map((e) => e.title)).toContain("Träning F14");
   });
 });
+
+describe("Att göra (#86)", () => {
+  it("shows the open items, dated ones first, and leaves the done ones out", async () => {
+    const { todoView } = await import("./dashboard.js");
+    const v = todoView([
+      { uid: "1", summary: "Boka sotning", status: "needs_action" },
+      { uid: "2", summary: "Beställa filter", status: "completed" },
+      { uid: "3", summary: "Byta däck", status: "needs_action", due: "2026-11-20" },
+      { uid: "4", summary: "  ", status: "needs_action" },
+      { uid: "5", summary: "Hallampa", status: "needs_action", due: "2026-11-10" },
+    ]);
+    expect(v.title).toBe("Att göra");
+    expect(v.items.map((i) => i.name)).toEqual(["Hallampa", "Byta däck", "Boka sotning"]);
+    expect(v.items[0]).toMatchObject({ id: "5", due: "2026-11-10" });
+    expect(todoView([], "Huset").title).toBe("Huset");
+  });
+});

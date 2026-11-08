@@ -1,8 +1,8 @@
 // Shared by the server and the board (no Node imports here).
 
 /** The boxes on a screen that can be adjusted on their own (held for a moment to open their settings). */
-export type BoxId = "nu" | "idag" | "mat" | "vecka" | "teknik" | "person";
-export const BOX_IDS: BoxId[] = ["nu", "idag", "mat", "vecka", "teknik", "person"];
+export type BoxId = "nu" | "idag" | "mat" | "vecka" | "teknik" | "person" | "todo";
+export const BOX_IDS: BoxId[] = ["nu", "idag", "mat", "vecka", "teknik", "person", "todo"];
 
 export interface BoxPref {
   /** Text size for just this box: 0.7–1.6 (1 = as it is). Grows only as far as the box has room. */
