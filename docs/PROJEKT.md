@@ -4,7 +4,7 @@
 >
 > Senaste granskningsunderlag: **[GRANSKNING.md](GRANSKNING.md)**. Hör ihop med **[DESIGN.md](DESIGN.md)** (designsystemet i detalj). Klickbar demo utan server: `docs/demo/familjetavla-demo.html` (öppna i webbläsaren; `#ipad` visar den i iPad-storlek, `#forsta` som nyinstallerad).
 
-Repo: https://github.com/murre87/familjetavla (MIT-licens, publikt)
+Repo: https://github.com/murre87/familjetavla (AGPL-3.0 sedan 2026-11-08, tidigare MIT; publikt)
 
 ---
 

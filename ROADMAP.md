@@ -5,6 +5,7 @@ Vad som är beslutat, vad som väntar och vad som medvetet inte görs. Uppdatera
 
 ## Beslut
 
+- **Licens: AGPL-3.0, beslutat 2026-11-08** (samma som EnergyWizard). Versioner till och med 0.27.0 släpptes under MIT och gäller fortfarande under MIT.
 - **Ny design (platt) är standard sedan 0.20.0.** Klassisk finns kvar och ändras inte. Stående läge på surfplatta stöds inte i nya designen (beslut 2026-11-04, tillsvidare).
 - **Läsbar text före att allt syns (2026-11-06–08).** Veckan, kalendern, personvyn och alla flikar och sidor krymper inte längre för att få plats: de rullar i full storlek. Textstorleken ställs per ruta och per sida med kugghjulet, per skärm.
 - **Startsidan byggs som ett pussel (0.24.0).** Per skärm under *Ordna startsidan*. Standarden är den gamla layouten.
@@ -12,9 +13,6 @@ Vad som är beslutat, vad som väntar och vad som medvetet inte görs. Uppdatera
 - **Nya issues får tack och sponsringsönskan automatiskt** (`.github/workflows/sponsring-nya-issues.yml`, samma text som 2026-11-06).
 - **Släpp:** ändringslogg och version i PR, tagg först när CI är grön på main, Home Assistant-tillägget höjs av release-jobbet.
 
-## Öppen fråga
-
-- **Licens.** README och LICENSE säger MIT. Emil har skrivit att AGPL gäller, och EnergyWizard valde AGPL-3.0 2026-11-03. Ändras först när Emil uttryckligen bestämmer det, eftersom det ändrar villkoren för alla som använder koden.
 
 ## Väntar på svar från den som frågade
 
