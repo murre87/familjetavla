@@ -356,7 +356,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
   const today = startOfDay(now);
 
   const conn = haConnection();
-  const [family, waste, weather, prices, states, shopping] = await Promise.all([
+  const [family, waste, weather, prices, states, shopping, todo] = await Promise.all([
     gatherFamily(cfg, now, errors),
     collectWaste(cfg, errors),
     cfg.household.lat != null && cfg.household.lon != null
@@ -375,6 +375,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
         })
       : Promise.resolve([] as HaState[]),
     loadShopping(cfg, errors),
+    loadTodo(cfg, errors),
   ]);
   const stateMap = new Map(states.map((s) => [s.entity_id, s]));
   const { people, children, all, withCare, travelCtx } = family;
@@ -439,6 +440,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     ],
     days,
     shopping,
+    ...(todo ? { todo } : {}),
     grocery: (() => {
       const g = groceryIntegration(cfg);
       return g ? { provider: g.provider.meta.id, name: g.provider.meta.name } : undefined;
@@ -684,6 +686,29 @@ async function loadShopping(cfg: Config, errors: SourceError[]): Promise<Dashboa
     return { source: "ha", items: [] };
   }
   return { source: "local", items: markSent(loadLocalList()) };
+}
+
+/** "Att göra" (#86): the open items of the chosen todo.* list, those with a date first (soonest), then the rest. */
+export function todoView(items: { uid: string; summary: string; status: string; due?: string }[], title?: string): NonNullable<Dashboard["todo"]> {
+  const open = items.filter((i) => i.status !== "completed" && i.summary?.trim());
+  const dated = open.filter((i) => i.due).sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  const rest = open.filter((i) => !i.due);
+  return {
+    title: title?.trim() || "Att göra",
+    items: [...dated, ...rest].slice(0, 30).map((i) => ({ id: i.uid, name: i.summary.trim(), done: false, ...(i.due ? { due: String(i.due).slice(0, 10) } : {}) })),
+  };
+}
+
+async function loadTodo(cfg: Config, errors: SourceError[]): Promise<Dashboard["todo"]> {
+  const id = cfg.todo?.entityId;
+  const conn = haConnection();
+  if (!id || !conn) return undefined;
+  try {
+    return todoView(await cached(`todo:${id}`, 15_000, () => ha.todoItems(conn, id)), cfg.todo?.title);
+  } catch (e) {
+    errors.push({ source: "Att göra", message: (e as Error).message });
+    return { title: cfg.todo?.title?.trim() || "Att göra", items: [] };
+  }
 }
 
 /** Items that were sent to a shop in the last days get a mark (the shop's name), so the list shows what is already ordered. */

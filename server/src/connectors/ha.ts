@@ -132,9 +132,9 @@ export const ha = {
     return out;
   },
 
-  async todoItems(c: HaConn, entityId: string): Promise<{ uid: string; summary: string; status: string }[]> {
+  async todoItems(c: HaConn, entityId: string): Promise<{ uid: string; summary: string; status: string; due?: string }[]> {
     const res = (await ha.service(c, "todo", "get_items", { entity_id: entityId }, true)) as {
-      service_response?: Record<string, { items: { uid: string; summary: string; status: string }[] }>;
+      service_response?: Record<string, { items: { uid: string; summary: string; status: string; due?: string }[] }>;
     };
     return res.service_response?.[entityId]?.items ?? [];
   },

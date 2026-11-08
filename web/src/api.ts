@@ -256,6 +256,9 @@ const realApi = {
   searchStations: (q: string) => request<{ stations: StationHit[] }>(`radio/search?q=${encodeURIComponent(q)}`),
   addItem: (name: string, offer?: { store: string; id: string }) => post("shopping/add", { name, offer }),
   toggleItem: (id: string, done: boolean) => post("shopping/toggle", { id, done }),
+  /** "Att göra" (#86): the todo.* list in Home Assistant. */
+  todoAdd: (name: string) => post("todo/add", { name }),
+  todoToggle: (id: string, done: boolean) => post("todo/toggle", { id, done }),
   clearDone: () => post("shopping/clear-done"),
 };
 

@@ -127,7 +127,7 @@ export interface TravelChoice {
   home?: TravelLeg;
 }
 
-export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "homestatus", "temps", "energy", "climates", "music"] as const;
+export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "homestatus", "todo", "temps", "energy", "climates", "music"] as const;
 export type HomeWidget = (typeof HOME_WIDGETS)[number];
 /** Startskärmens rutor: "auto" följer hur många rutor som visas, annars liten/normal/stor. */
 export type WidgetSize = "auto" | "s" | "m" | "l";
@@ -292,6 +292,12 @@ export interface Config {
   people: Person[];
   calendars: CalendarSource[];
   integrations: Integration[];
+  /** "Att göra" på startsidan: en todo.*-lista i Home Assistant (t.ex. Todoist), för odaterade saker (#86). */
+  todo?: {
+    entityId?: string;
+    /** Rubrik på rutan (standard "Att göra"). */
+    title?: string;
+  };
   shopping: {
     source: "local" | "ha";
     entityId?: string; // todo.* i Home Assistant
@@ -548,6 +554,8 @@ export interface Dashboard {
   legend: { name: string; color: string }[];
   days: DashDay[];
   shopping: { source: "local" | "ha"; items: { id: string; name: string; done: boolean; /** Skickad till den här butiken (senaste dygnen). */ sent?: string }[] };
+  /** "Att göra" (en todo.*-lista i Home Assistant): de öppna uppgifterna. Saknas när ingen lista är vald. */
+  todo?: { title: string; items: { id: string; name: string; done: boolean; due?: string }[] };
   /** Butik att skicka inköpslistan till, om en är vald. */
   grocery?: { provider: string; name: string };
   /** Alla valda butiker (listan skickas till `grocery`). */

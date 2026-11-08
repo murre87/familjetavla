@@ -230,6 +230,7 @@ export const configSchema = z
     people: z.array(personSchema).max(12),
     calendars: z.array(calendarSchema).max(40),
     integrations: z.array(integrationSchema).max(20),
+    todo: z.object({ entityId: entity.optional(), title: z.string().max(30).optional() }).optional(),
     shopping: z.object({
       source: z.enum(["local", "ha"]),
       entityId: entity.optional(),
@@ -1535,6 +1536,30 @@ export async function registerRoutes(app: FastifyInstance) {
     } else {
       saveLocalList(loadLocalList().map((i) => (i.id === id ? { ...i, done: Boolean(done) } : i)));
     }
+    return { ok: true };
+  });
+
+  // "Att göra" (#86): add and tick off in the household's todo.* list in Home Assistant.
+  app.post("/api/todo/add", async (req, reply) => {
+    const body = z.object({ name: z.string().trim().min(1).max(120) }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Skriv vad som ska göras."));
+    const id = loadConfig().todo?.entityId;
+    const conn = haConnection();
+    if (!id) return fail(reply, new Error("Ingen Att göra-lista är vald."));
+    if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
+    await ha.service(conn, "todo", "add_item", { entity_id: id, item: body.data.name });
+    invalidate("todo:");
+    return { ok: true };
+  });
+  app.post("/api/todo/toggle", async (req, reply) => {
+    const body = z.object({ id: z.string().min(1).max(200), done: z.boolean() }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Saknar uppgift"));
+    const id = loadConfig().todo?.entityId;
+    const conn = haConnection();
+    if (!id) return fail(reply, new Error("Ingen Att göra-lista är vald."));
+    if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
+    await ha.service(conn, "todo", "update_item", { entity_id: id, item: body.data.id, status: body.data.done ? "completed" : "needs_action" });
+    invalidate("todo:");
     return { ok: true };
   });
 
