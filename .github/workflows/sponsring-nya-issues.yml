@@ -1,0 +1,43 @@
+name: sponsring-nya-issues
+# Varje nytt issue från någon annan än projektägaren får ett tack och en önskan om sponsring (samma text som Emil
+# godkände och skickade för hand 2026-11-06; efter EnergyWizards arbetsflöde). Svenska om personens text ser svensk
+# ut, annars engelska. Projektägarens egna issues och bottar (t.ex. Källkoll) får ingen kommentar.
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  tack:
+    if: github.event.issue.user.login != 'murre87' && github.event.issue.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            // Bara personens egen text: kodblock och inklistrade loggrader räknas inte. Ord, inte å/ä/ö, avgör språket.
+            const prose = `${issue.title}\n${issue.body || ""}`
+              .replace(/```[\s\S]*?```/g, " ")
+              .split("\n").filter((l) => !/^\s*(>|File "|Traceback|[^\p{L}\s]|\S+:\s*\d)/u.test(l)).join("\n");
+            const words = (list) => (prose.match(new RegExp(`(?<!\\p{L})(${list})(?!\\p{L})`, "giu")) || []).length;
+            const sv = words("och|jag|har|med|inte|vill|skola|barn|hej|det|är|att|som|på|till|kan|vi|min|mitt|tack|tavlan");
+            const en = words("the|and|with|have|my|is|for|which|hello|hi|it|to|of|can|this|that|not|would|thanks");
+            const author = `@${issue.user.login}`;
+            const body = sv >= en
+              ? `Hej ${author}! Tack för att du använder Familjetavlan och för att du tog dig tid att skriva här. ` +
+                `Vi tittar på det så snart vi kan.\n\n` +
+                `Familjetavlan är gratis och byggs för alla, men utvecklingen kostar: över 1 000 euro de senaste veckorna. ` +
+                `Har du glädje av tavlan blir projektets ägare (murre87) väldigt tacksam om du vill sponsra den fortsatta ` +
+                `utvecklingen: https://github.com/sponsors/murre87\n\nVarje bidrag, stort som litet, hjälper. ` +
+                `Ingen press – det är lika mycket värt att du testar och berättar vad som inte fungerar.`
+              : `Hi ${author}! Thank you for using Familjetavlan and for taking the time to write here. ` +
+                `We will look at this as soon as we can.\n\n` +
+                `Familjetavlan is free and built for everyone, but development costs: over €1,000 over the last few weeks. ` +
+                `If you enjoy the board, the project's owner (murre87) would be very grateful if you would sponsor further ` +
+                `development: https://github.com/sponsors/murre87\n\nEvery contribution, big or small, helps. ` +
+                `No pressure – it is just as valuable that you test and tell us what does not work.`;
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: issue.number, body });
