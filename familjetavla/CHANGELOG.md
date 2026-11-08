@@ -2,7 +2,7 @@
 
 ## 0.26.0
 
-- **Att göra på startsidan.** En ruta för odaterade saker (boka sotning, byta hallampa, beställa filter) från en todo-lista i Home Assistant, till exempel Todoist eller Home Assistants egen. Välj listan under Inställningar → *Inköp och butiker* → **Att göra på startsidan**, och ge rutan en egen rubrik om du vill. Ett tryck bockar av en uppgift, och **Lägg till** skriver en ny, som hamnar i listan i Home Assistant (och därmed i Todoist). Uppgifter med datum står först. I nya designen står rutan till höger om veckan och kan flyttas, breddas eller döljas som de andra. I den klassiska slås den på under Startskärm. Tack pjdhub (#86).
+- **Att göra på startsidan.** En ruta för odaterade saker (boka sotning, byta hallampa, beställa filter) från en todo-lista i Home Assistant, till exempel Todoist eller Home Assistants egen. Välj listan under Inställningar → *Mat & inköp* → **Att göra på startsidan**, och ge rutan en egen rubrik om du vill. Ett tryck bockar av en uppgift, och **Lägg till** skriver en ny, som hamnar i listan i Home Assistant (och därmed i Todoist). Uppgifter med datum står först. I nya designen står rutan till höger om veckan och kan flyttas, breddas eller döljas som de andra. I den klassiska slås den på under Startskärm. Tack pjdhub (#86).
 
 ## 0.25.0
 
