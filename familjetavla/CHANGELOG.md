@@ -13,6 +13,7 @@
 - **Läsbar text i övre raden.** Nu, Idag, Maten och Att göra krymper inte under 85 %. Får innehållet inte plats rullar rutan, i stället för att texten blir 11 pixlar hög.
 - **Inställningsguiden ser ut som tavlan**, även när den öppnas direkt (första start). Förut föll den tillbaka på det klassiska lila och glasiga utseendet.
 - **Sidhuvudet har tre knappar:** Aa, ljust/mörkt och inställningar. *Ladda om* och *Installera som app* finns under Aa (på telefon står Installera kvar uppe).
+- **Rättat: en aktivitet med skjuts i en smal veckokolumn** (många personer) bröts en bokstav per rad. Skjutsbrickan hamnar nu på egen rad under titeln.
 
 ## 0.27.1
 

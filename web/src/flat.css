@@ -1694,3 +1694,12 @@ html[data-design="flat"] .lights-page .card .big-btn.amber {
     display: none;
   }
 }
+
+/* Resebrickan bredvid titeln i en smal veckokolumn: brickan får en egen rad, så titeln inte bryts bokstav för bokstav */
+html[data-design="flat"] .wk-evt:has(.travel-badge) {
+  flex-wrap: wrap;
+}
+html[data-design="flat"] .wk-evt .travel-badge {
+  white-space: normal;
+  flex-wrap: wrap;
+}
