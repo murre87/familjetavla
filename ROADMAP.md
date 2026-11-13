@@ -21,7 +21,6 @@ Vad som är beslutat, vad som väntar och vad som medvetet inte görs. Uppdatera
 - Uppdateringsfel i Home Assistant (#44): Supervisor-loggen.
 - Skolmat.info (#50): används Home Assistant?
 - Keba P30 (#62): vilka entiteter integrationen ger.
-- Att göra (#86): fungerar det mot ett riktigt Todoist-projekt?
 
 ## Önskemål, inte påbörjade
 

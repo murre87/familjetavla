@@ -1,5 +1,11 @@
 # Ändringar
 
+## 0.27.1
+
+- **Installera som app via https: rätt adress.** Gäller certifikatet för flera namn visade tavlan det första, som kunde vara ett helt annat ställe. Nu visas certifikatets eget namn, eller det du anger med `HTTPS_HOST`. Exempel i `docker-compose.yml` för Let's Encrypt, och om att namnet måste peka på datorn inne i hemmanätet (#91).
+- **Licens: AGPL-3.0** från och med den här versionen, samma som EnergyWizard. Versioner till och med 0.27.0 släpptes under MIT.
+- Källkoll larmar inte längre falskt om Boden, Kiruna och Lidköping: de svarar bara svenska adresser och fungerar för familjer i Sverige.
+
 ## 0.27.0
 
 - **Flikarna och sidorna har läsbar text.** Mat, Bil, Hus, Ljus, Energi, Kalendern och de andra krympte allt för att få plats, och på Mat blev texten bara några pixlar hög. I nya designen visas de nu i full storlek, och man rullar för resten.

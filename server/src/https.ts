@@ -37,6 +37,23 @@ export function certNames(pem: string): string[] {
   }
 }
 
+/**
+ * The address to show for https: HTTPS_HOST when set, else the certificate's own name (CN), else its first other name.
+ * A certificate for several sites (here also a work domain) listed another name first, and the board showed that.
+ */
+export function httpsName(pem: string, env = process.env): string | undefined {
+  const fixed = env.HTTPS_HOST?.trim();
+  if (fixed && /^[a-z0-9.-]+$/i.test(fixed)) return fixed;
+  const names = certNames(pem);
+  try {
+    const cn = /CN=([^\n,]+)/.exec(new X509Certificate(pem).subject)?.[1];
+    if (cn && names.includes(cn)) return cn;
+  } catch {
+    /* not a certificate */
+  }
+  return names[0];
+}
+
 let secure: { url: string } | null = null;
 /** "https://hemma.duckdns.org:8443/" when https runs, else null. */
 export const secureUrl = () => secure?.url ?? null;
@@ -64,7 +81,7 @@ export async function startHttps(app: FastifyInstance, log: FastifyBaseLogger): 
     log.warn({ err: e }, `https: port ${port} gick inte att öppna – tavlan körs bara på http`);
     return null;
   }
-  const name = certNames(files.cert.toString())[0];
+  const name = httpsName(files.cert.toString());
   secure = name ? { url: `https://${name}:${port}/` } : null;
   log.info(`https på port ${port}${secure ? ` – öppna ${secure.url}` : ""}`);
 

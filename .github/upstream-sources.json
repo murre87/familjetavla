@@ -81,7 +81,17 @@
         "Göteborgsvägen 11, Mölndal",
         "Storgatan 1, Mölndal"
       ]
-    }
+    },
+    "boden": {
+      "swedenOnly": true
+    },
+    "kiruna": {
+      "swedenOnly": true
+    },
+    "lidkoping": {
+      "swedenOnly": true
+    },
+    "_swedenOnly": "Svarar bara svenska adresser (fungerar från Sverige, tidsgräns från GitHubs servrar, kontrollerat 2026-11-13). Källkoll larmar inte när de inte nås härifrån."
   },
   "skolmaten": [
     "https://skolmaten.se/skutehagens-skolan"
