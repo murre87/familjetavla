@@ -1,3 +1,4 @@
+import { Icon } from "../Icon";
 import { useEffect, useState } from "react";
 import type { Dashboard } from "../../../server/src/types";
 import { api } from "../api";
@@ -107,7 +108,7 @@ function Chores({ data, actions }: { data: Dashboard; actions: Actions }) {
             <div key={p.personId} className="stack" style={{ gap: 6 }}>
               <div className="row gap" style={{ alignItems: "center" }}>
                 <b style={{ color: p.color }}>{p.name}</b>
-                {p.allDone && <span className="chip good">Klart! 🎉</span>}
+                {p.allDone && <span className="chip good"><Icon name="check" size={14} /> Klart</span>}
               </div>
               <div className="row gap wrap">
                 {p.items.map((i) => (

@@ -25,6 +25,7 @@ export function Fit({
   min = MIN,
   base = 1,
   noShrink = false,
+  floor,
 }: {
   className?: string;
   children: React.ReactNode;
@@ -36,6 +37,8 @@ export function Fit({
   base?: number;
   /** Never below `base`: the area scrolls instead (the schedules, where readable text matters more than seeing every day at once). */
   noShrink?: boolean;
+  /** Never below this share of `base` (0.85 = 85 %): text stays readable, the area scrolls the rest. */
+  floor?: number;
 }) {
   const outer = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLDivElement>(null);
@@ -45,7 +48,7 @@ export function Fit({
     const i = inner.current;
     if (!o || !i) return;
     const fit = () => {
-      const lo = noShrink ? base : document.documentElement.dataset.design === "flat" ? FLAT_MIN : min;
+      const lo = noShrink ? base : floor !== undefined ? floor * base : document.documentElement.dataset.design === "flat" ? FLAT_MIN : min;
       const kids = [...i.children] as HTMLElement[];
       kids.forEach((k) => (k.style.display = ""));
       i.style.transform = "";
@@ -125,7 +128,7 @@ export function Fit({
       window.removeEventListener("resize", fit);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, base, noShrink]);
+  }, [...deps, base, noShrink, floor]);
   return (
     <div ref={outer} className={`fit ${className}`}>
       <div ref={inner} className="fit-inner">

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Config, ConfigResponse } from "../../../server/src/types";
 import { api, setPin, type PostcodeInfo } from "../api";
 import { Icon } from "../Icon";
+import { useDesign } from "../uiscale";
 import { clearEntityCache, type SecretDraft } from "./parts";
 import {
   CalendarsStep,
@@ -53,7 +54,7 @@ const STEPS: { id: string; label: string; title: string; lead: string; C: (p: St
   { id: "inkop", label: "Inköp", title: "Mat & inköp", lead: "Inköpslistan på tavlan – och skicka den till butikens varukorg.", C: ShoppingStep, optional: true },
   { id: "el", label: "El", title: "Elpris", lead: "Se timpriset och de billigaste timmarna. Lägg till ditt elbolags påslag för verkligt pris.", C: ElectricityStep, optional: true },
   { id: "visning", label: "Startskärm", title: "Startskärm och utseende", lead: "Välj vad som ska synas och i vilken ordning.", C: DisplayStep, optional: true },
-  { id: "klart", label: "Klart", title: "Klart!", lead: "Tavlan är redo. Lägg till mer nu eller när som helst under Inställningar.", C: DoneStep, core: true },
+  { id: "klart", label: "Klart", title: "Tavlan är klar", lead: "Lägg till mer nu eller när som helst under Inställningar.", C: DoneStep, core: true },
 ];
 
 export function Wizard({ initial, startStep, onDone }: { initial: ConfigResponse; startStep?: string; onDone: (r: ConfigResponse) => void }) {
@@ -68,6 +69,21 @@ export function Wizard({ initial, startStep, onDone }: { initial: ConfigResponse
   const [firstRun] = useState(!initial.config.setupComplete);
   const [extras, setExtras] = useState<string[]>([]);
   const [jumpTo, setJumpTo] = useState("");
+  // The guide looks like the board: its own design and light/dark, also when it is opened directly (first start,
+  // or a link to #/setup) and not from the board. Before, it then fell back to the classic purple glass.
+  const design = useDesign(cfg.dashboard.design ?? "glass");
+  useEffect(() => {
+    const root = document.documentElement;
+    let theme: "dark" | "light" = window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    try {
+      const t = localStorage.getItem("familjetavla.theme");
+      if (t === "dark" || t === "light") theme = t;
+    } catch {
+      /* private mode */
+    }
+    root.dataset.design = design;
+    if (root.dataset.theme !== "dark" && root.dataset.theme !== "light") root.dataset.theme = theme;
+  }, [design]);
   const visible = STEPS.filter((s) => (!firstRun || s.core || extras.includes(s.id)) && (!s.needsHa || haOk));
   const startIdx = Math.max(0, visible.findIndex((s) => s.id === startStep));
   const [idx, setIdx] = useState(initial.config.setupComplete && !startStep ? visible.length - 1 : startIdx);

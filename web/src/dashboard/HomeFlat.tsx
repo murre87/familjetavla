@@ -17,6 +17,9 @@ import { gridOf, rowTemplate, LAYOUT_BOXES, type LayoutBox } from "../../../serv
 import { useLayout } from "../layout";
 import { useArrange } from "./Arrange";
 
+/** The boxes at the top never shrink their text below 85 %: below that it was 11 px, unreadable across a room. They scroll instead. */
+const TOP_FLOOR = 0.85;
+
 const SKY_LABEL: Record<string, string> = { clear: "Klart", partly: "Halvklart", cloudy: "Mulet", rain: "Regn", snow: "Snö", fog: "Dimma" };
 const REMINDER_ICON: Record<string, IconName> = { rain: "umbrella", bag: "bag", gym: "gym", trash: "trash", kids: "kids", info: "info", school: "school", food: "food" };
 
@@ -32,7 +35,7 @@ function Nu({ data, actions, box }: { data: Dashboard; actions: Actions; box: Bo
       <div className="hf-label">
         Nu{data.now.headline ? <span> · {data.now.headline}</span> : null}
       </div>
-      <Fit className="hf-fit" deps={[data]} base={box.base}>
+      <Fit className="hf-fit" deps={[data]} base={box.base} floor={TOP_FLOOR}>
       {rows.length === 0 && <div className="hf-empty">Inget det närmaste.</div>}
       {rows.map((e, i) => (
         <button key={i} className="hf-row" onClick={() => actions.openEvent(e)}>
@@ -63,7 +66,7 @@ function Idag({ data, actions, box }: { data: Dashboard; actions: Actions; box: 
   return (
     <section className={`card hf-idag ${box.className}`} style={box.style} aria-label="Idag" {...box.handlers}>
       {box.gear}
-      <Fit className="hf-fit" deps={[data]} base={box.base}>
+      <Fit className="hf-fit" deps={[data]} base={box.base} floor={TOP_FLOOR}>
       <div className="hf-weather">
         {header.tempNow !== undefined && (
           <span className="hf-temp num">

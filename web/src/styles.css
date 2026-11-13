@@ -4722,7 +4722,7 @@ marker.pf-buy path {
 .avatar-btn:active { transform: scale(0.94); }
 .avatar-btn:focus-visible { outline: 3px solid var(--accent, #7cf); outline-offset: 3px; }
 /* Första gången: ringen pulserar försiktigt så att man ser att namnen går att trycka på (ingen extra text: den täckte rubriken på smala skärmar). */
-.people.fresh .avatar-btn { animation: avatar-nudge 2.4s ease-in-out infinite; }
+.people.fresh .avatar-btn { box-shadow: 0 0 0 3px color-mix(in srgb, var(--text, #fff) 55%, transparent); }
 @keyframes avatar-nudge { 0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--text, #fff) 35%, transparent); } 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--text, #fff) 70%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .people.fresh .avatar-btn { animation: none; } }
 .person-switch { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; }

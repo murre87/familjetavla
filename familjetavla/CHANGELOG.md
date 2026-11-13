@@ -1,5 +1,19 @@
 # Ändringar
 
+## 0.28.0
+
+- **Lugnare och tydligare.**
+  - En färg betyder en person. *Gemensamt* var grönt, samma färg som en av personfärgerna, och är nu neutralt grått (i veckan och på händelserna).
+  - På Ljus är bara *Tänd inne* och *Tänd ute* gröna. En tänd lampa lyser själv.
+  - Etiketter som "NU" och "LUNCH IDAG" står i vanlig skiftläge, och rubrikerna är mindre feta.
+  - Versionen i sidhuvudet är dämpad text.
+  - Avatarerna pulserar inte längre.
+  - I elpriset är den här timmen inte längre röd, eftersom nu inte betyder dyrt.
+  - Ikoner i stället för emoji och tecken i meddelanden, bilagor och listor.
+- **Läsbar text i övre raden.** Nu, Idag, Maten och Att göra krymper inte under 85 %. Får innehållet inte plats rullar rutan, i stället för att texten blir 11 pixlar hög.
+- **Inställningsguiden ser ut som tavlan**, även när den öppnas direkt (första start). Förut föll den tillbaka på det klassiska lila och glasiga utseendet.
+- **Sidhuvudet har tre knappar:** Aa, ljust/mörkt och inställningar. *Ladda om* och *Installera som app* finns under Aa (på telefon står Installera kvar uppe).
+
 ## 0.27.1
 
 - **Installera som app via https: rätt adress.** Gäller certifikatet för flera namn visade tavlan det första, som kunde vara ett helt annat ställe. Nu visas certifikatets eget namn, eller det du anger med `HTTPS_HOST`. Exempel i `docker-compose.yml` för Let's Encrypt, och om att namnet måste peka på datorn inne i hemmanätet (#91).

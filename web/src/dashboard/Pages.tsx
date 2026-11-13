@@ -231,7 +231,7 @@ function CarDetailsSheet({ index, onClose, actions }: { index: number; onClose: 
             <div className="stack" style={{ gap: 0 }}>
               {rows.map((r) => (
                 <div key={r.entityId} className="row gap" style={{ padding: "12px 0", borderBottom: "1px solid var(--card-border)" }}>
-                  <span aria-hidden="true">{r.ok ? "✓" : "⚠"}</span>
+                  <Icon name={r.ok ? "check" : "alert"} size={16} />
                   <span className="grow">{r.name}</span>
                   <span style={{ color: r.ok ? "var(--muted)" : "var(--amber)", textAlign: "right" }}>
                     {r.value}
@@ -376,7 +376,7 @@ function SmartChargingCard({ index, car, actions }: { index: number; car: Dashbo
           })}
           {s.morning && (
             <p className={`plan-floor ${s.morning.ok ? "ok" : "warn"}`}>
-              {s.morning.ok ? "✓" : "⚠"} {s.morning.soc} % kl {s.morning.time}
+              <Icon name={s.morning.ok ? "check" : "alert"} size={14} /> {s.morning.soc} % kl {s.morning.time}
               {s.morning.ok ? ` (golv ${s.morning.min} %)` : ` – under golvet ${s.morning.min} %`}
             </p>
           )}
@@ -515,7 +515,7 @@ function PlanPriceChart({ data, selected }: { data: Dashboard; selected: number 
           const slots = (c.smart?.slots ?? []).filter((x) => Date.parse(x.end) > t0 && Date.parse(x.start) < t0 + span);
           const pct = (t: number) => Math.max(0, Math.min(100, ((t - t0) / span) * 100));
           const first = slots[0], last = slots[slots.length - 1];
-          const label = !slots.length ? (c.battery !== null && c.battery >= 98 ? "fulladdad" : sunText ? `☀ ${sunText} (solladdning)` : "ingen laddning planerad") : `${hhmm(first.start)}–${hhmm(last.end)}${first.socStart !== undefined && last.socEnd !== undefined ? ` · ${first.socStart} → ${last.socEnd} %` : ""}`;
+          const label = !slots.length ? (c.battery !== null && c.battery >= 98 ? "fulladdad" : sunText ? `${sunText} (solladdning)` : "ingen laddning planerad") : `${hhmm(first.start)}–${hhmm(last.end)}${first.socStart !== undefined && last.socEnd !== undefined ? ` · ${first.socStart} → ${last.socEnd} %` : ""}`;
           return (
             <div key={c.name} className={`pc-lane ${i === selected ? "sel" : ""}`}>
               <b style={{ color: colors[i % colors.length] }}>{c.name.split(" ")[0]}</b>

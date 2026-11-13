@@ -10,7 +10,8 @@ import { SCALE_MAX, SCALE_MIN, getDesignOverride, readScale, saveScale, screensa
 const PRESETS = [0.7, 0.8, 0.9, 1, 1.15];
 
 /** "Skärmstorlek": gör allt mindre eller större på just den här skärmen. Syns direkt medan man drar. */
-export function ScaleSheet({ onClose, names = [], all = names }: { onClose: () => void; names?: string[]; all?: string[] }) {
+/** `onInstall`: the board can be installed as an app on this screen (it is not yet). */
+export function ScaleSheet({ onClose, names = [], all = names, onInstall }: { onClose: () => void; names?: string[]; all?: string[]; onInstall?: () => void }) {
   const [z, setZ] = useState(readScale);
   const [saverOff, setSaverOff] = useState(screensaverOff);
   const [design, setDesign] = useState<Design | null>(getDesignOverride);
@@ -109,6 +110,23 @@ export function ScaleSheet({ onClose, names = [], all = names }: { onClose: () =
           )}
         </div>
         {box && <BoxSheet id={box} names={names} all={all} onClose={() => setBox(null)} />}
+        {/* Reload and install used to sit in the board's header all the time; they are this screen's business, so they live here. */}
+        <div className="row gap wrap">
+          <button className="btn" onClick={() => window.location.reload()}>
+            <Icon name="refresh" size={18} /> Ladda om tavlan
+          </button>
+          {onInstall && (
+            <button
+              className="btn"
+              onClick={() => {
+                onClose();
+                onInstall();
+              }}
+            >
+              <Icon name="install" size={18} /> Installera som app
+            </button>
+          )}
+        </div>
         <label className="saver-row">
           <input
             type="checkbox"

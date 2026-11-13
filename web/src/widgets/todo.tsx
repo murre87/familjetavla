@@ -84,7 +84,7 @@ export function Todo({ data, actions, box, fit = false }: { data: Dashboard; act
         {todo.items.length ? <span> · {todo.items.length}</span> : null}
       </div>
       {fit ? (
-        <Fit className="hf-fit" deps={[data]} base={box?.base}>
+        <Fit className="hf-fit" deps={[data]} base={box?.base} floor={0.85}>
           {list}
         </Fit>
       ) : (

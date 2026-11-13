@@ -346,7 +346,7 @@ function MiniPick({
               onClick={() => onPick(on ? undefined : { mode: o.mode })}
             >
               {o.mode === "ride" && on && leg?.by ? leg.by : o.label}
-              {b && <span aria-label="upptagen"> ⚠</span>}
+              {b && <span aria-label="upptagen" className="busy-mark"> <Icon name="alert" size={14} /></span>}
             </button>
           );
         })}
@@ -524,7 +524,7 @@ function PlanSheet({ data, onClose, onChanged, toast, startTab = "who" }: { data
             {onlyMissing ? "Visa allt" : "Bara det som saknas"}
           </button>
         </div>
-        {items.length === 0 && <p className="muted">{onlyMissing ? "Klart! Allt den här veckan har någon som lämnar, hämtar eller skjutsar." : "Inga aktiviteter eller förskoledagar de kommande 7 dagarna."}</p>}
+        {items.length === 0 && <p className="muted">{onlyMissing ? "Klart. Allt den här veckan har någon som lämnar, hämtar eller skjutsar." : "Inga aktiviteter eller förskoledagar de kommande 7 dagarna."}</p>}
         <div className="stack plan-list">
           {days.map((dk) => (
             <div key={dk} className="stack" style={{ gap: 8 }}>
@@ -1357,11 +1357,9 @@ export function Dashboard() {
             <button className="btn icon" aria-label={theme === "dark" ? "Byt till ljust tema" : "Byt till mörkt tema"} onClick={toggleTheme}>
               <Icon name={theme === "dark" ? "moon" : "sun"} size={24} />
             </button>
-            <button className="btn icon" aria-label="Ladda om tavlan" title="Ladda om tavlan (hämtar också senaste versionen)" onClick={() => window.location.reload()}>
-              <Icon name="refresh" size={24} />
-            </button>
+            {/* On a phone the Aa sheet is not offered, so installing stays here (on a tablet it is under Aa). */}
             {!isInstalled() && !isDemo && (
-              <button className="btn icon" aria-label="Installera som app" title="Lägg tavlan på hemskärmen" onClick={() => setInstallOpen(true)}>
+              <button className="btn icon install-phone" aria-label="Installera som app" title="Lägg tavlan på hemskärmen" onClick={() => setInstallOpen(true)}>
                 <Icon name="install" size={24} />
               </button>
             )}
@@ -1371,7 +1369,7 @@ export function Dashboard() {
           </div>
         </header>
 
-        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} names={data ? weekColumns(data).filter((c) => !c.family).map((c) => c.name) : []} all={data?.people.map((p) => p.name) ?? []} />}
+        {scaleOpen && <ScaleSheet onClose={() => setScaleOpen(false)} onInstall={!isInstalled() && !isDemo ? () => setInstallOpen(true) : undefined} names={data ? weekColumns(data).filter((c) => !c.family).map((c) => c.name) : []} all={data?.people.map((p) => p.name) ?? []} />}
 
         {error && (
           <div className="card result bad" role="status" style={{ padding: "12px 18px" }}>
@@ -1517,7 +1515,18 @@ export function Dashboard() {
 
       {toast && (
         <div className="toast" role="status">
-          {toast}
+          {/* "✓ …" / "⚠ …" from the actions get a line icon instead of the glyph. */}
+          {toast.startsWith("✓ ") ? (
+            <>
+              <Icon name="check" size={18} /> {toast.slice(2)}
+            </>
+          ) : toast.startsWith("⚠ ") ? (
+            <>
+              <Icon name="alert" size={18} /> {toast.slice(2)}
+            </>
+          ) : (
+            toast
+          )}
         </div>
       )}
     </div>
