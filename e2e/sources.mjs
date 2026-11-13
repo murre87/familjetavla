@@ -114,6 +114,14 @@ for (const [key, p] of [...Object.entries(EDP_PROVIDERS), ...Object.entries(EDP_
       parkedNotes.push(`${p.title}: fortfarande ur funktion – ${tried[tried.length - 1]}`);
       continue;
     }
+    // Some municipalities only answer Swedish addresses: from GitHub's servers they time out though they work for
+    // families in Sweden. Not reaching them from here is no fault; an answer that is wrong still is.
+    const unreachable = tried.every((t) => /Kunde inte nå|fetch failed|nås inte|TIMEOUT|aborted/i.test(t));
+    if (cfg.edp?.[key]?.swedenOnly && unreachable) {
+      parkedNotes.push(`${p.title}: provas inte härifrån (svarar bara svenska adresser)`);
+      edpRows.push(`| ${p.title} | ${addresses[0]} | ⚪ provas inte härifrån (bara svenska adresser) |`);
+      continue;
+    }
     problems.push(`**${p.title} fungerar inte:** ${tried.join("; ")}`);
     edpRows.push(`| ${p.title} | ${addresses[0]} | ❌ ${tried[tried.length - 1]} |`);
   }

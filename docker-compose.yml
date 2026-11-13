@@ -14,11 +14,15 @@ services:
       - ./data:/data
       # Https med samma certifikat som Home Assistant: mappen med fullchain.pem och privkey.pem.
       # - /sökväg/till/homeassistant/ssl:/ssl:ro
+      # Let's Encrypt (certbot): live/<namn> innehåller länkar till archive/<namn>, så montera hela mappen och peka ut filerna:
+      # - /etc/letsencrypt:/le:ro        och under environment: SSL_CERT=/le/live/<namn>/fullchain.pem, SSL_KEY=/le/live/<namn>/privkey.pem
+      # Inne i hemmanätet måste certifikatets namn peka på den här datorn (lokal DNS-post i routern), annars når plattan inte https.
     labels:
       - com.centurylinklabs.watchtower.enable=true      # uppdateras automatiskt av tjänsten watchtower nedan (eller din egen Watchtower med --label-enable)
     environment:
       - TZ=Europe/Stockholm
       # - BROWSER_WS_URL=ws://browserless:3000   # extern webbläsare för Willys (valfritt)
+      # - HTTPS_HOST=hemma.example.org            # adressen som visas för https, om certifikatet gäller flera namn
 
   # Hämtar nya versioner av tavlan automatiskt (var sjätte timme) och startar om den. Inställningarna ligger kvar i ./data.
   # Vill du uppdatera själv: ta bort den här tjänsten, och kör `docker compose pull && docker compose up -d` när du vill.
