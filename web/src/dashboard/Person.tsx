@@ -151,7 +151,7 @@ export function PersonPage({ data, personId, onOpenEvent }: { data: Dashboard; p
                   <span>
                     <b>{KIND_LABEL[t.kind] ?? "Uppgift"}:</b> {t.title}
                     {t.time ? ` · ${t.time}` : ""}
-                    {t.files?.length ? <small className="p-more p-file">📎 {t.files.map((f) => f.name).join(", ")}</small> : null}
+                    {t.files?.length ? <small className="p-more p-file"><Icon name="paperclip" size={14} /> {t.files.map((f) => f.name).join(", ")}</small> : null}
                     {t.detail && <small className="p-more">{t.detail.split("\n").map((l) => l.trim().replace(/ \| /g, " – ")).filter(Boolean).join(" · ").slice(0, 240)}</small>}
                   </span>
                   <Icon name="chevronRight" size={18} />

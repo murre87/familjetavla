@@ -87,7 +87,7 @@ html[data-design="flat"] .card {
 html[data-design="flat"] .card h2 {
   font-family: var(--font-body);
   font-size: var(--f-t-strong);
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0;
 }
 html[data-design="flat"] .btn,
@@ -119,13 +119,13 @@ html[data-design="flat"] .btn.selected {
 html[data-design="flat"] .board-header h1 {
   font-family: var(--font-body);
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.4px;
 }
 html[data-design="flat"] .clock {
   font-family: var(--font-body);
   font-size: var(--f-t-hero);
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -1.5px;
   font-variant-numeric: tabular-nums;
 }
@@ -181,10 +181,10 @@ html[data-design="flat"] .side-tabs {
   flex-direction: column;
 }
 .hf-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--muted);
   margin-bottom: 4px;
 }
@@ -216,7 +216,7 @@ html[data-design="flat"] .side-tabs {
   flex: none;
   width: 92px;
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.15;
 }
 .hf-time small {
@@ -253,7 +253,7 @@ html[data-design="flat"] .side-tabs {
 }
 .hf-temp {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: -0.5px;
   line-height: 1.1;
 }
@@ -322,7 +322,7 @@ html[data-design="flat"] .hf .wk-row .day-name {
 html[data-design="flat"] .hf .wk-row .day-name b {
   font-family: var(--font-body);
   font-size: var(--f-t-body);
-  font-weight: 800;
+  font-weight: 600;
 }
 html[data-design="flat"] .hf .wk-row .day-name small {
   font-size: var(--f-t-meta);
@@ -548,11 +548,11 @@ html[data-design="flat"] .wk-cell .wk-evt {
   max-width: 100%;
 }
 .hf-waste b {
-  font-weight: 800;
+  font-weight: 600;
 }
 .hf-waste .soon {
   color: var(--accent);
-  font-weight: 800;
+  font-weight: 600;
 }
 .hf-waste {
   cursor: default;
@@ -586,7 +586,7 @@ html[data-design="flat"] .big-btn {
   border-radius: 12px;
   font-family: var(--font-body);
   font-size: var(--f-t-strong);
-  font-weight: 800;
+  font-weight: 600;
   box-shadow: none;
 }
 html[data-design="flat"] .big-btn.amber,
@@ -717,7 +717,7 @@ html[data-design="flat"] .car-head {
 }
 .car-head-text b {
   font-size: 17px;
-  font-weight: 800;
+  font-weight: 600;
   white-space: nowrap;
 }
 .car-head-text .chips {
@@ -782,7 +782,7 @@ html[data-design="flat"] .page-grid.even .big-num {
 .wk-kind {
   flex: none;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #a65f0a;
@@ -1489,7 +1489,7 @@ html[data-design="flat"] .hf > .area-week > .cal-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-weight: 800;
+  font-weight: 600;
   font-size: 16px;
 }
 .arr-tools {
@@ -1652,4 +1652,54 @@ html[data-design="flat"] .hf > .hf-todo {
   align-self: flex-start;
   margin-top: 6px;
   flex: none;
+}
+
+/* ---------- Unslop 2026-11-13 ---------- */
+/* Etiketter i vanlig skiftläge, som texten runt dem (inga spärrade versaler). */
+html[data-design="flat"] .eyebrow,
+html[data-design="flat"] .mini-label {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+/* Versionen är metainformation: dämpad text, ingen ram. "Uppdatera" syns fortfarande tydligt. */
+html[data-design="flat"] .version-badge:not(.old) {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding-left: 0;
+  padding-right: 0;
+}
+/* Elpris: den här timmen i textfärg (nu betyder inte dyrt), billiga timmar i accent, resten neutralt. */
+html[data-design="flat"] .bars .current {
+  background: color-mix(in srgb, var(--text) 80%, transparent);
+}
+/* Ljus: bara "Tänd inne/ute" överst är fyllda. Rummens "Tänd alla" är vanliga knappar, en tänd lampa visar sig själv. */
+html[data-design="flat"] .lights-page .card .big-btn.amber {
+  background: var(--f-soft);
+  color: var(--text);
+  border: 1px solid var(--f-line);
+}
+.toast svg,
+.busy-mark svg {
+  vertical-align: -3px;
+}
+.p-file svg {
+  vertical-align: -2px;
+}
+/* Installera i sidhuvudet bara på telefon (där finns ingen Aa-knapp); på surfplatta ligger den under Aa. */
+@media (min-width: 900px) {
+  .install-phone {
+    display: none;
+  }
+}
+
+/* Resebrickan bredvid titeln i en smal veckokolumn: brickan får en egen rad, så titeln inte bryts bokstav för bokstav */
+html[data-design="flat"] .wk-evt:has(.travel-badge) {
+  flex-wrap: wrap;
+}
+html[data-design="flat"] .wk-evt .travel-badge {
+  white-space: normal;
+  flex-wrap: wrap;
 }

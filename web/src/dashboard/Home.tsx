@@ -130,7 +130,7 @@ export function weekColumns(data: Dashboard): WeekCol[] {
   // A child with only school that week still gets a column: when school ends is shown every day.
   for (const d of data.days) for (const s of d.schoolEnds ?? []) used.add(s.name);
   const people = data.people.filter((p) => used.has(p.name)).map((p) => ({ key: p.id, name: p.name, initial: p.initial, color: p.color }));
-  return [...(family ? [{ key: "family", name: "Gemensamt", initial: "G", color: "var(--accent)", family: true }] : []), ...people];
+  return [...(family ? [{ key: "family", name: "Gemensamt", initial: "G", color: "var(--muted)", family: true }] : []), ...people];
 }
 
 /** When the child's school day ends (and whether there is gym), for the week's columns. */

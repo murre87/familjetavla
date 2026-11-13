@@ -14,7 +14,7 @@ export function Meals({ data, fit = false, box }: { data: Dashboard; fit?: boole
   const dinnerDay = h < 20 ? data.meals[0] : data.meals[1];
   const dinner = dinnerDay?.dinner;
   if (!lunch && !dinner) return null;
-  const wrap = (body: React.ReactNode) => (fit ? <Fit className="hf-fit" deps={[data]} base={box?.base}>{body}</Fit> : body);
+  const wrap = (body: React.ReactNode) => (fit ? <Fit className="hf-fit" deps={[data]} base={box?.base} floor={0.85}>{body}</Fit> : body);
   const when = (label: string) => (label === "idag" || label === "imorgon" ? label : `på ${label.split(" ")[0]}`);
   return (
     <section className={`card meals-card ${box?.className ?? ""}`} style={box?.style} {...box?.handlers}>

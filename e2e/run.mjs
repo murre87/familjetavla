@@ -109,7 +109,7 @@ async function firstRun(page, { haCalendar }) {
   await shot(page, "4-skola");
   await next(page);
 
-  await expectText(page, "Tavlan är redo");
+  await expectText(page, "Tavlan är klar");
   await shot(page, "5-klart");
 }
 

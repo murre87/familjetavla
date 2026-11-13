@@ -52,7 +52,8 @@ import type { ActivityIcon, CalendarSource, Config, Control, DashDay, DashEvent,
 
 const MIN = 60_000;
 const WASTE_COLOR = "#9aa0bf";
-const FAMILY_COLOR = "#34e0a1";
+// Neutral: a colour on the board means a person, and the family's things are no one's (the old green was also a person colour).
+const FAMILY_COLOR = "#8b9bb0";
 
 /**
  * Swap calendar: an all-day event with the child's name means "here" that day, the name plus
