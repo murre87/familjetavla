@@ -1,3 +1,4 @@
+import { Hide } from "../hide";
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { Dashboard, Music as MusicData } from "../../../server/src/types";
@@ -417,14 +418,14 @@ function usePages(count: number, reset: unknown) {
 export function MusicPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   const m = data.music;
   if (!m?.speakers.length) return <p className="muted">Välj högtalare under Inställningar → Huset → Musik.</p>;
-  return <MusicTab m={m} actions={actions} />;
+  return <MusicTab m={m} actions={actions} data={data} />;
 }
 
 /**
  * Which speaker plays. With Music Assistant several can play together (#93): "Flera" turns the buttons into
  * tick boxes, and every speaker ticked joins the chosen one – the radio or playlist then plays in all of them.
  */
-function SpeakerPicker({ m, sp, pick, actions }: { m: MusicData; sp: Speaker; pick: (id: string) => void; actions: Actions }) {
+function SpeakerPicker({ m, sp, pick, actions, data }: { m: MusicData; sp: Speaker; pick: (id: string) => void; actions: Actions; data: Dashboard }) {
   const group = sp.group ?? [];
   const [multi, setMulti] = useState(group.length > 0);
   useEffect(() => {
@@ -448,8 +449,8 @@ function SpeakerPicker({ m, sp, pick, actions }: { m: MusicData; sp: Speaker; pi
         const lead = s.entityId === sp.entityId;
         const joined = group.includes(s.entityId);
         return (
+          <Hide key={s.entityId} k={s.entityId} label={s.name} data={data} actions={actions}>
           <button
-            key={s.entityId}
             className={`seg-btn ${lead ? "on" : ""} ${joined ? "joined" : ""}`}
             role={multi ? "checkbox" : "radio"}
             aria-checked={lead || joined}
@@ -457,6 +458,7 @@ function SpeakerPicker({ m, sp, pick, actions }: { m: MusicData; sp: Speaker; pi
           >
             {multi ? <span className="chk">{(lead || joined) && <Icon name="check" size={14} />}</span> : <Icon name="speaker" size={18} />} {s.name}
           </button>
+          </Hide>
         );
       })}
       {m.groupable && (
@@ -475,7 +477,7 @@ function SpeakerPicker({ m, sp, pick, actions }: { m: MusicData; sp: Speaker; pi
   );
 }
 
-function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
+function MusicTab({ m, actions, data }: { m: MusicData; actions: Actions; data: Dashboard }) {
   const { sp, choose: pick } = useSpeaker(m);
   const c = useControls(sp, actions);
   // Radio or the library: what was open last (also after a reload).
@@ -498,14 +500,16 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
       {drag.overlay}
       <section className="card">
         {m.speakers.length > 1 && (
-          <SpeakerPicker m={m} sp={sp} pick={pick} actions={actions} />
+          <SpeakerPicker m={m} sp={sp} pick={pick} actions={actions} data={data} />
         )}
         <NowPlaying sp={sp} actions={actions} showName={m.speakers.length < 2} logo={sp.station !== undefined ? m.stations[sp.station]?.logo : undefined} />
         {/* The favourites are for the radio: while the library is open they only take room from it. */}
         {source === "radio" && m.stations.length > 0 && (
           <div className="music-favs">
             {m.stations.map((s) => (
-              <StationButton key={s.index} name={s.name} logo={s.logo} on={sp.playing && sp.station === s.index} disabled={sp.offline} onPlay={() => void c.playFav(s.index, s.name)} />
+              <Hide key={s.index} k={`station:${s.name}`} label={s.name} data={data} actions={actions}>
+                <StationButton name={s.name} logo={s.logo} on={sp.playing && sp.station === s.index} disabled={sp.offline} onPlay={() => void c.playFav(s.index, s.name)} />
+              </Hide>
             ))}
           </div>
         )}

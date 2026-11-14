@@ -1,3 +1,4 @@
+import { Hide } from "../hide";
 import { useEffect, useState } from "react";
 import type { AlarmMode, Dashboard, Robot, Security } from "../../../server/src/types";
 import { api } from "../api";
@@ -51,7 +52,8 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
   if (!s) return <p className="muted">Välj kameror, lås och larm under Inställningar → Huset → Säkerhet.</p>;
   const code = (id: string) => codes[id] || undefined;
   const setCode = (id: string) => (v: string) => setCodes((c) => ({ ...c, [id]: v }));
-  const openNow = s.openings.filter((o) => o.open);
+  // What was taken away under the cog does not count as open either.
+  const openNow = s.openings.filter((o) => o.open && !(data.hidden ?? []).includes(`opening:${o.name}`));
   const cams = big ? s.cameras.filter((c) => c.entityId === big) : s.cameras;
 
   return (
@@ -62,18 +64,21 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
           {big && <p className="muted" style={{ margin: "-4px 0 8px" }}>Tryck på bilden för att se alla.</p>}
           <div className={`camera-grid ${big ? "one" : ""}`}>
             {cams.map((c) => (
-              <Camera key={c.entityId} cam={c} big={big === c.entityId} onTap={() => {
+              <Hide key={c.entityId} k={c.entityId} label={c.name} data={data} actions={actions} block>
+              <Camera cam={c} big={big === c.entityId} onTap={() => {
                   setBig(big ? null : c.entityId);
                   // The page gets shorter: start from the top so nothing hides behind the tab bar on phones.
                   window.scrollTo(0, 0);
                 }} />
+              </Hide>
             ))}
           </div>
         </section>
       )}
 
       {!big && s.alarms.map((a) => (
-        <section key={a.entityId} className={`card alarm ${a.triggered ? "triggered" : a.armed ? "armed" : ""}`}>
+        <Hide key={a.entityId} k={a.entityId} label={a.name} data={data} actions={actions} card>
+        <section className={`card alarm ${a.triggered ? "triggered" : a.armed ? "armed" : ""}`}>
           <h2>
             <Icon name="shield" size={22} /> {a.name}
             <span className={`chip ${a.triggered ? "warn" : a.armed ? "good" : ""}`}>{a.label}</span>
@@ -93,6 +98,7 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
             )}
           </div>
         </section>
+        </Hide>
       ))}
 
       {!big && s.locks.length > 0 && (
@@ -100,7 +106,8 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
           <h2>Lås</h2>
           <div className="stack" style={{ gap: 10 }}>
             {s.locks.map((l) => (
-              <div key={l.entityId} className="sec-row">
+              <Hide key={l.entityId} k={l.entityId} label={l.name} data={data} actions={actions} block>
+              <div className="sec-row">
                 <Icon name="lock" size={22} />
                 <span className="sec-name">
                   {l.name} <b className={l.state === "locked" ? "ok-text" : "warn-text"}>{l.offline ? "Svarar inte" : LOCK_LABEL[l.state]}</b>
@@ -116,6 +123,7 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
                   </button>
                 ) : null}
               </div>
+              </Hide>
             ))}
           </div>
         </section>
@@ -126,7 +134,8 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
           <h2>Portar</h2>
           <div className="stack" style={{ gap: 10 }}>
             {s.covers.map((c) => (
-              <div key={c.entityId} className="sec-row">
+              <Hide key={c.entityId} k={c.entityId} label={c.name} data={data} actions={actions} block>
+              <div className="sec-row">
                 <Icon name="home" size={22} />
                 <span className="sec-name">
                   {c.name} <b className={c.open ? "warn-text" : "ok-text"}>{c.label}</b>
@@ -135,6 +144,7 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
                   {c.open ? "Stäng" : "Öppna"}
                 </button>
               </div>
+              </Hide>
             ))}
           </div>
         </section>
@@ -148,9 +158,11 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
           </div>
           <div className="open-chips">
             {s.openings.map((o) => (
-              <span key={o.name} className={`open-chip ${o.open ? "open" : ""}`}>
-                <Icon name={o.open ? "unlock" : "lock"} size={16} /> {o.name}
-              </span>
+              <Hide key={o.name} k={`opening:${o.name}`} label={o.name} data={data} actions={actions}>
+                <span className={`open-chip ${o.open ? "open" : ""}`}>
+                  <Icon name={o.open ? "unlock" : "lock"} size={16} /> {o.name}
+                </span>
+              </Hide>
             ))}
           </div>
         </section>
@@ -175,7 +187,8 @@ export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Act
           <h2>Husgeråd</h2>
           <div className="stack" style={{ gap: 12 }}>
             {machines.map((m) => (
-              <div key={m.name} className={`machine m-${m.phase}`}>
+              <Hide key={m.name} k={`machine:${m.name}`} label={m.name} data={data} actions={actions} block>
+              <div className={`machine m-${m.phase}`}>
                 <div className="sec-row machine-row">
                   <span className="machine-ico" aria-hidden="true">
                     <Icon name={(({ washer: "washer", dryer: "dryer", dishwasher: "dishwasher", oven: "oven" }) as Record<string, "washer" | "dryer" | "dishwasher" | "oven">)[m.kind] ?? "washer"} size={26} />
@@ -197,12 +210,14 @@ export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Act
                   </div>
                 )}
               </div>
+              </Hide>
             ))}
           </div>
         </section>
       )}
       {robots.map((r) => (
-        <section key={r.entityId} className={`card robot ${r.error ? "error" : ""}`}>
+        <Hide key={r.entityId} k={r.entityId} label={r.name} data={data} actions={actions} card>
+        <section className={`card robot ${r.error ? "error" : ""}`}>
           <h2>{r.name}</h2>
           <p className={r.error ? "warn-text" : "muted"} style={{ margin: "0 0 10px" }}>
             {r.label}
@@ -226,6 +241,7 @@ export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Act
             )}
           </div>
         </section>
+        </Hide>
       ))}
     </main>
   );

@@ -1,4 +1,5 @@
 import { hourBuckets, shortControl } from "../../../server/src/pagebits";
+import { Hide } from "../hide";
 import { useEffect, useId, useMemo, useState } from "react";
 import type { Control, Dashboard, Lamp } from "../../../server/src/types";
 import { api, type CarDetails, type GraphData } from "../api";
@@ -731,15 +732,18 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
           <h2>Snabbval</h2>
           <div className="big-buttons">
             {data.buttons.map((b) => (
-              <button key={b.entityId} className={`big-btn wide ${b.style}`} onClick={() => actions.run(b.name, () => api.button(b.entityId))}>
-                {b.name}
-              </button>
+              <Hide key={b.entityId} k={b.entityId} label={b.name} data={data} actions={actions}>
+                <button className={`big-btn wide ${b.style}`} onClick={() => actions.run(b.name, () => api.button(b.entityId))}>
+                  {b.name}
+                </button>
+              </Hide>
             ))}
           </div>
         </section>
       )}
       {data.lightGroups.map((g) => (
-        <section className="card" key={g.index}>
+        <Hide key={g.index} k={`lightgroup:${g.name}`} label={g.name} data={data} actions={actions} card>
+        <section className="card">
           <h2>{g.name}</h2>
           <p className="muted">
             {g.on} av {g.total - g.offline.length} tända{g.offline.length ? <span className="lamp-off-note"> · offline: {g.offline.join(", ")}</span> : null}
@@ -774,12 +778,15 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
           {g.lamps.length > 1 && (
             <div className="lamp-list">
               {g.lamps.map((l) => (
-                <LampRow key={l.entityId} lamp={l} actions={actions} />
+                <Hide key={l.entityId} k={l.entityId} label={l.name} data={data} actions={actions} block>
+                  <LampRow lamp={l} actions={actions} />
+                </Hide>
               ))}
             </div>
           )}
           {g.lamps.length === 1 && g.lamps[0].dimmable && <LampRow lamp={g.lamps[0]} actions={actions} />}
         </section>
+        </Hide>
       ))}
       {flat && data.lights.length > 0 && lights.length === 0 && (
         <button className="btn lights-all" onClick={() => actions.run("Släck allt", () => api.lightsOff(), { done: "Allt släckt", check: (d) => d.lights.every((l) => !l.on || l.offline) })}>
@@ -796,7 +803,9 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
           </div>
           <div className="lamp-list">
             {lights.map((l) => (
-              <LampRow key={l.entityId} lamp={l} actions={actions} />
+              <Hide key={l.entityId} k={l.entityId} label={l.name} data={data} actions={actions} block>
+                <LampRow lamp={l} actions={actions} />
+              </Hide>
             ))}
           </div>
         </section>
@@ -816,10 +825,12 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
             Smart styrning
           </span>
           {data.smartModes.map((m) => (
-            <div key={m.entityId} className="stack" style={{ gap: 6 }}>
+            <Hide key={m.entityId} k={m.entityId} label={m.name} data={data} actions={actions} block>
+            <div className="stack" style={{ gap: 6 }}>
               <span>{m.name}</span>
               <div className="row gap wrap">
                 {m.options.map((o) => (
+                  <Hide key={o} k={`${m.entityId}#${o}`} label={`${m.name}: ${o}`} data={data} actions={actions}>
                   <button
                     key={o}
                     className={`btn small ${m.mode === o ? "selected" : ""}`}
@@ -829,14 +840,17 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
                   >
                     {o}
                   </button>
+                  </Hide>
                 ))}
               </div>
             </div>
+            </Hide>
           ))}
         </section>
       )}
       {data.climates.map((c) => (
-        <section className="card strong" key={c.entityId}>
+        <Hide key={c.entityId} k={c.entityId} label={c.name} data={data} actions={actions} card>
+        <section className="card strong">
           <span className="muted" style={{ fontWeight: 600 }}>
             {c.name}
           </span>
@@ -863,28 +877,33 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
           {c.modes.length > 0 && (
             <div className="row gap wrap">
               {c.modes.map((m) => (
+                <Hide key={m.value} k={`${c.entityId}#${m.value}`} label={m.label} data={data} actions={actions}>
                 <button
-                  key={m.value}
                   className={`btn small ${c.active === m.value ? "selected" : ""}`}
                   aria-pressed={c.active === m.value}
                   onClick={() => actions.confirm(`Byt ${c.name} till ${m.label}?`, c.name, () => api.climateMode(c.entityId, m.field, m.value))}
                 >
                   {m.label}
                 </button>
+                </Hide>
               ))}
             </div>
           )}
           {c.controls.length > 0 && (
             <div className="grid-2" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
               {c.controls.map((ctl) => (
-                <ControlView key={ctl.entityId} c={ctl} actions={actions} device={c.name} />
+                <Hide key={ctl.entityId} k={ctl.entityId} label={shortControl(ctl.name, c.name)} data={data} actions={actions} block>
+                  <ControlView c={ctl} actions={actions} device={c.name} />
+                </Hide>
               ))}
             </div>
           )}
         </section>
+        </Hide>
       ))}
       {data.deviceCards.map((d) => (
-        <section className="card strong" key={d.index}>
+        <Hide key={d.index} k={`card:${d.title}`} label={d.title} data={data} actions={actions} card>
+        <section className="card strong">
           <span className="muted" style={{ fontWeight: 600 }}>
             {d.title}
           </span>
@@ -909,21 +928,26 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
           {d.controls.length > 0 && (
             <div className="stack">
               {d.controls.map((ctl) => (
-                <ControlView key={ctl.entityId} c={ctl} actions={actions} />
+                <Hide key={ctl.entityId} k={ctl.entityId} label={shortControl(ctl.name, d.title)} data={data} actions={actions} block>
+                  <ControlView c={ctl} actions={actions} device={d.title} />
+                </Hide>
               ))}
             </div>
           )}
         </section>
+        </Hide>
       ))}
       {data.temps.length > 0 && (
         <section className="card">
           <h2>Temperaturer</h2>
           <div className="stats">
             {data.temps.map((t) => (
-              <div key={t.name}>
-                <small>{t.name}</small>
-                <b>{t.value}</b>
-              </div>
+              <Hide key={t.name} k={`temp:${t.name}`} label={t.name} data={data} actions={actions} block>
+                <div>
+                  <small>{t.name}</small>
+                  <b>{t.value}</b>
+                </div>
+              </Hide>
             ))}
           </div>
         </section>
@@ -1322,13 +1346,15 @@ function GraphCard({ index }: { index: number }) {
   );
 }
 
-export function GraphsPage({ data }: { data: Dashboard }) {
+export function GraphsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   // The new design shows the electricity price once (on Energi), not on every page that can.
   const flat = useDesign(data.design) === "flat";
   return (
     <main className="page-grid">
       {data.graphs.map((g) => (
-        <GraphCard key={g.index} index={g.index} />
+        <Hide key={g.index} k={`graph:${g.title}`} label={g.title} data={data} actions={actions} block>
+          <GraphCard index={g.index} />
+        </Hide>
       ))}
       {data.prices && !(flat && data.energy) && <PriceCard prices={data.prices} />}
     </main>

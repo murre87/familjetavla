@@ -239,6 +239,7 @@ const realApi = {
   /** A camera's still image; t makes the browser fetch a new one. */
   cameraUrl: (entityId: string, t: number) => `api/camera/${encodeURIComponent(entityId)}?t=${t}`,
   saveHomeLayout: (home: { id: string; on: boolean }[]) => post("home-layout", { home }),
+  setHidden: (key: string, hidden: boolean) => post("hidden", { key, hidden }),
   playStation: (index: number, speaker: string) => post("music/play", { index, speaker }),
   stopMusic: (speaker: string) => post("music/stop", { speaker }),
   tryStation: (name: string, url: string, speaker: string) => post("music/try", { name, url, speaker }),

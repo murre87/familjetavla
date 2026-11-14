@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "../Icon";
 import { PAGE_SIZE_MAX, PAGE_SIZE_MIN, usePagePrefs } from "../pageprefs";
+import { setEditing } from "../hide";
+
+/** Pages whose cards and buttons can be taken away ("Ta bort saker"). */
+const REMOVABLE = new Set(["tab:house", "tab:lights", "tab:security", "tab:graphs", "tab:music", "tab:household"]);
 
 /** The cog on a tab or page (next to Hem): settings for just that page on this screen. */
 export function PageGear({ id, title }: { id: string; title: string }) {
@@ -52,6 +56,21 @@ export function PageSheet({ id, title, onClose }: { id: string; title: string; o
           </div>
           <small className="muted">Får inte allt plats rullar du på sidan.</small>
         </div>
+        {REMOVABLE.has(id) && (
+          <div className="field">
+            <span>Knappar och kort</span>
+            <button
+              className="btn"
+              onClick={() => {
+                setEditing(true);
+                onClose();
+              }}
+            >
+              <Icon name="trashSmall" size={18} /> Ta bort saker på sidan
+            </button>
+            <small className="muted">Varje knapp och kort får ett ×. Det du tar bort försvinner på alla skärmar och kan tas tillbaka här.</small>
+          </div>
+        )}
         <div className="row gap">
           <button className="btn" onClick={() => setSize(id, 1)} disabled={size === 1}>
             Återställ
