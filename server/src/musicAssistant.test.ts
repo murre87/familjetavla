@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMaPlayer, libraryNameOf, playerFor, providerOf, SHELVES, toTile } from "./musicAssistant.js";
+import { isBuiltinPlaylist, serviceOfImage, isMaPlayer, libraryNameOf, playerFor, providerOf, SHELVES, toTile } from "./musicAssistant.js";
 
 describe("Music Assistant", () => {
   it("turns library items into covers, web images only", () => {
@@ -74,5 +74,17 @@ describe("music service names and radio", () => {
   it("has a shelf for Music Assistant's radio stations (TuneIn …)", () => {
     expect(SHELVES.radios).toEqual({ media_type: "radio", order_by: "name" });
   });
+  it("leaves out Music Assistant's own generated playlists, keeps the family's", () => {
+    const t = (title: string, type: "playlist" | "album" = "playlist") => ({ uri: "library://playlist/1", type, title });
+    for (const n of ["500 Random tracks (from library)", "All favorited tracks", "Random Artist (from library)", "Random Album (from library)", "Recently played tracks", "Recently added tracks", "Infinite Mix (library)", "Infinite Mix (favorites)"])
+      expect(isBuiltinPlaylist(t(n))).toBe(true);
+    for (const n of ["Absolute KAOS", "Liked Songs Emil", "Daily Mix 1", "Liked from Radio", "Recently played tracks 2026"]) expect(isBuiltinPlaylist(t(n))).toBe(false);
+    expect(isBuiltinPlaylist(t("Recently played tracks", "album"))).toBe(false);
+  });
+  it("names the service of library:// items by their covers", () => {
+    expect(serviceOfImage("https://i.scdn.co/image/ab67")).toBe("Spotify");
+    expect(serviceOfImage("https://pickasso.spotifycdn.com/image/x")).toBe("Spotify");
+    expect(serviceOfImage("http://192.168.1.109:8095/imageproxy/55fa")).toBe("");
+    expect(libraryNameOf([{ uri: "library://playlist/73", image: "https://image-cdn-fa.spotifycdn.com/image/ab" }, { uri: "library://playlist/4" }])).toBe("Spotify");
+  });
 });
-

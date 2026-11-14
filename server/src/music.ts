@@ -1,6 +1,6 @@
 import type { HaState } from "./connectors/ha.js";
 import { getJson } from "./http.js";
-import { isMaPlayer } from "./musicAssistant.js";
+import { isMaPlayer, knownPlayers } from "./musicAssistant.js";
 import type { Config, Music, RadioStation } from "./types.js";
 
 /**
@@ -13,7 +13,17 @@ export function buildMusic(cfg: Config, states: Map<string, HaState>): Music | u
   const speakers = cfg.entities.speakers ?? [];
   const stations = cfg.entities.stations ?? [];
   if (!speakers.length) return undefined;
+  // Speakers playing together (#93): each board speaker's Music Assistant player, and who its group holds.
+  const players = knownPlayers(speakers, states);
+  const groupOf = (id: string) => {
+    const p = players.get(id);
+    const gm = (states.get(p ?? "")?.attributes as { group_members?: string[] } | undefined)?.group_members ?? [];
+    if (!p || gm.filter((x) => x !== p).length === 0) return undefined;
+    const ids = speakers.filter((o) => o.entityId !== id && gm.includes(players.get(o.entityId) ?? "")).map((o) => o.entityId);
+    return ids.length ? ids : undefined;
+  };
   return {
+    groupable: players.size > 1,
     speakers: speakers.map((s) => {
       const st = states.get(s.entityId);
       const a = (st?.attributes ?? {}) as { media_content_id?: string; media_title?: string; media_artist?: string; media_album_name?: string; app_name?: string; volume_level?: number; entity_picture?: string; media_position?: number; media_duration?: number; media_position_updated_at?: string; supported_features?: number };
@@ -50,6 +60,7 @@ export function buildMusic(cfg: Config, states: Map<string, HaState>): Music | u
         canPause: live ? (feat & 1) === 1 : undefined,
         canNext: live ? (feat & 32) === 32 : undefined,
         canPrev: live ? (feat & 16) === 16 : undefined,
+        group: groupOf(s.entityId),
       };
     }),
     stations: stations.map((s, index) => ({ index, name: s.name, logo: s.logo, url: s.url })),

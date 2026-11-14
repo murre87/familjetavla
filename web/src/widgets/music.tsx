@@ -7,25 +7,35 @@ import type { Actions } from "../dashboard/Dashboard";
 import type { WidgetModule } from "./types";
 
 // ---------- Which speaker ----------
-// The default speaker (first under Huset → Musik) is always one tap away: "RIX FM" plays in the
-// kitchen. Picking another one in the Musik tab holds for a few minutes after the last tap, then the
-// board goes back to the default. Shared by the home card and the tab.
+// The speaker picked last stays picked, on this screen, until someone picks another one (Emil 2026-11-14:
+// "allt väljer den man valde sist"). Shared by the home card and the tab. Before any pick it is the
+// first speaker under Huset → Musik.
 
-const BACK_TO_DEFAULT_MS = 5 * 60_000;
-let chosen: string | null = null;
-let timer: ReturnType<typeof setTimeout> | undefined;
+const SPEAKER_KEY = "familjetavla.speaker";
+const stored = (k: string) => {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+};
+const store = (k: string, v: string | null) => {
+  try {
+    if (v === null) localStorage.removeItem(k);
+    else localStorage.setItem(k, v);
+  } catch {
+    /* privat läge: valet gäller tills sidan laddas om */
+  }
+};
+let chosen: string | null = stored(SPEAKER_KEY);
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 function choose(id: string | null) {
   chosen = id;
-  clearTimeout(timer);
-  if (id) timer = setTimeout(() => choose(null), BACK_TO_DEFAULT_MS);
+  store(SPEAKER_KEY, id);
   emit();
 }
-/** Any tap in the tab keeps a picked speaker a little longer. */
-const keep = () => {
-  if (chosen) choose(chosen);
-};
+const keep = () => undefined;
 function useSpeaker(m: MusicData) {
   const id = useSyncExternalStore(
     (l) => {
@@ -35,7 +45,7 @@ function useSpeaker(m: MusicData) {
     () => chosen,
   );
   const sp = m.speakers.find((s) => s.entityId === id) ?? m.speakers[0]!;
-  return { sp, choose: (x: string) => choose(x === m.speakers[0]!.entityId ? null : x) };
+  return { sp, choose: (x: string) => choose(x) };
 }
 
 type Speaker = MusicData["speakers"][number];
@@ -116,6 +126,12 @@ function VolumeSlider({ value, onCommit, label }: { value: number; onCommit: (v:
         }}
       />
       <b className="vol-val">{local}</b>
+      <button className="vol-step" aria-label="Sänk volymen 5 steg" onClick={() => { const v = Math.max(0, local - 5); setLocal(v); send(v, true); }}>
+        <Icon name="minus" size={20} />
+      </button>
+      <button className="vol-step" aria-label="Höj volymen 5 steg" onClick={() => { const v = Math.min(100, local + 5); setLocal(v); send(v, true); }}>
+        <Icon name="plus" size={20} />
+      </button>
     </div>
   );
 }
@@ -404,10 +420,70 @@ export function MusicPage({ data, actions }: { data: Dashboard; actions: Actions
   return <MusicTab m={m} actions={actions} />;
 }
 
+/**
+ * Which speaker plays. With Music Assistant several can play together (#93): "Flera" turns the buttons into
+ * tick boxes, and every speaker ticked joins the chosen one – the radio or playlist then plays in all of them.
+ */
+function SpeakerPicker({ m, sp, pick, actions }: { m: MusicData; sp: Speaker; pick: (id: string) => void; actions: Actions }) {
+  const group = sp.group ?? [];
+  const [multi, setMulti] = useState(group.length > 0);
+  useEffect(() => {
+    if (group.length > 0) setMulti(true);
+  }, [group.length]);
+  const toggle = (id: string) => {
+    const next = group.includes(id) ? group.filter((g) => g !== id) : [...group, id];
+    const name = m.speakers.find((s) => s.entityId === id)?.name ?? "";
+    void actions.run(group.includes(id) ? `${name} tas bort` : `${name} läggs till`, () => api.musicGroup(sp.entityId, next), {
+      done: group.includes(id) ? `${name} spelar inte längre med ${sp.name}` : `${name} spelar med ${sp.name}`,
+      check: (d) => {
+        const now = d.music?.speakers.find((s) => s.entityId === sp.entityId)?.group ?? [];
+        return now.length === next.length && next.every((x) => now.includes(x));
+      },
+      slow: "Högtalarna kopplas ihop – det kan ta några sekunder.",
+    });
+  };
+  return (
+    <div className="seg music-speakers" role={multi ? "group" : "radiogroup"} aria-label="Högtalare">
+      {m.speakers.map((s) => {
+        const lead = s.entityId === sp.entityId;
+        const joined = group.includes(s.entityId);
+        return (
+          <button
+            key={s.entityId}
+            className={`seg-btn ${lead ? "on" : ""} ${joined ? "joined" : ""}`}
+            role={multi ? "checkbox" : "radio"}
+            aria-checked={lead || joined}
+            onClick={() => (multi && !lead ? toggle(s.entityId) : pick(s.entityId))}
+          >
+            {multi ? <span className="chk">{(lead || joined) && <Icon name="check" size={14} />}</span> : <Icon name="speaker" size={18} />} {s.name}
+          </button>
+        );
+      })}
+      {m.groupable && (
+        <button
+          className={`seg-btn ${multi ? "joined" : ""}`}
+          aria-pressed={multi}
+          onClick={() => {
+            if (multi && group.length) void actions.run("Var för sig", () => api.musicGroup(sp.entityId, []), { done: `Bara ${sp.name}`, check: (d) => !d.music?.speakers.find((s) => s.entityId === sp.entityId)?.group });
+            setMulti(!multi);
+          }}
+        >
+          Flera
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
   const { sp, choose: pick } = useSpeaker(m);
   const c = useControls(sp, actions);
-  const [source, setSource] = useState<"radio" | "library">("radio");
+  // Radio or the library: what was open last (also after a reload).
+  const [source, setSourceState] = useState<"radio" | "library">(() => (stored("familjetavla.music.source") === "library" ? "library" : "radio"));
+  const setSource = (v: "radio" | "library") => {
+    store("familjetavla.music.source", v);
+    setSourceState(v);
+  };
   // Tapping the Musik tab again goes back to the first view (the radio) from the library.
   useEffect(() => {
     const reset = () => setSource("radio");
@@ -422,13 +498,7 @@ function MusicTab({ m, actions }: { m: MusicData; actions: Actions }) {
       {drag.overlay}
       <section className="card">
         {m.speakers.length > 1 && (
-          <div className="seg music-speakers" role="radiogroup" aria-label="Högtalare">
-            {m.speakers.map((s) => (
-              <button key={s.entityId} className={`seg-btn ${s.entityId === sp.entityId ? "on" : ""}`} role="radio" aria-checked={s.entityId === sp.entityId} onClick={() => pick(s.entityId)}>
-                <Icon name="speaker" size={18} /> {s.name}
-              </button>
-            ))}
-          </div>
+          <SpeakerPicker m={m} sp={sp} pick={pick} actions={actions} />
         )}
         <NowPlaying sp={sp} actions={actions} showName={m.speakers.length < 2} logo={sp.station !== undefined ? m.stations[sp.station]?.logo : undefined} />
         {/* The favourites are for the radio: while the library is open they only take room from it. */}
@@ -575,7 +645,15 @@ function Library({ sp, connect, actions }: { sp: Speaker; connect: string[]; act
   const [device, setDevice] = useState<string | null>(null);
   const others = connect.filter((d) => d.toLowerCase() !== sp.name.toLowerCase());
   const target = device && others.includes(device) ? device : null;
-  const [shelf, setShelf] = useState<Shelf | "search" | "home">("home");
+  // The shelf open last (Hem, Spellistor, Album …); search starts over.
+  const [shelf, setShelfState] = useState<Shelf | "search" | "home">(() => {
+    const v = stored("familjetavla.music.shelf");
+    return v && v !== "search" && ["home", "recent", "playlists", "albums", "podcasts", "radios"].includes(v) ? (v as Shelf | "home") : "home";
+  });
+  const setShelf = (v: Shelf | "search" | "home") => {
+    if (v !== "search") store("familjetavla.music.shelf", v);
+    setShelfState(v);
+  };
   const [q, setQ] = useState("");
   const [asked, setAsked] = useState("");
   const [tiles, setTiles] = useState<Tile[] | null>(null);

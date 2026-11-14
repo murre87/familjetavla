@@ -51,7 +51,7 @@ export function toTile(x: MaItem): Tile | null {
   return {
     uri: x.uri,
     type,
-    title: x.name.slice(0, 80),
+    title: x.name.trim().slice(0, 80),
     subtitle: (by || (x.version ?? "")).slice(0, 60) || undefined,
     // Spotify's covers are https; Music Assistant's own image proxy on the home network is http.
     image: x.image && /^https?:\/\//.test(x.image) ? x.image : undefined,
@@ -59,6 +59,13 @@ export function toTile(x: MaItem): Tile | null {
 }
 
 const tiles = (list: unknown): Tile[] => (Array.isArray(list) ? list.map((x) => toTile(x as MaItem)).filter((t): t is Tile => t !== null) : []);
+
+/**
+ * Music Assistant's own generated playlists ("500 Random tracks (from library)", "Infinite Mix …", "Recently played tracks" …),
+ * with its logo as cover. The family wants the playlists they have in Spotify (or another service), so these are left out.
+ */
+const BUILTIN_PLAYLIST = /^(all favou?rited tracks|recently (played|added) tracks|infinite mix \((library|favou?rites)\)|\d+ random tracks \(from library\)|random (artist|album) \(from library\))$/i;
+export const isBuiltinPlaylist = (t: Tile) => t.type === "playlist" && BUILTIN_PLAYLIST.test(t.title);
 
 interface MaSetup {
   entryId: string;
@@ -83,6 +90,38 @@ async function cachedSetup(conn: HaConn, speakers: string[]) {
   cache = { at: Date.now(), key, value };
   return value;
 }
+/** The Music Assistant player of each board speaker, from the last setup read (empty until Music Assistant has answered once). */
+export function knownPlayers(speakers: { entityId: string; name: string }[], states: Map<string, HaState>): Map<string, string> {
+  const s = cache?.value;
+  const out = new Map<string, string>();
+  if (!s) return out;
+  const names = new Map([...states.values()].map((x) => [x.entity_id, String((x.attributes as { friendly_name?: string }).friendly_name ?? "")]));
+  for (const sp of speakers) {
+    const p = playerFor(s, sp, names);
+    if (p) out.set(sp.entityId, p);
+  }
+  return out;
+}
+
+/** Board speakers playing together (#93): the Music Assistant player of `leader` gets the others' players as group members. */
+export async function setGroup(conn: HaConn, states: Map<string, HaState>, all: { entityId: string; name: string }[], leader: { entityId: string; name: string }, members: { entityId: string; name: string }[]) {
+  const s = await cachedSetup(conn, all.map((x) => x.entityId));
+  if (!s) throw new Error("Music Assistant finns inte i Home Assistant.");
+  const names = new Map([...states.values()].map((x) => [x.entity_id, String((x.attributes as { friendly_name?: string }).friendly_name ?? "")]));
+  const lead = playerFor(s, leader, names);
+  if (!lead) throw new Error(`Music Assistant känner inte igen ${leader.name}.`);
+  const want = members.map((m) => {
+    const p = playerFor(s, m, names);
+    if (!p) throw new Error(`Music Assistant känner inte igen ${m.name}.`);
+    return p;
+  }).filter((p) => p !== lead);
+  const now = ((states.get(lead)?.attributes as { group_members?: string[] } | undefined)?.group_members ?? []).filter((p) => p !== lead);
+  for (const p of now.filter((p) => !want.includes(p))) await ha.service(conn, "media_player", "unjoin", { entity_id: p });
+  const add = want.filter((p) => !now.includes(p));
+  if (add.length) await ha.service(conn, "media_player", "join", { entity_id: lead, group_members: add });
+  return lead;
+}
+
 export function clearMaCache() {
   cache = null;
 }
@@ -110,7 +149,7 @@ export async function library(conn: HaConn, speakers: string[], shelf: Shelf, of
   const s = await cachedSetup(conn, speakers);
   if (!s) throw new Error("Music Assistant finns inte i Home Assistant.");
   const r = await respond(conn, "get_library", { config_entry_id: s.entryId, ...SHELVES[shelf], limit: 60, offset });
-  return tiles(r.items);
+  return tiles(r.items).filter((t) => !isBuiltinPlaylist(t));
 }
 
 export async function search(conn: HaConn, speakers: string[], q: string): Promise<Tile[]> {
@@ -118,7 +157,7 @@ export async function search(conn: HaConn, speakers: string[], q: string): Promi
   if (!s) throw new Error("Music Assistant finns inte i Home Assistant.");
   const r = await respond(conn, "search", { config_entry_id: s.entryId, name: q, media_type: ["playlist", "artist", "album", "track", "podcast", "radio"], limit: 8 });
   // Playlists and artists first – what a family picks from a wall – then albums, songs, podcasts and radio stations (TuneIn …).
-  return ["playlists", "artists", "albums", "tracks", "podcasts", "radio"].flatMap((k) => tiles(r[k] ?? r.radios));
+  return ["playlists", "artists", "albums", "tracks", "podcasts", "radio"].flatMap((k) => tiles(r[k] ?? r.radios)).filter((t) => !isBuiltinPlaylist(t));
 }
 
 export interface Track {
@@ -159,8 +198,9 @@ export async function tracksOf(conn: HaConn, speakers: string[], uri: string): P
   return { title: node.title ?? "", tracks: (node.children ?? []).map(toTrack).filter((t): t is Track => t !== null).slice(0, 500) };
 }
 
-export async function playOn(conn: HaConn, states: Map<string, HaState>, speaker: { entityId: string; name: string }, tile: { uri: string; type: MediaType; start?: string; shuffle?: boolean }) {
-  const s = await cachedSetup(conn, [speaker.entityId]);
+export async function playOn(conn: HaConn, states: Map<string, HaState>, speaker: { entityId: string; name: string }, tile: { uri: string; type: MediaType; start?: string; shuffle?: boolean }, all: string[] = [speaker.entityId]) {
+  // All the board's speakers in one read, so the cache also knows the others (groups, knownPlayers).
+  const s = await cachedSetup(conn, all.includes(speaker.entityId) ? all : [...all, speaker.entityId]);
   if (!s) throw new Error("Music Assistant finns inte i Home Assistant.");
   const names = new Map([...states.values()].map((x) => [x.entity_id, String((x.attributes as { friendly_name?: string }).friendly_name ?? "")]));
   const player = playerFor(s, speaker, names);
@@ -209,6 +249,7 @@ const PROVIDER_NAMES: Record<string, string> = {
   itunes_podcasts: "Poddar",
   builtin: "",
   url: "",
+  library: "",
 };
 
 /** "apple_music://playlist/abc" → "Apple Music"; an unknown service gets its own domain, tidied. */
@@ -219,11 +260,24 @@ export function providerOf(uri: string): string {
   return d.replace(/[_-]+/g, " ").replace(/^./, (c) => c.toUpperCase());
 }
 
+/** "https://i.scdn.co/image/…" → "Spotify": the service a cover comes from, for items that only say library://. */
+export function serviceOfImage(url?: string): string {
+  const host = url?.match(/^https?:\/\/([^/]+)/i)?.[1]?.toLowerCase() ?? "";
+  if (/(^|\.)(scdn\.co|spotifycdn\.com)$/.test(host)) return "Spotify";
+  if (/(^|\.)mzstatic\.com$/.test(host)) return "Apple Music";
+  if (/(^|\.)tidal\.com$/.test(host)) return "Tidal";
+  if (/(^|\.)dzcdn\.net$/.test(host)) return "Deezer";
+  if (/(^|\.)(ggpht|googleusercontent)\.com$/.test(host)) return "YouTube Music";
+  if (/(^|\.)qobuz\.com$/.test(host)) return "Qobuz";
+  return "";
+}
+
 /** The music services behind a list of tiles, most common first ("Apple Music", or "Apple Music · Tidal"). */
-export function libraryNameOf(list: { uri: string }[]): string | undefined {
+export function libraryNameOf(list: { uri: string; image?: string }[]): string | undefined {
   const count = new Map<string, number>();
   for (const t of list) {
-    const n = providerOf(t.uri);
+    // Music Assistant's own library items ("library://playlist/12") do not say where they come from; the cover's host does.
+    const n = providerOf(t.uri) || serviceOfImage(t.image);
     if (n) count.set(n, (count.get(n) ?? 0) + 1);
   }
   const names = [...count.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => n);

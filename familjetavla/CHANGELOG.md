@@ -1,5 +1,16 @@
 # Ändringar
 
+## 0.29.0
+
+**Musik, spabad och grafer.**
+
+- **Tavlan minns vad du valde sist i Musik:** högtalaren, Radio eller Spotify, och hyllan (Spellistor, Album …), också efter omstart. Förut gick den tillbaka till första högtalaren efter fem minuter.
+- **Volym − och + i steg om 5**, bredvid reglaget. Lättare att träffa på surfplattan än att dra.
+- **Flera högtalare samtidigt** (#93). Tryck *Flera*, kryssa i högtalarna, så spelar radion eller spellistan i alla. Kräver Music Assistant. Tryck *Flera* igen för att spela i en högtalare.
+- **Spellistor visar dina listor från Spotify.** Music Assistants egna listor ("500 Random tracks", "Infinite Mix" …) med dess logga visas inte längre. Fliken heter Spotify (eller Apple Music, Tidal …) även när Music Assistant inte säger var listorna kommer ifrån.
+- **Grafer timme för timme**, ritade som *Dygnet timme för timme* i EnergyWizard: klockslag längs nederkanten, ett streckat *nu*, en trappkurva per serie och under den en rad timrutor per serie där starkare färg betyder mer. Förut stod samma klockslag i båda ändarna (11:31 … 11:31).
+- **Knapparna i spabadets kort** heter *Pump 1*, *Economy Mode* och *Lights* i stället för att upprepa *Spabad*. Långa namn bryts på två rader i stället för att klippas.
+
 ## 0.28.0
 
 - **Lugnare och tydligare.**

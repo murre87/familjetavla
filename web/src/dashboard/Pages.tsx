@@ -1,3 +1,4 @@
+import { hourBuckets, shortControl } from "../../../server/src/pagebits";
 import { useEffect, useId, useMemo, useState } from "react";
 import type { Control, Dashboard, Lamp } from "../../../server/src/types";
 import { api, type CarDetails, type GraphData } from "../api";
@@ -13,11 +14,8 @@ const fmtNum = (n: number | null | undefined, d = 1) => (n === null || n === und
 
 // ---------- Generic control (switch / select / number / button) ----------
 
-/** "Spabad Spa Malmgatan 34: Blower" → "Blower": the card already says which device it is. */
-const shortControl = (name: string) => (name.includes(": ") ? name.slice(name.lastIndexOf(": ") + 2) : name);
-
-export function ControlView({ c: control, actions }: { c: Control; actions: Actions }) {
-  const c = { ...control, name: shortControl(control.name) };
+export function ControlView({ c: control, actions, device }: { c: Control; actions: Actions; device?: string }) {
+  const c = { ...control, name: shortControl(control.name, device) };
   if (c.domain === "select" || c.domain === "input_select") {
     return (
       <label className="field">
@@ -879,7 +877,7 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
           {c.controls.length > 0 && (
             <div className="grid-2" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
               {c.controls.map((ctl) => (
-                <ControlView key={ctl.entityId} c={ctl} actions={actions} />
+                <ControlView key={ctl.entityId} c={ctl} actions={actions} device={c.name} />
               ))}
             </div>
           )}
@@ -1152,124 +1150,136 @@ function niceTicks(lo: number, hi: number, count: number): number[] {
   return out;
 }
 
-/** Mjuk kurva (horisontella tangenter: ingen översvängning), i segment när det saknas värden. */
-function smoothPath(pts: ({ x: number; y: number } | null)[]): { line: string; area: string } {
-  let line = "";
-  let area = "";
-  let run: { x: number; y: number }[] = [];
-  const flush = (bottom: number) => {
-    if (run.length < 2) {
-      run = [];
-      return;
-    }
-    let d = `M${run[0]!.x.toFixed(1)},${run[0]!.y.toFixed(1)}`;
-    for (let i = 1; i < run.length; i++) {
-      const p0 = run[i - 1]!;
-      const p1 = run[i]!;
-      const mx = (p0.x + p1.x) / 2;
-      d += ` C${mx.toFixed(1)},${p0.y.toFixed(1)} ${mx.toFixed(1)},${p1.y.toFixed(1)} ${p1.x.toFixed(1)},${p1.y.toFixed(1)}`;
-    }
-    line += (line ? " " : "") + d;
-    area += `${area ? " " : ""}${d} L${run[run.length - 1]!.x.toFixed(1)},${bottom} L${run[0]!.x.toFixed(1)},${bottom} Z`;
-    run = [];
-  };
-  for (const p of pts) {
-    if (p) run.push(p);
-    else flush(180);
-  }
-  flush(180);
-  return { line, area };
-}
-
-function LineChart({ data }: { data: GraphData }) {
+/**
+ * The day hour by hour, drawn like EnergyWizard's "Dygnet timme för timme" (Emil 2026-11-14): one step line per
+ * series over clock hours, a dashed "nu" at the right edge, and below it one row of hour blocks per series where a
+ * stronger colour means more. Touch or drag shows that hour's values.
+ */
+function HourChart({ data }: { data: GraphData }) {
   const W = 600;
-  const H = 180;
+  const H = 150;
   const id = useId().replace(/:/g, "");
   const [hover, setHover] = useState<number | null>(null);
-  const all = data.series.flatMap((s) => s.points.filter((p): p is number => p !== null));
-  if (!all.length) return <p className="muted">Ingen historik ännu.</p>;
+  const { hours, series } = hourBuckets(data);
+  const all = series.flat().filter((p): p is number => p !== null);
+  if (!all.length || !hours.length) return <p className="muted">Ingen historik ännu.</p>;
+  const n = hours.length;
   const lo = Math.min(...all);
   const hi = Math.max(...all);
-  const pad = (hi - lo || 1) * 0.08;
+  const pad = (hi - lo || 1) * 0.1;
   const min = lo - pad;
   const max = hi + pad;
   const span = max - min || 1;
-  const n = Math.max(...data.series.map((s) => s.points.length));
-  const x = (i: number) => (i / Math.max(1, n - 1)) * W;
-  const y = (v: number) => H - 6 - ((v - min) / span) * (H - 12);
-  const time = (iso: string) => new Date(iso).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
-  const stamp = (i: number) => {
-    const t0 = new Date(data.from).getTime();
-    const t1 = new Date(data.to).getTime();
-    return time(new Date(t0 + ((t1 - t0) * i) / Math.max(1, n - 1)).toISOString());
-  };
+  const colW = W / n;
+  const y = (v: number) => H - 4 - ((v - min) / span) * (H - 8);
   const ticks = niceTicks(lo, hi, 4).filter((t) => t >= min && t <= max);
+  const hourOf = (k: number) => new Date(hours[k]! * 3_600_000).getHours();
+  const label = (k: number) => String(hourOf(k)).padStart(2, "0");
+  const every = n > 16 ? 3 : n > 8 ? 2 : 1;
   const at = (e: React.PointerEvent<HTMLDivElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
-    setHover(Math.max(0, Math.min(n - 1, Math.round(((e.clientX - r.left) / r.width) * (n - 1)))));
+    setHover(Math.max(0, Math.min(n - 1, Math.floor(((e.clientX - r.left) / r.width) * n))));
   };
+  // Each series' own scale for the blocks: its lowest hour is faint, its highest is strong.
+  const strength = (si: number, v: number) => {
+    const vals = series[si]!.filter((p): p is number => p !== null);
+    const a = Math.min(...vals);
+    const b = Math.max(...vals);
+    return b - a < 1e-9 ? 0.5 : (v - a) / (b - a);
+  };
+  const step = (pts: (number | null)[]) => {
+    let line = "";
+    let area = "";
+    let run: string[] = [];
+    let runStart = 0;
+    const flush = (endK: number) => {
+      if (!run.length) return;
+      line += ` M${run.join(" L")}`;
+      area += ` M${(runStart * colW).toFixed(1)},${H} L${run.join(" L")} L${(endK * colW).toFixed(1)},${H} Z`;
+      run = [];
+    };
+    pts.forEach((v, k) => {
+      if (v === null) return flush(k);
+      if (!run.length) runStart = k;
+      run.push(`${(k * colW).toFixed(1)},${y(v).toFixed(1)}`, `${((k + 1) * colW).toFixed(1)},${y(v).toFixed(1)}`);
+    });
+    flush(n);
+    return { line, area };
+  };
+  const tipLeft = hover === null ? 0 : Math.min(70, Math.max(0, ((hover + 0.5) / n) * 100 - 12));
   return (
-    <div className="chart">
-      <div className="chart-plot" onPointerMove={at} onPointerDown={at} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
-        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={data.title}>
-          <defs>
-            {data.series.map((s, i) => (
-              <linearGradient key={s.name} id={`${id}-${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor={s.color} stopOpacity="0.30" />
-                <stop offset="1" stopColor={s.color} stopOpacity="0" />
-              </linearGradient>
-            ))}
-          </defs>
+    <div className="hour-chart">
+      <div className="hc-row">
+        <div className="hc-yaxis">
           {ticks.map((t, k) => (
-            <line key={k} x1="0" x2={W} y1={y(t)} y2={y(t)} stroke="currentColor" strokeOpacity="0.1" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" />
+            <span key={k} style={{ top: `${(y(t) / H) * 100}%` }}>
+              {fmtNum(t)}
+            </span>
           ))}
-          {data.series.map((s, i) => {
-            const { line, area } = smoothPath(s.points.map((p, j) => (p === null ? null : { x: x(j), y: y(p) })));
-            return (
-              <g key={s.name}>
-                <path d={area} fill={`url(#${id}-${i})`} stroke="none" />
-                <path d={line} fill="none" stroke={s.color} strokeWidth={2.6} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
-              </g>
-            );
-          })}
-        </svg>
-        {ticks.map((t, k) => (
-          <span key={k} className="chart-y" style={{ top: `${(y(t) / H) * 100}%` }}>
-            {fmtNum(t)}
-          </span>
-        ))}
-        {/* Senaste värdet som punkt, och markören när man trycker eller drar */}
-        {hover === null &&
-          data.series.map((s) => {
-            const last = s.points.length - 1;
-            const v = s.points[last];
-            return v === null || v === undefined ? null : <i key={s.name} className="chart-dot" style={{ left: `${(x(last) / W) * 100}%`, top: `${(y(v) / H) * 100}%`, background: s.color }} />;
-          })}
-        {hover !== null && (
-          <>
-            <i className="chart-cursor" style={{ left: `${(x(hover) / W) * 100}%` }} />
-            {data.series.map((s) => {
-              const v = s.points[hover];
-              return v === null || v === undefined ? null : <i key={s.name} className="chart-dot on" style={{ left: `${(x(hover) / W) * 100}%`, top: `${(y(v) / H) * 100}%`, background: s.color }} />;
+        </div>
+        <div className="hc-plot" onPointerMove={at} onPointerDown={at} onPointerLeave={() => setHover(null)} onPointerCancel={() => setHover(null)}>
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`${data.title}, senaste dygnet timme för timme`}>
+            <defs>
+              {data.series.map((s, i) => (
+                <linearGradient key={s.name} id={`${id}-${i}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor={s.color} stopOpacity="0.22" />
+                  <stop offset="1" stopColor={s.color} stopOpacity="0" />
+                </linearGradient>
+              ))}
+            </defs>
+            {ticks.map((t, k) => (
+              <line key={k} x1="0" x2={W} y1={y(t)} y2={y(t)} stroke="currentColor" strokeOpacity="0.12" vectorEffect="non-scaling-stroke" />
+            ))}
+            {series.map((pts, i) => {
+              const { line, area } = step(pts);
+              const color = data.series[i]!.color;
+              return (
+                <g key={i}>
+                  <path d={area} fill={`url(#${id}-${i})`} stroke="none" />
+                  <path d={line} fill="none" stroke={color} strokeWidth={2.2} vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+                </g>
+              );
             })}
-            <div className="chart-tip" style={{ left: `${Math.min(78, Math.max(2, (x(hover) / W) * 100 - 10))}%` }}>
-              <b>{stamp(hover)}</b>
-              {data.series.map((s) => (
+            {hover !== null && <rect x={hover * colW} y={0} width={colW} height={H} fill="currentColor" fillOpacity="0.07" />}
+            <line x1={W - colW / 2} x2={W - colW / 2} y1={0} y2={H} stroke="currentColor" strokeOpacity="0.45" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
+          </svg>
+          <span className="hc-now" style={{ left: `${((n - 0.5) / n) * 100}%` }}>
+            nu
+          </span>
+          {hover !== null && (
+            <div className="chart-tip" style={{ left: `${tipLeft}%` }}>
+              <b>
+                {label(hover)}:00{hover === n - 1 ? " · nu" : ""}
+              </b>
+              {data.series.map((s, i) => (
                 <span key={s.name}>
                   <i style={{ background: s.color }} />
-                  {s.name} {s.points[hover] === null || s.points[hover] === undefined ? "–" : fmtNum(s.points[hover] as number)}
+                  {s.name} {series[i]![hover] === null ? "–" : fmtNum(Math.round(series[i]![hover]! * 10) / 10)}
                 </span>
               ))}
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
-      <div className="axis">
-        <span>{time(data.from)}</span>
-        <span>
-          min {fmtNum(lo)} · max {fmtNum(hi)}
-        </span>
-        <span>{time(data.to)}</span>
+      {data.series.map((s, i) => series[i]!.every((v) => v === null) ? null : (
+        <div className="hc-row hc-lane" key={s.name}>
+          <span className="hc-name" title={s.name}>
+            {s.name}
+          </span>
+          <div className="hc-cells" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
+            {series[i]!.map((v, k) => (
+              <i key={k} className={hover === k ? "on" : ""} style={v === null ? undefined : { background: s.color, opacity: 0.14 + 0.8 * strength(i, v) }} />
+            ))}
+          </div>
+        </div>
+      ))}
+      <div className="hc-row">
+        <span />
+        <div className="hc-hours" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
+          {hours.map((_, k) => (
+            <span key={k}>{k % every === 0 || k === n - 1 ? label(k) : ""}</span>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -1307,7 +1317,7 @@ function GraphCard({ index }: { index: number }) {
         </div>
       )}
       {error && <p className="error-text">{error}</p>}
-      {data && <LineChart data={data} />}
+      {data && <HourChart data={data} />}
     </section>
   );
 }

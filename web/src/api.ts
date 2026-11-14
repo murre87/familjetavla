@@ -253,6 +253,7 @@ const realApi = {
   musicItems: (uri: string) => request<{ title: string; tracks: Track[] }>(`music/items?uri=${encodeURIComponent(uri)}`),
   musicTransport: (speaker: string, action: "play_pause" | "next" | "previous") => post("music/transport", { speaker, action }),
   volume: (speaker: string, pct: number) => post("music/volume", { speaker, pct }),
+  musicGroup: (speaker: string, members: string[]) => post("music/group", { speaker, members }),
   searchStations: (q: string) => request<{ stations: StationHit[] }>(`radio/search?q=${encodeURIComponent(q)}`),
   addItem: (name: string, offer?: { store: string; id: string }) => post("shopping/add", { name, offer }),
   toggleItem: (id: string, done: boolean) => post("shopping/toggle", { id, done }),
