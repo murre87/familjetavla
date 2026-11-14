@@ -5275,3 +5275,129 @@ html.board-lock body {
   overscroll-behavior: none;
   height: 100%;
 }
+
+/* Volym ± 5 steg (2026-11-14): stora knappar bredvid reglaget, lättare än att dra på en surfplatta */
+.vol-slider:has(.vol-step) {
+  max-width: 460px;
+}
+.vol-step {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.2));
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.vol-step:active {
+  transform: scale(0.97);
+}
+/* Flera högtalare samtidigt (#93) */
+.music-speakers .seg-btn.joined {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.music-speakers .seg-btn .chk {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid currentColor;
+  opacity: 0.7;
+}
+.music-speakers .seg-btn.joined .chk,
+.music-speakers .seg-btn.on .chk {
+  opacity: 1;
+}
+/* Långa namn på knappar i ett smalt kort (spabadets "Economy Mode"): bryts på två rader i stället för att klippas */
+.card .grid-2 > .light-btn,
+.card .grid-2 > .btn {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  line-height: 1.2;
+  text-align: center;
+}
+
+/* ---------- Grafer timme för timme (som EnergyWizards "Dygnet timme för timme", 2026-11-14) ---------- */
+.hour-chart {
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+}
+.hc-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+.hc-yaxis {
+  position: relative;
+  height: 150px;
+}
+.hc-yaxis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 12.5px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.hc-plot {
+  position: relative;
+  height: 150px;
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.hc-plot svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.hc-now {
+  position: absolute;
+  top: -2px;
+  transform: translateX(-110%);
+  font-size: 12px;
+  color: var(--faint);
+  pointer-events: none;
+}
+.hc-name {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hc-cells,
+.hc-hours {
+  display: grid;
+  gap: 2px;
+}
+.hc-cells i {
+  height: 18px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+.hc-cells i.on {
+  outline: 1.5px solid var(--text);
+  outline-offset: -1px;
+}
+.hc-hours span {
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: visible;
+}
+@media (max-width: 600px) {
+  .hc-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+}

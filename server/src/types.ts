@@ -736,7 +736,11 @@ export interface Music {
     canPause?: boolean;
     canNext?: boolean;
     canPrev?: boolean;
+    /** De andra högtalarna (entity_id) som spelar tillsammans med den här via Music Assistant (#93). */
+    group?: string[];
   }[];
+  /** Music Assistant känner till minst två av högtalarna: de kan spela tillsammans. */
+  groupable?: boolean;
   stations: { index: number; name: string; logo?: string; url: string }[];
   /** Home Assistant's Spotify integration: null when it is not installed (the tab then says how). */
   spotify: { entityId: string; playing: boolean; title?: string; device?: string; offline: boolean; devices: string[] } | null;

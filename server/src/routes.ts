@@ -52,7 +52,7 @@ import { makeBackup, restoreBackup } from "./backup.js";
 import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
 import { alarmCall, robotCall } from "./security.js";
-import { MEDIA_TYPES, SHELVES, isMaPlayer, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
+import { MEDIA_TYPES, SHELVES, isMaPlayer, knownPlayers, setGroup as maSetGroup, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
 import { HOME_WIDGETS, TAB_IDS, type Config, type FoodPart, type StoreFood, type StoreFoodData, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
 
 export { VERSION } from "./version.js";
@@ -925,6 +925,13 @@ export async function registerRoutes(app: FastifyInstance) {
       await ha.service(conn, "media_player", "volume_set", { entity_id: id, volume_level: last / 100 }).catch(() => undefined);
   };
   const speakerOf = (id: unknown) => (typeof id === "string" ? (loadConfig().entities.speakers ?? []).find((x) => x.entityId === id) : undefined);
+  /** A speaker playing together with others (#93): its Music Assistant player leads the group, so the radio goes there. */
+  const groupLead = async (conn: NonNullable<ReturnType<typeof haConnection>>, id: string) => {
+    const states = new Map((await ha.states(conn)).map((s) => [s.entity_id, s]));
+    const lead = knownPlayers(loadConfig().entities.speakers ?? [], states).get(id);
+    const members = (states.get(lead ?? "")?.attributes as { group_members?: string[] } | undefined)?.group_members ?? [];
+    return lead && members.filter((m) => m !== lead).length > 0 ? lead : undefined;
+  };
 
   /**
    * Starts a station on a speaker. A plain play_media with the stream URL suits Google, Sonos and most others; a Music Assistant player
@@ -957,7 +964,7 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
     await wake(conn, body.data.speaker);
     try {
-      await startStation(conn, body.data.speaker, station);
+      await startStation(conn, (await groupLead(conn, body.data.speaker).catch(() => undefined)) ?? body.data.speaker, station);
     } catch (e) {
       return fail(reply, new Error(`${speakerOf(body.data.speaker)!.name} kunde inte spela ${station.name}: ${(e as Error).message}`), 502);
     }
@@ -970,6 +977,9 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!speakerOf(speaker)) return fail(reply, new Error("Okänd högtalare"));
     const conn = haConnection();
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
+    // Speakers playing together: stopping the group's leader silences all of them.
+    const lead = await groupLead(conn, speaker!).catch(() => undefined);
+    if (lead) await ha.service(conn, "media_player", "media_stop", { entity_id: lead }).catch(() => undefined);
     // Not every speaker can stop (some only pause); media_stop falls back to pause there.
     try {
       await ha.service(conn, "media_player", "media_stop", { entity_id: speaker });
@@ -1039,7 +1049,7 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
     await wake(conn, body.data.speaker);
     try {
-      await startStation(conn, body.data.speaker, station);
+      await startStation(conn, (await groupLead(conn, body.data.speaker).catch(() => undefined)) ?? body.data.speaker, station);
     } catch (e) {
       return fail(reply, new Error(`${speakerOf(body.data.speaker)!.name} kunde inte spela ${station.name}: ${(e as Error).message}`), 502);
     }
@@ -1092,6 +1102,24 @@ export async function registerRoutes(app: FastifyInstance) {
     }
   });
 
+  /** Speakers playing together (#93): `members` are the other board speakers that join `speaker`; an empty list ends the group. */
+  app.post("/api/music/group", async (req, reply) => {
+    const body = z.object({ speaker: entity, members: z.array(entity).max(16) }).safeParse(req.body);
+    const lead = body.success ? speakerOf(body.data.speaker) : undefined;
+    const members = body.success ? body.data.members.map(speakerOf) : [];
+    if (!body.success || !lead || members.some((m) => !m)) return fail(reply, new Error("Okänd högtalare"));
+    const conn = haConnection();
+    if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
+    try {
+      const states = new Map((await ha.states(conn)).map((s) => [s.entity_id, s]));
+      await maSetGroup(conn, states, loadConfig().entities.speakers ?? [], lead, members as NonNullable<(typeof members)[number]>[]);
+    } catch (e) {
+      return fail(reply, e, 502);
+    }
+    invalidate("ha:states");
+    return { ok: true };
+  });
+
   app.get("/api/music/search", async (req, reply) => {
     const q = z.object({ q: z.string().trim().min(2).max(60) }).safeParse(req.query);
     if (!q.success) return { tiles: [] };
@@ -1127,7 +1155,7 @@ export async function registerRoutes(app: FastifyInstance) {
     if (!conn) return fail(reply, new Error("Home Assistant är inte anslutet."));
     try {
       await wake(conn, sp.entityId);
-      await maPlayOn(conn, new Map((await ha.states(conn)).map((s) => [s.entity_id, s])), sp, body.data);
+      await maPlayOn(conn, new Map((await ha.states(conn)).map((s) => [s.entity_id, s])), sp, body.data, boardSpeakers());
     } catch (e) {
       return fail(reply, new Error(`${sp.name} kunde inte spela ${body.data.title ?? "det"}: ${(e as Error).message}`), 502);
     }
