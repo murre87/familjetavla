@@ -1412,7 +1412,7 @@ export function Dashboard() {
               {tab === "food" && <FoodPage data={data} actions={actions} />}
               {tab === "house" && <HousePage data={data} actions={actions} />}
               {tab === "energy" && <EnergyPage data={data} />}
-              {tab === "graphs" && <GraphsPage data={data} />}
+              {tab === "graphs" && <GraphsPage data={data} actions={actions} />}
               {tab === "music" && <MusicPage data={data} actions={actions} />}
             </Fit>
           )}

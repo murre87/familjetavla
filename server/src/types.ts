@@ -372,6 +372,8 @@ export interface Config {
     sunArc?: boolean;
     /** Sidan Skolan: "span" visar bara när skoldagen slutar (och idrott), inte varje lektion. Standard är alla lektioner. */
     lessons?: "all" | "span";
+    /** Knappar, kort och val som familjen tagit bort under kugghjulet på en sida (#2026-11-14): entity_id, eller entity_id#val för ett läge. Gäller alla skärmar. */
+    hidden?: string[];
   };
 }
 
@@ -603,6 +605,8 @@ export interface Dashboard {
   school?: SchoolChild[];
   /** "span": Skolan shows when the day starts and ends, not every lesson. */
   lessonView?: "all" | "span";
+  /** Det som tagits bort under sidornas kugghjul (entity_id, eller entity_id#val). */
+  hidden: string[];
   /** En nyare version finns publicerad. */
   update?: { latest: string; current: string };
   /** Running version, and the published one when known: "v0.10.0 ✓ senaste" or "uppdatera till …" in the header. */

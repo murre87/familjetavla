@@ -328,6 +328,7 @@ export const configSchema = z
       design: z.enum(["flat", "glass"]).optional(),
       sunArc: z.boolean().optional(),
       lessons: z.enum(["all", "span"]).optional(),
+      hidden: z.array(z.string().max(160)).max(500).optional(),
     }),
   })
   .superRefine((c, ctx) => {
@@ -899,6 +900,20 @@ export async function registerRoutes(app: FastifyInstance) {
     cfg.dashboard.home = next;
     saveConfig(cfg);
     return { ok: true, home: next };
+  });
+
+  /** The cog on a page → "Ta bort saker": one button, card or choice taken away (or back). Same rights as the settings. */
+  app.post("/api/hidden", { preHandler: guard }, async (req, reply) => {
+    const body = z.object({ key: z.string().min(3).max(160).regex(/^[a-z0-9_]+\.[a-z0-9_]+(#.{1,100})?$|^[a-z]+:.{1,100}$/), hidden: z.boolean() }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Okänd sak att ta bort"));
+    const cfg = loadConfig();
+    const now = new Set(cfg.dashboard.hidden ?? []);
+    if (body.data.hidden) now.add(body.data.key);
+    else now.delete(body.data.key);
+    if (now.size > 500) return fail(reply, new Error("För många borttagna saker"));
+    cfg.dashboard.hidden = [...now];
+    saveConfig(cfg);
+    return { ok: true, hidden: cfg.dashboard.hidden };
   });
 
   app.post("/api/lights/off", async (_req, reply) => {

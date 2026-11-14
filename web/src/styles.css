@@ -5401,3 +5401,96 @@ html.board-lock body {
     grid-template-columns: 64px minmax(0, 1fr);
   }
 }
+
+/* ---------- Ta bort saker på en sida (kugghjulet, 2026-11-14) ---------- */
+.hideable {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+.hideable.block {
+  display: flex;
+  flex-direction: column;
+}
+.hideable-inner {
+  display: contents;
+}
+.hideable.block > .hideable-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.hideable .hideable-inner > * {
+  pointer-events: none;
+}
+.hideable.gone > .hideable-inner > * {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.hide-x {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-solid, #fff);
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.hide-x::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.hideable.gone > .hide-x {
+  background: var(--accent);
+}
+.hide-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--bg-solid, #fff);
+  box-shadow: 0 0 0 2px var(--accent);
+  font-size: 15px;
+}
+.hideable > .hideable-inner > * {
+  flex: 1 1 auto;
+}
+/* En borttagbar sak inne i ett borttagbart kort: dess × ska gå att trycka på (pointer-events ärvs annars från kortet) */
+.hideable,
+.hide-x {
+  pointer-events: auto;
+}
+/* Kortets eget × ligger innanför hörnet, så att det inte klipps vid sidans kant */
+.hideable.block:has(> .hideable-inner > .card) > .hide-x {
+  top: 8px;
+  right: 8px;
+}
+.hideable-card {
+  position: relative;
+}
+.hideable-card > .hide-x {
+  top: 8px;
+  right: 8px;
+}
+.hideable-card.gone > :not(.hide-x) {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+/* Medan man tar bort saker går kortets egna knappar inte att trycka på (bara ×) */
+.hideable-card > :not(.hide-x) {
+  pointer-events: none;
+}

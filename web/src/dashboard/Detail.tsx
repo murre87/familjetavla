@@ -4,6 +4,7 @@ import type { Dashboard } from "../../../server/src/types";
 import { isoWeek } from "../../../server/src/time";
 import { usePagePrefs } from "../pageprefs";
 import { PageGear } from "./PageSheet";
+import { EditBar, setEditing } from "../hide";
 import { api } from "../api";
 import { Icon } from "../Icon";
 import { Attachments, isBoardFile } from "./Attachments";
@@ -31,7 +32,10 @@ export const PAGE_TITLES: Record<PageId, string> = {
 /** Every page and tab: back, the title, and home – always in the same place. */
 /** `gearId`: this page's settings (text size) under a cog next to Hem. */
 export function PageBar({ title, gearId }: { title: string; gearId?: string }) {
+  // Leaving the page ends "Ta bort saker".
+  useEffect(() => () => setEditing(false), [title]);
   return (
+    <>
     <div className="page-bar">
       <button className="btn" onClick={goBack} aria-label="Tillbaka">
         <Icon name="chevronLeft" size={22} /> Tillbaka
@@ -42,6 +46,8 @@ export function PageBar({ title, gearId }: { title: string; gearId?: string }) {
         <Icon name="home" size={22} /> Hem
       </button>
     </div>
+    <EditBar />
+    </>
   );
 }
 

@@ -453,6 +453,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     schoolDay: buildSchoolDays(all, people, now, (e, day) => visibleOn(e, people, day)),
     school: buildSchoolWeek(all, people, now, (e, day) => visibleOn(e, people, day)),
     lessonView: cfg.dashboard.lessons ?? "all",
+    hidden: cfg.dashboard.hidden ?? [],
     update: updateAvailable(),
     version: versionInfo(),
     cars: cfg.entities.cars.map((c) => {

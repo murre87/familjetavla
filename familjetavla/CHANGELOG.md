@@ -1,5 +1,12 @@
 # Ändringar
 
+## 0.30.0
+
+**Ta bort det du inte vill se.**
+
+- **Kugghjulet på Hus, Ljus, Säkerhet, Grafer, Musik och Hushåll har *Ta bort saker på sidan*.** Varje kort och knapp får ett ×, till exempel spabadets *Blower* eller ett läge du aldrig använder. Det du tar bort försvinner på alla skärmar. Medan du ändrar syns det bleknat med en knapp för att ta tillbaka det. *Klar* avslutar.
+- En öppning som du tagit bort (till exempel tvättmaskinens lucka) räknas inte heller i *öppet* på Säkerhet.
+
 ## 0.29.0
 
 **Musik, spabad och grafer.**
