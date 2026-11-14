@@ -62,7 +62,7 @@ export function EditBar() {
   const on = useEditing();
   if (!on) return null;
   return (
-    <div className="edit-bar" role="status">
+    <div className="hide-bar" role="status">
       <span className="grow">Tryck på × för att ta bort en knapp eller ett kort. Borttaget syns bleknat medan du ändrar och kan tas tillbaka. Gäller alla skärmar.</span>
       <button className="btn primary" onClick={() => setEditing(false)}>
         Klar

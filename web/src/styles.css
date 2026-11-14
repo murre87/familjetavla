@@ -5452,7 +5452,7 @@ html.board-lock body {
 .hideable.gone > .hide-x {
   background: var(--accent);
 }
-.edit-bar {
+.hide-bar {
   position: sticky;
   top: 0;
   z-index: 20;
