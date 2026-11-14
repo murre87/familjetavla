@@ -1703,3 +1703,13 @@ html[data-design="flat"] .wk-evt .travel-badge {
   white-space: normal;
   flex-wrap: wrap;
 }
+
+/* Lägg till i kalendern: bredvid Kalender-knappen i veckans hörn (2026-11-14) */
+html[data-design="flat"] .hf > .area-week > .add-btn {
+  position: absolute;
+  top: 4px;
+  right: 92px;
+  z-index: 3;
+  min-height: 32px;
+  padding: 0 10px;
+}

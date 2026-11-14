@@ -5494,3 +5494,14 @@ html.board-lock body {
 .hideable-card > :not(.hide-x) {
   pointer-events: none;
 }
+
+/* Lägg till: vem det gäller, en eller flera (2026-11-14) */
+.qa-person {
+  gap: 8px;
+}
+.qa-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+}

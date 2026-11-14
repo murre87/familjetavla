@@ -261,6 +261,8 @@ export interface OwnEvent {
   end?: string;
   title: string;
   personId?: string;
+  /** Flera personer (Emil och Alicia); hamnar i Gemensamt med deras färgprickar. */
+  personIds?: string[];
   note?: string;
 }
 

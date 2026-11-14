@@ -147,6 +147,6 @@ export function ownCalendarEvents(): SourcedEvent[] {
     const at = (t?: string) => (t ? new Date(y, m - 1, d, Number(t.slice(0, 2)), Number(t.slice(3, 5))) : new Date(y, m - 1, d));
     const start = at(e.time);
     const end = e.time ? (e.end ? at(e.end) : new Date(start.getTime() + 60 * 60_000)) : new Date(y, m - 1, d + 1);
-    return { sourceId: "own", uid: e.id, title: e.title, description: e.note, start, end, allDay: !e.time, personId: e.personId, category: "family" as const };
+    return { sourceId: "own", uid: e.id, title: e.title, description: e.note, start, end, allDay: !e.time, personId: e.personId, personIds: e.personIds, category: "family" as const };
   });
 }

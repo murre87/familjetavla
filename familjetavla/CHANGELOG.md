@@ -1,5 +1,12 @@
 # Ändringar
 
+## 0.31.0
+
+**Lägg in i kalendern direkt från tavlan, för en eller flera.**
+
+- **Plusknapp i veckan**, bredvid *Kalender*, och **Lägg till** på Kalender-sidan. Båda öppnar *Lägg till på tavlan*.
+- **Vem gäller det? Välj en eller flera.** Tryck till exempel på Emil och Alicia. En person hamnar i sin egen kolumn. Flera hamnar i Gemensamt med allas färgprickar. Väljer du ingen gäller det hela familjen (*Alla*).
+
 ## 0.30.0
 
 **Ta bort det du inte vill se.**

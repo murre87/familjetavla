@@ -84,7 +84,9 @@ function EventForm({ people, onAdded }: { people: Person[]; onAdded: (t: string)
   const [date, setDate] = useState(days[0]);
   const [time, setTime] = useState("");
   const [end, setEnd] = useState("");
-  const [who, setWho] = useState("");
+  // Who it concerns: nobody picked = the whole family; one or several people (Emil and Alicia).
+  const [who, setWho] = useState<string[]>([]);
+  const toggle = (id: string) => setWho((w) => (w.includes(id) ? w.filter((x) => x !== id) : [...w, id]));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -96,10 +98,12 @@ function EventForm({ people, onAdded }: { people: Person[]; onAdded: (t: string)
         setBusy(true);
         setError("");
         try {
-          await api.addOwnEvent({ title: title.trim(), date, time: time || undefined, end: time && end ? end : undefined, personId: who || undefined });
-          const name = people.find((p) => p.id === who)?.name;
-          onAdded(`${title.trim()} · ${dayLabel(date)}${time ? ` ${time}` : ""}${name ? ` · ${name}` : ""}`);
+          await api.addOwnEvent({ title: title.trim(), date, time: time || undefined, end: time && end ? end : undefined, ...(who.length ? { personIds: who } : {}) });
+          const names = people.filter((p) => who.includes(p.id)).map((p) => p.name);
+          const namesText = names.length > 1 ? `${names.slice(0, -1).join(", ")} och ${names[names.length - 1]}` : names[0];
+          onAdded(`${title.trim()} · ${dayLabel(date)}${time ? ` ${time}` : ""} · ${namesText ?? "alla"}`);
           setTitle("");
+          setWho([]);
           setTime("");
           setEnd("");
         } catch (err) {
@@ -139,13 +143,14 @@ function EventForm({ people, onAdded }: { people: Person[]; onAdded: (t: string)
       </div>
       {people.length > 0 && (
         <div className="field">
-          <span>Vem gäller det?</span>
-          <div className="seg">
-            <button type="button" className={`seg-btn ${who === "" ? "on" : ""}`} onClick={() => setWho("")}>
+          <span>Vem gäller det? Välj en eller flera</span>
+          <div className="seg" role="group" aria-label="Vem gäller det?">
+            <button type="button" className={`seg-btn ${who.length === 0 ? "on" : ""}`} aria-pressed={who.length === 0} onClick={() => setWho([])}>
               Alla
             </button>
             {people.map((p) => (
-              <button type="button" key={p.id} className={`seg-btn ${who === p.id ? "on" : ""}`} onClick={() => setWho(p.id)}>
+              <button type="button" key={p.id} className={`seg-btn qa-person ${who.includes(p.id) ? "on" : ""}`} aria-pressed={who.includes(p.id)} onClick={() => toggle(p.id)}>
+                <span className="qa-dot" style={{ background: p.color }} aria-hidden="true" />
                 {p.name}
               </button>
             ))}

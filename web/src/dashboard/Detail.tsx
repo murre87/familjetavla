@@ -9,7 +9,7 @@ import { api } from "../api";
 import { Icon } from "../Icon";
 import { Attachments, isBoardFile } from "./Attachments";
 import { RichText } from "./RichText";
-import { goBack, goHome } from "../route";
+import { goBack, goHome, navigate } from "../route";
 import type { Actions } from "./Dashboard";
 import { Week, renderWidget } from "./Home";
 import { Custody } from "../widgets/custody";
@@ -528,6 +528,9 @@ export function CalendarPage({ data, actions }: { data: Dashboard; actions: Acti
         )}
         <button className="btn" onClick={() => setPage((p) => Math.min(MAX_PAGE, p + 1))} disabled={page === MAX_PAGE} aria-label="Senare vecka">
           Senare <Icon name="chevronRight" size={22} />
+        </button>
+        <button className="btn primary" onClick={() => navigate("/lagg-till")}>
+          <Icon name="plus" size={20} /> Lägg till
         </button>
       </div>
       {error && page > 0 && !days && <p className="muted">{error}</p>}
