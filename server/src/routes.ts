@@ -1752,6 +1752,7 @@ export async function registerRoutes(app: FastifyInstance) {
     end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
     title: z.string().trim().min(1).max(80),
     personId: z.string().regex(ID).optional(),
+    personIds: z.array(z.string().regex(ID)).max(20).optional(),
     note: z.string().max(500).optional(),
   });
   // "Utgår": hide one occurrence on the board (the family's calendar itself is not changed).
@@ -1772,8 +1773,12 @@ export async function registerRoutes(app: FastifyInstance) {
   app.post("/api/own-events", async (req, reply) => {
     const body = ownEventSchema.safeParse(req.body);
     if (!body.success) return fail(reply, new Error("Fyll i dag och vad det gäller."));
-    if (body.data.personId && !loadConfig().people.some((p) => p.id === body.data.personId)) return fail(reply, new Error("Okänd person"));
-    return addOwnEvent(body.data);
+    const people = new Set(loadConfig().people.map((p) => p.id));
+    const ids = [...new Set([...(body.data.personId ? [body.data.personId] : []), ...(body.data.personIds ?? [])])];
+    if (ids.some((id) => !people.has(id))) return fail(reply, new Error("Okänd person"));
+    // One person: their own column. Several: Gemensamt with their dots. None: the whole family.
+    const { personId: _p, personIds: _ps, ...rest } = body.data;
+    return addOwnEvent({ ...rest, ...(ids.length === 1 ? { personId: ids[0] } : ids.length > 1 ? { personIds: ids } : {}) });
   });
   app.delete("/api/own-events/:id", async (req) => {
     removeOwnEvent((req.params as { id: string }).id);

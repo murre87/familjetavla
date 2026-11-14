@@ -160,6 +160,12 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
       <span className="plan-word">Kalender</span>
     </button>
   );
+  // Put something in the calendar by hand, for one or several of the family (the form "Lägg till på tavlan").
+  const addButton = (
+    <button className="btn small plan-btn add-btn" aria-label="Lägg till i kalendern" title="Lägg till i kalendern" onClick={() => navigate("/lagg-till")}>
+      <Icon name="plus" size={18} />
+    </button>
+  );
   type Day = Dashboard["days"][number];
   type Col = ReturnType<typeof weekColumns>[number];
   // Homework, tests and hand-ins from the school are marked in their own colour.
@@ -187,6 +193,7 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
       {box?.gear}
       {/* New design: top right corner, next to the cog (the top left already holds Planera, by the column names). */}
       {!full && flat && calButton}
+      {!full && flat && addButton}
       <div className="card-head" style={{ flexWrap: "wrap" }}>
         {/* On its own page the page title already says it – the room goes to the days. */}
         {full || flat ? <h2 className="sr-only">Kommande 7 dagar</h2> : <h2>Kommande 7 dagar</h2>}
@@ -207,6 +214,7 @@ export function Week({ data, actions, full = false, edit, box, pref }: { data: D
           </span>
         </button>
         {!full && !flat && calButton}
+        {!full && !flat && addButton}
         <div className="legend">
           {data.legend
             .filter((l) => !data.people.some((p) => p.name === l.name))
