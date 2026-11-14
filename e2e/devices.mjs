@@ -123,13 +123,15 @@ for (const [name0, dev, tablet] of DEVICES) {
     }
     if (open === "playlist") {
       await p.getByRole("tab", { name: /Spotify|Bibliotek/ }).click();
+      // The board remembers the shelf open last (Poddar from the view before): pick the playlists.
+      await p.getByRole("tab", { name: "Spellistor", exact: true }).click();
       await p.locator(".cover").first().click();
       await p.locator(".track-row").first().waitFor();
       await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     }
     if (open === "library" || open === "podcasts") {
       await p.getByRole("tab", { name: /Spotify|Bibliotek/ }).click();
-      if (open === "podcasts") await p.getByRole("tab", { name: "Poddar" }).click();
+      await p.getByRole("tab", { name: open === "podcasts" ? "Poddar" : "Hem", exact: true }).click();
       await p.locator(".cover").first().waitFor();
       await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     }
