@@ -5505,3 +5505,9 @@ html.board-lock body {
   flex: none;
   border-radius: 50%;
 }
+
+/* Laddschema: raden "Finns i Home Assistant" får luft till höger, som övriga rader i kortet */
+.item-row > .muted:last-child {
+  padding-right: 12px;
+  white-space: nowrap;
+}

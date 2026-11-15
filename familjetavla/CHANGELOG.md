@@ -1,5 +1,14 @@
 # Ändringar
 
+## 0.32.0
+
+**Eget laddschema på Bil-fliken** (för bilar utan smart laddning).
+
+- Nytt kort **Laddschema**: gör ett eget schema, till exempel mån–fre 22:00–06:00. Det sparas i Home Assistant som en schemahjälpare och en automation som slår på och av laddningen, så det fungerar även när tavlan är avstängd och syns i Home Assistant. Valfritt: sätt laddgränsen när schemat startar. Av/på, Ändra och Ta bort direkt från tavlan.
+- Kortet visar också det som redan finns: laddboxar (Easee, Zaptec, Wallbox, Charge Amps, go-e, Ohme, Zappi, OCPP …), laddgränsen och automationer och scheman i Home Assistant som handlar om laddning.
+- Kortet visas bara för bilar **utan** smart laddning (EV Smart Charging). Styr en smart laddning redan bilen skulle ett andra schema slåss med den.
+- Bil på telefon: bilarna ligger under varandra i stället för i smala kolumner där texten klipptes.
+
 ## 0.31.1
 
 **Rättat: spellistor i Musik gick inte att öppna.**
