@@ -1,5 +1,13 @@
 # Ändringar
 
+## 0.31.1
+
+**Rättat: spellistor i Musik gick inte att öppna.**
+
+- *Home Assistant svarar inte just nu* när man öppnade en spellista. Två orsaker:
+  - Efter en omstart på natten hängde anslutningen till Home Assistant medan Home Assistant fortfarande startade, och tavlan försökte aldrig igen. Nu ansluter tavlan igen själv om den inte kommer fram inom 20 sekunder, eller om Home Assistant slutar svara (en kontroll var 30:e sekund).
+  - Music Assistant har fått nya entiteter som inte är spelare och inte kan visa en spellista ("was not found"). Tavlan använder nu bara riktiga Music Assistant-spelare, helst högtalaren du valt. Det gör också att en högtalare inte kopplas till fel spelare när du trycker spela.
+
 ## 0.31.0
 
 **Lägg in i kalendern direkt från tavlan, för en eller flera.**
