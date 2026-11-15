@@ -49,7 +49,8 @@
       "file": "juneavfall_se.py"
     },
     "lerum": {
-      "file": "lerum_se.py"
+      "file": "lerum_se.py",
+      "swedenOnly": true
     },
     "partille": {
       "file": "partille_se.py"
@@ -89,7 +90,11 @@
       "swedenOnly": true
     },
     "lidkoping": {
-      "swedenOnly": true
+      "swedenOnly": true,
+      "extra": [
+        "Skaragatan 8",
+        "Stenportsgatan 1"
+      ]
     },
     "_swedenOnly": "Svarar bara svenska adresser (fungerar från Sverige; tidsgräns eller brandväggssidan \"Request Rejected\" från GitHubs servrar, kontrollerat 2026-11-13 och 2026-11-15). Källkoll larmar inte när de inte nås härifrån.",
     "nvoa": {
