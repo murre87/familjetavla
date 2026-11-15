@@ -1713,3 +1713,17 @@ html[data-design="flat"] .hf > .area-week > .add-btn {
   min-height: 32px;
   padding: 0 10px;
 }
+
+/* Bil på telefon: bilarna under varandra i stället för i smala kolumner där texten klipptes (2026-11-15) */
+@media (max-width: 700px) {
+  html[data-design="flat"] .cars-cols {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+html[data-design="flat"] .car-head .chips {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+html[data-design="flat"] .car-head-text {
+  min-width: 0;
+}
