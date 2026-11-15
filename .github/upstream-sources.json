@@ -91,7 +91,10 @@
     "lidkoping": {
       "swedenOnly": true
     },
-    "_swedenOnly": "Svarar bara svenska adresser (fungerar från Sverige, tidsgräns från GitHubs servrar, kontrollerat 2026-11-13). Källkoll larmar inte när de inte nås härifrån."
+    "_swedenOnly": "Svarar bara svenska adresser (fungerar från Sverige; tidsgräns eller brandväggssidan \"Request Rejected\" från GitHubs servrar, kontrollerat 2026-11-13 och 2026-11-15). Källkoll larmar inte när de inte nås härifrån.",
+    "nvoa": {
+      "swedenOnly": true
+    }
   },
   "skolmaten": [
     "https://skolmaten.se/skutehagens-skolan"
