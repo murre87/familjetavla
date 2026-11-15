@@ -171,9 +171,18 @@ Kalenderkällor (Google/iCloud/laget.se/SportAdmin/Outlook/ICS/HA) är en egen, 
 - Tavlans vardagsknappar är oskyddade på lokala nätet om appen körs utanför HA utan omvänd proxy.
 - Waste/EDP och SportAdmin/laget.se-flöden är inte verifierade mot verkliga konton ännu.
 
+## 7b. Laddning av bil
+
+Kortet **Laddning** startar/stoppar och visar bilens eget laddschema. Kortet **Laddschema** bredvid (`server/src/chargeplan.ts`, `GET/PUT/DELETE /api/car/:index/charging`):
+
+1. **Läser in det som finns:** bilens laddgräns, laddboxar (Easee, Zaptec, Wallbox, Charge Amps, go-e, Ohme, Zappi, OCPP …), EV Smart Charging, samt scheman och automationer i HA som handlar om laddning. Allt går att ändra från tavlan.
+2. **Eget laddschema** när man inte har något: tavlan skapar en **schemahjälpare** (`schedule.familjetavla_laddning_<bil>`) och en **automation** (`familjetavla_laddning_<bil>`) i HA som slår på/av laddningen och kan sätta laddgränsen. Det ligger kvar i HA och fungerar även när tavlan är avstängd. Fönster över midnatt (22–06) delas automatiskt i två block, eftersom HA:s scheman inte kan passera midnatt; tavlan slår ihop dem igen när den läser. Ändrar man schemat i HA syns det på tavlan.
+
+Kräver WebSocket-anslutning och admin-token (samma som enhetsregistret).
+
 ## 8. Inte byggt ännu (medvetet utskjutet)
 
-- Laddschema per veckodag för bil ("klar till kl 07:00 med 80 %") och smart laddning på billigaste timmar
+- Smart laddning på billigaste timmar ("klar till kl 07:00 med 80 %") – idag visas och styrs t.ex. EV Smart Charging om den finns i HA
 - Effektvakt / peak shaving, effekttoppar per månad
 - Styrning av värme efter elpris ("sänkt värme vid dyr el")
 - SolarEdge exportbegränsning-reglage (går redan via enhetskort om HA har `number/select`)

@@ -1,4 +1,4 @@
-import type { ApplianceEntities, CarEntity, Config, SecurityEntities, ConfigResponse, Dashboard, Integration, NamedEntity, Schedule, StoreFood, StoreFoodData, FoodPart, TestResult, TravelChoice } from "../../server/src/types";
+import type { ApplianceEntities, CarEntity, Config, SecurityEntities, ConfigResponse, Dashboard, Integration, NamedEntity, Schedule, StoreFood, StoreFoodData, FoodPart, TestResult, TravelChoice, CarCharging, ChargeRule } from "../../server/src/types";
 
 /** A station in the Musik tab: every Swedish station from the radio directory. */
 export interface DirStation {
@@ -67,6 +67,8 @@ export interface CarDetails {
     schedule: { entityId: string; name: string; value: string }[];
   };
 }
+
+export type ControlOp = "toggle" | "on" | "off" | "press" | "set" | "select" | "time";
 
 export interface GraphData {
   title: string;
@@ -217,6 +219,11 @@ const realApi = {
   saveChores: (chores: { id: string; personId: string; title: string; days: number[] }[]) => request("chores", { method: "PUT", body: JSON.stringify({ chores }) }),
   carMode: (index: number, option: string) => post(`car/${index}/mode`, { option }),
   carSchedule: (index: number, row: { day: number; time: string; soc: number; enabled: boolean }) => post(`car/${index}/schedule`, row),
+  chargePlan: (index: number) => request<CarCharging>(`car/${index}/charging`),
+  saveChargePlan: (index: number, plan: { rules: ChargeRule[]; target: string; limit?: number }) =>
+    request(`car/${index}/charging`, { method: "PUT", body: JSON.stringify(plan) }),
+  deleteChargePlan: (index: number) => request(`car/${index}/charging`, { method: "DELETE" }),
+  chargePlanSet: (index: number, entityId: string, op: ControlOp, value?: string | number) => post(`car/${index}/charging/set`, { entityId, op, value }),
   run: (entityId: string, action: "on" | "off" | "press" = "on") => post("run", { entityId, action }),
   saveSchedule: (s: Schedule) => request(`schedules/${s.id}`, { method: "PUT", body: JSON.stringify(s) }),
   deleteSchedule: (id: string) => request(`schedules/${id}`, { method: "DELETE" }),
