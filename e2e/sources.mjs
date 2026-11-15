@@ -58,7 +58,8 @@ const spUrl = Object.fromEntries([...edpEvent.matchAll(/"([\w-]+)":\s*\{[^{}]*?"
 
 function addressesFor(key, apiUrl) {
   const own = cfg.edp?.[key];
-  if (own) {
+  // Bara en post med egen källfil (file) hämtar adresserna därifrån; en post med enbart swedenOnly använder edpevent.
+  if (own?.file) {
     const filter = own.filter ? new RegExp(own.filter, "i") : null;
     return testCases(upstream[own.file]).map((t) => t.address).filter((a) => a && (!filter || filter.test(a)));
   }
@@ -116,7 +117,8 @@ for (const [key, p] of [...Object.entries(EDP_PROVIDERS), ...Object.entries(EDP_
     }
     // Some municipalities only answer Swedish addresses: from GitHub's servers they time out though they work for
     // families in Sweden. Not reaching them from here is no fault; an answer that is wrong still is.
-    const unreachable = tried.every((t) => /Kunde inte nå|fetch failed|nås inte|TIMEOUT|aborted/i.test(t));
+    // Nacka (2026-11-15) svarar i stället med brandväggens sida "Request Rejected" (HTML i stället för JSON) – samma sak.
+    const unreachable = tried.every((t) => /Kunde inte nå|fetch failed|nås inte|TIMEOUT|aborted|Request Rejected|svarade 40[13]|Unexpected token '<'|not valid JSON|startsidan svarar 200/i.test(t));
     if (cfg.edp?.[key]?.swedenOnly && unreachable) {
       parkedNotes.push(`${p.title}: provas inte härifrån (svarar bara svenska adresser)`);
       edpRows.push(`| ${p.title} | ${addresses[0]} | ⚪ provas inte härifrån (bara svenska adresser) |`);
@@ -195,7 +197,8 @@ for (const [q, mustPlay] of [["P4 Jönköping", true], ["P4 Östergötland", tru
       if (a.audio) return `${hit.name} · ${hit.quality ?? ""} · ${a.type} · ${hit.url.startsWith("https://") ? "https" : "http"}`;
       tried.push(`${new URL(hit.url).host} ${a.status || a.type}`);
     }
-    if (!mustPlay && tried.every((t) => / 40[13]$/.test(t))) return `${hits.length} träffar, strömmarna svarar bara i Sverige (${tried.join(", ")})`;
+    // Svarar bara i Sverige: alla strömmar nekar (401/403) eller har fel hos sig (5xx), och minst en nekar (RIX FM 2026-11-15: 500, 401, 401).
+    if (!mustPlay && tried.every((t) => / (40[13]|5\d\d)$/.test(t)) && tried.some((t) => / 40[13]$/.test(t))) return `${hits.length} träffar, strömmarna svarar bara i Sverige (${tried.join(", ")})`;
     throw new Error(`ingen ström spelade: ${tried.join(", ")}`);
   });
 }

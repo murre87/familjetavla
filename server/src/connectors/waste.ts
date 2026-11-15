@@ -20,6 +20,7 @@ export const EDP_PROVIDERS: Record<string, { title: string; apiUrl: string }> = 
   kiruna: { title: "Kiruna – Tekniska Verken", apiUrl: "https://kund.tekniskaverkenikiruna.se/FutureWebBasic/SimpleWastePickup" },
   "kretslopp-sydost": { title: "Kretslopp Sydost", apiUrl: "https://kundportal.kretsloppsydost.se/FutureWeb/SimpleWastePickup" },
   kungalv: { title: "Kungälv", apiUrl: "https://minasidor-va-avfall.kungalv.se/FutureWeb/SimpleWastePickup" },
+  lerum: { title: "Lerum", apiUrl: "https://vatjanst.lerum.se/FutureWeb/SimpleWastePickup" },
   lidkoping: { title: "Lidköping", apiUrl: "https://futureweb.lidkoping.se/FutureWebBasic/SimpleWastePickup" },
   ljungby: { title: "Ljungby", apiUrl: "https://edpwebb.ljungby.se/FutureWeb/SimpleWastePickup" },
   lund: { title: "Lund", apiUrl: "https://eservice431601.lund.se/Lund/FutureWeb/SimpleWastePickup" },
@@ -43,7 +44,6 @@ export const EDP_PROVIDERS: Record<string, { title: string; apiUrl: string }> = 
  */
 export const EDP_PARKED: Record<string, { title: string; apiUrl: string; reason: string }> = {
   gotland: { title: "Gotland", apiUrl: "https://edpfuture.gotland.se/FutureWeb/SimpleWastePickup", reason: "söker bara på id, inte adress" },
-  lerum: { title: "Lerum", apiUrl: "https://vatjanst.lerum.se/FutureWeb/SimpleWastePickup", reason: "spärrar anrop (403)" },
   molndal: { title: "Mölndal", apiUrl: "https://future.molndal.se/FutureWeb/SimpleWastePickup", reason: "söker bara på id, inte adress" },
   roslagsvatten: { title: "Roslagsvatten (Österåker, Vaxholm m.fl.)", apiUrl: "https://edpmypage.roslagsvatten.se/FutureWebOS/SimpleWastePickup", reason: "tjänsten finns inte längre på adressen (404)" },
 };

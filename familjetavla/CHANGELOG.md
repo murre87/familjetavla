@@ -1,5 +1,9 @@
 # Ändringar
 
+## 0.32.1
+
+- **Lerum går att välja igen** under Sophämtning. Lerums tjänst spärrar anrop utifrån Sverige, men fungerar för familjer i Sverige.
+
 ## 0.32.0
 
 **Eget laddschema på Bil-fliken** (för bilar utan smart laddning).
