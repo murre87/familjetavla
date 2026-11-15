@@ -76,7 +76,7 @@ interface MaSetup {
 /** Music Assistant's config entry, its players and the device of each board speaker – one template. */
 async function setup(conn: HaConn, speakers: string[]): Promise<MaSetup | null> {
   const ids = JSON.stringify(speakers.filter((s) => /^media_player\.[a-z0-9_]+$/.test(s)));
-  const tpl = `{% set ns = namespace(p=[], c=none, s=[]) %}{% for e in integration_entities('music_assistant') %}{% if e.startswith('media_player.') %}{% set ns.c = ns.c or config_entry_id(e) %}{% set ns.p = ns.p + [{'e': e, 'd': device_id(e), 'n': state_attr(e, 'friendly_name') or e}] %}{% endif %}{% endfor %}{% for e in ${ids} %}{% set ns.s = ns.s + [[e, device_id(e)]] %}{% endfor %}{{ {'entryId': ns.c, 'players': ns.p, 'speakers': ns.s} | tojson }}`;
+  const tpl = `{% set ns = namespace(p=[], c=none, s=[]) %}{% for e in integration_entities('music_assistant') %}{% if e.startswith('media_player.') and state_attr(e, 'mass_player_type') is not none %}{% set ns.c = ns.c or config_entry_id(e) %}{% set ns.p = ns.p + [{'e': e, 'd': device_id(e), 'n': state_attr(e, 'friendly_name') or e}] %}{% endif %}{% endfor %}{% for e in ${ids} %}{% set ns.s = ns.s + [[e, device_id(e)]] %}{% endfor %}{{ {'entryId': ns.c, 'players': ns.p, 'speakers': ns.s} | tojson }}`;
   const r = await ha.template(conn, tpl);
   const raw = (typeof r === "string" ? JSON.parse(r) : r) as Omit<MaSetup, "speakers"> & { speakers: [string, string | null][] };
   return raw.entryId ? { ...raw, speakers: Object.fromEntries(raw.speakers) } : null;
@@ -190,7 +190,12 @@ export function toTrack(x: Browsed): Track | null {
 /** Every track in a playlist or album (Music Assistant browses it on one of its players). */
 export async function tracksOf(conn: HaConn, speakers: string[], uri: string): Promise<{ title: string; tracks: Track[] }> {
   const s = await cachedSetup(conn, speakers);
-  const player = s?.players[0]?.e;
+  // En riktig Music Assistant-spelare som svarar, helst en av tavlans högtalare (2026-11-15: första entiteten i listan
+  // var en nyare entitet som inte är en spelare och inte kan bläddra, "library://playlist/74 was not found").
+  const states = haSocket()?.states;
+  const live = (e: string) => !states || !["unavailable", "unknown"].includes(states.get(e)?.state ?? "");
+  const mine = s ? speakers.map((id) => playerFor(s, { entityId: id, name: "" }, new Map())).filter((p): p is string => Boolean(p)) : [];
+  const player = [...mine, ...(s?.players.map((p) => p.e) ?? [])].find(live) ?? s?.players[0]?.e;
   const sock = haSocket();
   if (!s || !player) throw new Error("Music Assistant finns inte i Home Assistant.");
   if (!sock?.connected) throw new Error("Home Assistant svarar inte just nu.");
