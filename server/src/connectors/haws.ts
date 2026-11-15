@@ -23,6 +23,8 @@ export class HaSocket {
   private timer: NodeJS.Timeout | null = null;
   private conn: HaConn | null = null;
   private stopped = false;
+  /** Vakthund: ett försök som aldrig ansluter, eller en länk som slutat svara, stängs och öppnas igen. */
+  private watchdog: NodeJS.Timeout | null = null;
 
   constructor(private log: FastifyBaseLogger) {}
 
@@ -43,6 +45,8 @@ export class HaSocket {
     this.stopped = true;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = null;
     this.ws?.close();
     this.ws = null;
     this.connected = false;
@@ -94,6 +98,19 @@ export class HaSocket {
       return this.schedule();
     }
     this.ws = ws;
+    // 2026-11-15: efter en omstart på natten hängde försöket medan Home Assistant fortfarande startade – inget fel,
+    // ingen stängning, inget nytt försök – och tavlan blev utan sin livelänk (Musik: "Home Assistant svarar inte").
+    // Därför: ansluten inom 20 s, och sedan en ping var 30:e sekund som måste besvaras inom 10 s.
+    const opened = Date.now();
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = setInterval(() => {
+      if (this.ws !== ws || this.stopped) return;
+      if (!this.connected) {
+        if (Date.now() - opened > 20_000) this.restart(ws, "fick ingen anslutning inom 20 s");
+        return;
+      }
+      this.call({ type: "ping" }, 10_000).catch(() => this.restart(ws, "svarade inte på ping"));
+    }, 30_000);
     // Events from a socket that has since been replaced (config saved → start()) are ignored,
     // otherwise its late onclose would open a second, duplicate connection.
     ws.onmessage = (ev) => {
@@ -115,6 +132,23 @@ export class HaSocket {
     ws.onerror = () => {
       /* onclose follows */
     };
+  }
+
+  /** Ge upp den här anslutningen (den hänger) och öppna en ny. */
+  private restart(ws: WebSocket, why: string) {
+    if (this.ws !== ws || this.stopped) return;
+    this.log.warn(`HA WebSocket ${why} – ansluter igen`);
+    this.connected = false;
+    this.ws = null;
+    for (const p of this.pending.values()) p.reject(new Error("WebSocket stängd"));
+    this.pending.clear();
+    try {
+      ws.close();
+    } catch {
+      /* already closed */
+    }
+    this.retry = 0;
+    this.open();
   }
 
   private schedule() {
@@ -150,6 +184,11 @@ export class HaSocket {
       } catch (e) {
         this.log.warn(`HA WebSocket: ${(e as Error).message}`);
       }
+    } else if (msg.type === "pong" && msg.id !== undefined) {
+      // Svaret på vakthundens ping (Home Assistant skickar "pong", inte "result").
+      const p = this.pending.get(msg.id);
+      this.pending.delete(msg.id);
+      p?.resolve(true);
     } else if (msg.type === "result" && msg.id !== undefined) {
       const p = this.pending.get(msg.id);
       if (!p) return;
