@@ -16,7 +16,7 @@ Vad som är beslutat, vad som väntar och vad som medvetet inte görs. Uppdatera
 
 ## Väntar på svar från den som frågade
 
-- Tyra (#28): adresserna (URL:erna) som laddar schemat, utan lösenord.
+- Tyra (#28): kopplingen finns (experimentell) – behöver någon med mobilnummer + lösenord som provar den.
 - Sökbara rullistor (#40): vilken lista som saknar sök.
 - Uppdateringsfel i Home Assistant (#44): Supervisor-loggen.
 - Skolmat.info (#50): används Home Assistant?

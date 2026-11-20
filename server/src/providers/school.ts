@@ -3,6 +3,7 @@ import { ha, haConnection } from "../connectors/ha.js";
 import { getJson } from "../http.js";
 import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connectors/schoolsoft.js";
 import { groupsOfClass, skola24Host, skola24Lessons, skola24Selection, skola24Units } from "../connectors/skola24.js";
+import { tyraCare, tyraEvents, tyraKids, tyraLogin, tyraMe, tyraToEvent } from "../connectors/tyra.js";
 import { isGymLesson, vklassAssignmentInfo, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
 import { addDays, hhmm, shortDate, shortWeekday } from "../time.js";
 import { menuDishes, splitMenuEvents } from "../mealwords.js";
@@ -137,6 +138,80 @@ export const schoolsoft: SchoolProvider = {
   async fetch(ctx, from, to) {
     const d = await schoolsoftData(ctx, from, to);
     return { events: d.events, food: d.food };
+  },
+};
+
+/** A Tyra session: the saved one while it works, otherwise a new login (saved for next time). */
+async function tyraSession(ctx: ProviderCtx, fresh = false) {
+  need(ctx, "username", "password");
+  const saved = fresh ? undefined : ctx.secret("session");
+  if (saved) {
+    const userId = await tyraMe(saved);
+    if (userId) return { session: saved, userId };
+  }
+  const session = await tyraLogin(ctx.str("username"), ctx.secret("password")!);
+  const userId = await tyraMe(session);
+  if (!userId) throw new Error("Tyra loggade in men lät inte tavlan läsa kontot.");
+  ctx.remember("session", session);
+  return { session, userId };
+}
+
+async function tyraData(ctx: ProviderCtx, from: Date, to: Date, fresh = false) {
+  const { session, userId } = await tyraSession(ctx, fresh);
+  const kids = await tyraKids(session, userId);
+  if (!kids.length) throw new Error("Inloggad, men kontot har inga barn i Tyra.");
+  const now = new Date();
+  const events: SchoolEvent[] = [];
+  const care: { child: string; text: string }[] = [];
+  for (const k of kids) {
+    for (const raw of await tyraEvents(session, k, from, to)) {
+      const e = tyraToEvent(raw);
+      if (e) events.push({ ...e, child: k.name });
+    }
+    const text = await tyraCare(session, k, now);
+    if (text) care.push({ child: k.name, text });
+  }
+  return { kids, events, care };
+}
+
+export const tyra: SchoolProvider = {
+  meta: {
+    id: "tyra",
+    category: "school",
+    name: "Tyra (förskola)",
+    description: "Förskolans kalender (händelser, stängda dagar) och omsorgstider med mobilnummer och lösenord. Ny – testa gärna och berätta hur det gick.",
+    status: "experimental",
+    discoversChildren: true,
+    fields: [
+      { key: "username", label: "Mobilnummer", type: "text", placeholder: "070-123 45 67" },
+      { key: "password", label: "Lösenord", type: "password", secret: true },
+    ],
+    guide: [
+      "Logga in som vårdnadshavare med mobilnummer och lösenord, som i Tyra-appen.",
+      "Har du bara BankID fungerar det inte – lägg då in stängda dagar själv, eller fråga förskolan om en kalenderlänk.",
+      "Barnen hämtas automatiskt – koppla dem till rätt person nedan.",
+    ],
+  },
+  async test(ctx) {
+    const now = new Date();
+    const d = await tyraData(ctx, now, new Date(now.getTime() + 30 * 86_400_000), true);
+    return {
+      ok: true,
+      message: `Inloggad. Hittade ${d.kids.length} barn och ${d.events.length} händelser kommande månaden.`,
+      discovered: d.kids.map((k) => k.name),
+      preview: [...d.care.map((c) => `${c.child} · omsorg i dag ${c.text}`), ...d.events.slice(0, 4).map(preview)],
+    };
+  },
+  async fetch(ctx, from, to) {
+    try {
+      const d = await tyraData(ctx, from, to);
+      return { events: d.events, care: d.care };
+    } catch (e) {
+      // The saved session can end between the check and the reads: log in again once.
+      if ((e as { status?: number }).status !== 401) throw e;
+      const d = await tyraData(ctx, from, to, true);
+      return { events: d.events, care: d.care };
+    }
   },
 };
 
