@@ -41,6 +41,18 @@ describe("Snabbknappar (#101)", () => {
     expect(configSchema.safeParse(cfg).success).toBe(false);
   });
 
+  it("lets a light group get its own Tänd / Släck buttons on the start page", () => {
+    const cfg = defaultConfig();
+    cfg.entities.lightGroups = [
+      { name: "Fönsterlampor", entities: ["light.fonster_kok", "light.fonster_vardagsrum"], place: "home" },
+      { name: "Utebelysning", entities: ["light.carport", "switch.fasad"] },
+    ];
+    const r = configSchema.safeParse(cfg);
+    expect(r.success, r.success ? "" : r.error.message).toBe(true);
+    if (!r.success) return;
+    expect(r.data.entities.lightGroups.map((g) => g.place)).toEqual(["home", undefined]);
+  });
+
   it("has the start-page card on from the start", () => {
     expect(defaultConfig().dashboard.home.find((w) => w.id === "buttons")?.on).toBe(true);
   });

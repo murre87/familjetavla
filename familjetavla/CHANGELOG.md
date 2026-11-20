@@ -7,6 +7,7 @@
 - Varje snabbknapp under Inställningar → Huset → Snabbknappar har nu valet **Visas på**: Ljus, Hus, Hushåll, Säkerhet eller Startsidan. Ett skript som skickar dammsugaren hem kan alltså ligga under Hushåll i stället för under Ljus.
 - På startsidan hamnar knapparna i en egen ruta, **Snabbknappar** (i det nya utseendet: i raden längst ner).
 - Knappar du redan har ligger kvar under Ljus tills du väljer något annat.
+- **Egna ljusgrupper med egna knappar.** Bygg grupper av valfria lampor under Inställningar → Huset → Ljusgrupper, t.ex. *Fönsterlampor* och *Utebelysning*. Varje grupp har Tänd alla / Släck alla på fliken Ljus och kan nu få egna Tänd- och Släck-knappar även på startsidan, Hus, Hushåll eller Säkerhet (valet *Tänd/Släck-knappar även på*). I det nya utseendet blir det en knapp i raden längst ner som släcker när något lyser och tänder när allt är släckt.
 
 ## 0.32.1
 

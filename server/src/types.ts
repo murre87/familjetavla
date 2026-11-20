@@ -374,8 +374,8 @@ export interface Config {
     /** Lampor på startsidans Ljus-ruta. */
     lights: NamedEntity[];
     temps: NamedEntity[];
-    /** Ljusfliken: grupper med Tänd alla / Släck alla. */
-    lightGroups: { name: string; entities: string[] }[];
+    /** Ljusfliken: grupper med Tänd alla / Släck alla. `place` ger gruppen egna knappar även på en annan flik eller startsidan. */
+    lightGroups: { name: string; entities: string[]; place?: ButtonPlace }[];
     /** Lampor som Tänd alla / Tänd inne hoppar över på natten (t.ex. ett barns rum). */
     quietLights?: { entities: string[]; from: string; to: string };
     /** Snabbknappar: scener, skript och knappar, t.ex. "Godnatt – släck uppe". Var de visas väljs per knapp. */
@@ -686,7 +686,7 @@ export interface Dashboard {
   security?: Security;
   robots?: Robot[];
   appliances?: ApplianceView[];
-  lightGroups: { index: number; name: string; on: number; total: number; offline: string[]; lamps: Lamp[] }[];
+  lightGroups: { index: number; name: string; on: number; total: number; offline: string[]; lamps: Lamp[]; place?: ButtonPlace }[];
   buttons: QuickButton[];
   climates: {
     entityId: string;

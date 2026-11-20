@@ -268,7 +268,7 @@ export const configSchema = z
       }),
       lights: z.array(z.object({ name: label(40), entityId: entity })).max(16),
       temps: z.array(z.object({ name: label(40), entityId: entity })).max(8),
-      lightGroups: z.array(z.object({ name: label(40), entities: z.array(entity).max(40) })).max(12),
+      lightGroups: z.array(z.object({ name: label(40), entities: z.array(entity).max(40), place: z.enum(BUTTON_PLACES).optional() })).max(12),
       quietLights: z
         .object({ entities: z.array(entity).max(20), from: z.string().regex(/^\d{2}:\d{2}$/), to: z.string().regex(/^\d{2}:\d{2}$/) })
         .optional(),

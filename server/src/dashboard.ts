@@ -482,6 +482,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
       total: g.entities.length,
       offline: g.entities.filter((id) => isOffline(stateMap, id)).map((id) => friendly(stateMap, id)),
       lamps: g.entities.map((id) => lamp(stateMap, id, friendly(stateMap, id), g.name)),
+      ...(g.place && g.place !== "lights" ? { place: g.place } : {}),
     })),
     buttons: cfg.entities.buttons ?? [],
     climates: (cfg.entities.climates ?? []).map((c) => ({

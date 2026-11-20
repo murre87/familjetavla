@@ -4,7 +4,7 @@ import type { AlarmMode, Dashboard, Robot, Security } from "../../../server/src/
 import { api } from "../api";
 import { Icon } from "../Icon";
 import type { Actions } from "../dashboard/Dashboard";
-import { QuickButtons, buttonsAt } from "../dashboard/QuickButtons";
+import { QuickButtons, quickCount } from "../dashboard/QuickButtons";
 
 // ---------- Säkerhet: cameras, locks, alarm, garage doors and doors/windows ----------
 
@@ -51,7 +51,7 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
   const [big, setBig] = useState<string | null>(null);
   const [codes, setCodes] = useState<Record<string, string>>({});
   if (!s)
-    return buttonsAt(data, "security").length ? (
+    return quickCount(data, "security") ? (
       <main className="page-grid security">
         <QuickButtons data={data} actions={actions} place="security" />
       </main>
@@ -189,7 +189,7 @@ export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Act
   const machines = data.appliances ?? [];
   const quick = <QuickButtons data={data} actions={actions} place="household" />;
   if (!robots.length && !machines.length)
-    return buttonsAt(data, "household").length ? <main className="page-grid household">{quick}</main> : <p className="muted">Välj maskiner och robotar under Inställningar → Huset → Hushåll.</p>;
+    return quickCount(data, "household") ? <main className="page-grid household">{quick}</main> : <p className="muted">Välj maskiner och robotar under Inställningar → Huset → Hushåll.</p>;
   const run = (r: Robot, op: "start" | "pause" | "dock", label: string) => actions.run(`${r.name}: ${label}`, () => api.robot(r.entityId, op));
   return (
     <main className="page-grid household">
