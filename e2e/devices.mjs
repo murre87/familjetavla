@@ -199,6 +199,9 @@ for (const [name0, dev, tablet] of DEVICES) {
           if (r.width < 2 || r.height < 2) continue;
           // A text that is only a sliver inside the screen (a fraction of a pixel after scrolling) counts as outside: its centre cannot be probed.
           if (r.bottom < 2 || r.top > innerHeight - 2 || r.right < 2 || r.left > innerWidth - 2) continue;
+          // Mostly scrolled past the top or bottom edge (a big number with only its foot showing): what is probed there is the
+          // next line, not something covering it.
+          if (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0) < r.height / 3) continue;
           // A radio station's scrolling text slides on purpose; screen-reader-only text is not meant to be seen.
           if (el.closest(".ticker, .sr-only")) continue;
           // Hidden by a fit area or a scroll box? Then it is not shown – skip.
@@ -213,6 +216,8 @@ for (const [name0, dev, tablet] of DEVICES) {
               const cut = r.bottom > cr.bottom + 2 || r.top < cr.top - 2 || ((r.right > cr.right + 2 || r.left < cr.left - 2) && s2.textOverflow !== "ellipsis" && cs.textOverflow !== "ellipsis");
               const scroller = s2.overflowY === "auto" || s2.overflowY === "scroll";
               if (cut && !scroller && !a.classList.contains("fit")) out.cut.push(`${n.textContent.trim().slice(0, 24)} i ${String(a.className?.baseVal ?? a.className ?? "").split(" ").filter(Boolean).slice(0, 2).join(".") || a.tagName.toLowerCase()}`);
+              // Inside a scroll box the rest is reached by scrolling: the boxes around it do not cut it.
+              if (scroller) break;
             }
           }
           if (clipped) continue;
@@ -249,11 +254,12 @@ for (const [name0, dev, tablet] of DEVICES) {
       }
       // In the new design tabs and pages scroll at full size instead of shrinking (Emil 2026-11-08: the shrunk text was
       // unreadable), so their overflow is the intended scrolling there, not a fault. The classic design still fits.
+      // The same goes for the start page's boxes: the week never shrinks and the boxes at the top stop at 85 %; they scroll.
       const flatOn = document.documentElement.dataset.design === "flat";
       for (const f of document.querySelectorAll(".fit")) {
         const z = Number(f.firstElementChild?.style.zoom || 1);
         out.scales.push(Math.round(z * 100));
-        const scrollsByDesign = flatOn && (f.classList.contains("detail-body") || f.classList.contains("tab-body"));
+        const scrollsByDesign = flatOn && (f.classList.contains("detail-body") || f.classList.contains("tab-body") || f.classList.contains("week-body") || f.classList.contains("hf-fit"));
         if (f.classList.contains("fit-overflow") && !scrollsByDesign) out.overflow.push(f.className.replace("fit", "").trim());
       }
       for (const btn of document.querySelectorAll("button, a.btn")) {

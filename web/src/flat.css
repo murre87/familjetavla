@@ -1203,6 +1203,13 @@ html[data-design="flat"] .board-header .sub {
   flex-wrap: wrap;
   row-gap: 2px;
 }
+/* Liggande platta: datumblocket räknas från noll bredd, så att väderraden radbryts inom blocket i stället för att
+   knapparna (Aa, tema, inställningar) hamnar på en egen rad och tar höjd från rutorna (Nu, Idag och veckan klipptes). */
+@media (min-width: 900px) {
+  html[data-design="flat"] .board-header > .grow {
+    flex: 1 1 0;
+  }
+}
 
 /* Övre raden får högst ~46 % av höjden; korten krymper sitt innehåll (aldrig scroll, aldrig något utanför rutan). */
 @media (min-width: 900px) {

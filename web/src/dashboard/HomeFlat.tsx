@@ -8,6 +8,8 @@ import { Todo } from "../widgets/todo";
 import type { Actions } from "./Dashboard";
 import { Avatar, travelText } from "./bits";
 import { insideGroups, setGroups } from "./lightGroups";
+import { buttonsAt, groupSwitch, groupsAt } from "./QuickButtons";
+import { Hide } from "../hide";
 import { Week, weekColumns } from "./Home";
 import { BOX_TITLE, BoxGear, BoxSheet } from "./BoxSheet";
 import { boxClass, useBoxPrefs, type BoxProps } from "../boxprefs";
@@ -117,20 +119,23 @@ function Idag({ data, actions, box }: { data: Dashboard; actions: Actions; box: 
   );
 }
 
-/** Temperature, lights and music in one row at the bottom: small buttons that open their own tab. */
+/** Temperature, lights, Snabbknappar placed on the start page and music in one row at the bottom. */
 function Teknik({ data, actions, box }: { data: Dashboard; actions: Actions; box: BoxProps }) {
   const lamps = new Map([...data.lights, ...data.lightGroups.flatMap((g) => g.lamps)].map((l) => [l.entityId, l]));
   const total = [...lamps.values()].filter((l) => !l.offline).length;
   const on = [...lamps.values()].filter((l) => l.on).length;
   const sp = data.music?.speakers.find((s) => s.playing && !s.offline) ?? data.music?.speakers.find((s) => !s.offline);
   const transport = (action: "play_pause" | "next" | "previous", label: string) => sp && actions.run(label, () => api.musicTransport(sp.entityId, action), { done: label, check: () => true });
-  if (!data.temps.length && !total && !sp) return null;
+  const quick = buttonsAt(data, "home");
+  const quickGroups = groupsAt(data, "home");
+  if (!data.temps.length && !total && !sp && !quick.length && !quickGroups.length) return null;
   return (
     <div className={`hf-tech-wrap ${box.className}`} style={box.style} {...box.handlers}>
     {box.gear}
     <Fit className="hf-fit hf-tech-fit" deps={[data]} base={box.base}>
     <div className="hf-tech">
-      {data.temps.slice(0, 3).map((t) => (
+      {/* Buttons placed on the start page take the place of temperatures (all of them are on Hus), so the row still fits. */}
+      {data.temps.slice(0, Math.max(1, 3 - 2 * (quick.length + quickGroups.length))).map((t) => (
         <button key={t.name} className="hf-pill" onClick={() => actions.openTab("house")}>
           <Icon name="sun" size={18} />
           <span>{shortTemp(t.name)}</span>
@@ -155,6 +160,22 @@ function Teknik({ data, actions, box }: { data: Dashboard; actions: Actions; box
           </button>
         </>
       )}
+      {quickGroups.map((g) => (
+        <Hide key={g.index} k={`quick:lightgroup:${g.name}`} label={g.name} data={data} actions={actions}>
+          {/* One pill per group, so the row still fits: Släck while any lamp is on, Tänd when all are off. */}
+          <button className={`hf-pill hf-act ${g.on > 0 ? "on" : ""}`} aria-pressed={g.on > 0} onClick={() => groupSwitch(actions, g, g.on === 0)}>
+            <Icon name="bulb" size={18} />
+            {g.on > 0 ? "Släck" : "Tänd"} {g.name.toLowerCase()}
+          </button>
+        </Hide>
+      ))}
+      {quick.map((b) => (
+        <Hide key={b.entityId} k={b.entityId} label={b.name} data={data} actions={actions}>
+          <button className="hf-pill hf-act" onClick={() => actions.run(b.name, () => api.button(b.entityId))}>
+            {b.name}
+          </button>
+        </Hide>
+      ))}
       {sp && (
         <div className="hf-pill hf-music grow">
           <button className="hf-music-text" onClick={() => actions.openTab("music")}>

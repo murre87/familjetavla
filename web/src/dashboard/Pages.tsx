@@ -9,6 +9,7 @@ import { AnimatedNumber, Ring } from "./bits";
 import { PriceCard } from "../widgets/prices";
 import { useDesign } from "../uiscale";
 import { insideGroups, outsideGroups, setGroups } from "./lightGroups";
+import { QuickButtons } from "./QuickButtons";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const fmtNum = (n: number | null | undefined, d = 1) => (n === null || n === undefined ? "–" : String(Math.round(n * 10 ** d) / 10 ** d).replace(".", ","));
@@ -958,20 +959,7 @@ export function LightsPage({ data, actions }: { data: Dashboard; actions: Action
           )}
         </div>
       )}
-      {data.buttons.length > 0 && (
-        <section className="card">
-          <h2>Snabbval</h2>
-          <div className="big-buttons">
-            {data.buttons.map((b) => (
-              <Hide key={b.entityId} k={b.entityId} label={b.name} data={data} actions={actions}>
-                <button className={`big-btn wide ${b.style}`} onClick={() => actions.run(b.name, () => api.button(b.entityId))}>
-                  {b.name}
-                </button>
-              </Hide>
-            ))}
-          </div>
-        </section>
-      )}
+      <QuickButtons data={data} actions={actions} place="lights" />
       {data.lightGroups.map((g) => (
         <Hide key={g.index} k={`lightgroup:${g.name}`} label={g.name} data={data} actions={actions} card>
         <section className="card">
@@ -1183,6 +1171,7 @@ export function HousePage({ data, actions }: { data: Dashboard; actions: Actions
           </div>
         </section>
       )}
+      <QuickButtons data={data} actions={actions} place="house" />
     </main>
   );
 }

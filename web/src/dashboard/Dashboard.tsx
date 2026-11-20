@@ -21,6 +21,7 @@ import { navigate, useHash } from "../route";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { canPrompt, inIngress, isInstalled, onInstallChange, platform, promptInstall, useSecureUrl } from "../install";
 import { CarsPage, EnergyPage, GraphsPage, HousePage, LightsPage } from "./Pages";
+import { buttonsAt, quickCount } from "./QuickButtons";
 import { FoodPage } from "./Food";
 import { MusicPage } from "../widgets/music";
 import { HouseholdPage, SecurityPage } from "../widgets/security";
@@ -33,13 +34,13 @@ const TABS: { id: Tab; label: string; icon: IconName; show: (d: Dash) => boolean
   { id: "home", label: "Hem", icon: "calendar", show: () => true },
   { id: "food", label: "Mat", icon: "food", show: (d) => d.meals.length > 0 || Boolean(d.grocery) || d.shopping.items.length > 0 },
   { id: "cars", label: "Bil", icon: "car", show: (d) => d.cars.length > 0 },
-  { id: "lights", label: "Ljus", icon: "bulb", show: (d) => d.lightGroups.length + d.buttons.length + d.lights.length > 0 },
-  { id: "house", label: "Hus", icon: "home", show: (d) => d.climates.length + d.temps.length > 0 },
+  { id: "lights", label: "Ljus", icon: "bulb", show: (d) => d.lightGroups.length + buttonsAt(d, "lights").length + d.lights.length > 0 },
+  { id: "house", label: "Hus", icon: "home", show: (d) => d.climates.length + d.temps.length + quickCount(d, "house") > 0 },
   { id: "energy", label: "Energi", icon: "bolt", show: (d) => Boolean(d.energy || d.prices) },
   { id: "graphs", label: "Grafer", icon: "graph", show: (d) => d.graphs.length > 0 || Boolean(d.prices) },
   { id: "music", label: "Musik", icon: "music", show: (d) => Boolean(d.music?.speakers.length) },
-  { id: "security", label: "Säkerhet", icon: "shield", show: (d) => Boolean(d.security) },
-  { id: "household", label: "Hushåll", icon: "robot", show: (d) => Boolean(d.robots?.length || d.appliances?.length) },
+  { id: "security", label: "Säkerhet", icon: "shield", show: (d) => Boolean(d.security) || quickCount(d, "security") > 0 },
+  { id: "household", label: "Hushåll", icon: "robot", show: (d) => Boolean(d.robots?.length || d.appliances?.length || quickCount(d, "household")) },
 ];
 
 /** Phones fit six tabs side by side; the rest sit under "Mer" (tablets show them all). */

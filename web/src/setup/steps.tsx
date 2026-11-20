@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { ScaleSheet } from "../dashboard/ScaleSheet";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { WIDGET_LABELS } from "../widgets";
+import { BUTTON_PLACE_OPTIONS } from "../dashboard/QuickButtons";
 import { CUSTODY_PRESETS, isHome } from "../../../server/src/custody";
 import type {
+  ButtonPlace,
   CalendarCategory,
   CalendarProvider,
   CalendarSource,
@@ -1677,27 +1679,35 @@ export function HouseStep({ cfg, set, saveNow }: StepProps) {
       <SecurityCard cfg={cfg} set={set} />
       <ListCard
         title="Ljusgrupper"
-        help="Visas på fliken Ljus med Tänd alla / Släck alla."
+        help="Bygg egna grupper, t.ex. Fönsterlampor eller Utebelysning. De visas på fliken Ljus med Tänd alla / Släck alla och kan få egna knappar även på startsidan eller en annan flik."
         items={en.lightGroups}
         onChange={(lightGroups) => setEn({ lightGroups })}
         make={() => ({ name: "", entities: [] })}
         addLabel="Lägg till grupp"
         render={(g, s) => (
           <>
-            <Text label="Namn" value={g.name} onChange={(v) => s({ ...g, name: v })} placeholder="Fönsterlampor" />
+            <div className="grid-2">
+              <Text label="Namn" value={g.name} onChange={(v) => s({ ...g, name: v })} placeholder="Fönsterlampor" />
+              <Select
+                label="Tänd/Släck-knappar även på"
+                value={g.place ?? "lights"}
+                onChange={(v) => s({ ...g, place: v === "lights" ? undefined : (v as ButtonPlace) })}
+                options={[{ value: "lights", label: "Bara fliken Ljus" }, ...BUTTON_PLACE_OPTIONS.filter((o) => o.value !== "lights")]}
+              />
+            </div>
             <MultiEntityPicker label="Lägg till lampa" domains={["light", "switch"]} value={g.entities} onChange={(v) => s({ ...g, entities: v })} />
           </>
         )}
       />
       <ListCard
         title="Snabbknappar"
-        help="Scener och skript, t.ex. Godnatt – släck uppe."
+        help="Scener och skript, t.ex. Godnatt – släck uppe eller Dammsugaren hem. Välj var varje knapp ska visas."
         items={en.buttons}
         onChange={(buttons) => setEn({ buttons })}
         make={() => ({ name: "", entityId: "", style: "blue" as const })}
         addLabel="Lägg till knapp"
         render={(b, s) => (
-          <div className="grid-3">
+          <div className="grid-2">
             <Text label="Text på knappen" value={b.name} onChange={(v) => s({ ...b, name: v })} />
             <EntityPicker label="Scen/skript" domains={["scene", "script", "button", "input_button", "automation"]} value={b.entityId || undefined} onChange={(v, o) => s({ ...b, entityId: v ?? "", name: b.name || o?.name || "" })} optional={false} />
             <Select
@@ -1711,6 +1721,7 @@ export function HouseStep({ cfg, set, saveNow }: StepProps) {
                 { value: "plain", label: "Neutral" },
               ]}
             />
+            <Select label="Visas på" value={b.place ?? "lights"} onChange={(v) => s({ ...b, place: v as ButtonPlace })} options={BUTTON_PLACE_OPTIONS} />
           </div>
         )}
       />

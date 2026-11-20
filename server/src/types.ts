@@ -127,12 +127,21 @@ export interface TravelChoice {
   home?: TravelLeg;
 }
 
-export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "homestatus", "todo", "temps", "energy", "climates", "music"] as const;
+export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "buttons", "homestatus", "todo", "temps", "energy", "climates", "music"] as const;
 export type HomeWidget = (typeof HOME_WIDGETS)[number];
 /** Startskärmens rutor: "auto" följer hur många rutor som visas, annars liten/normal/stor. */
 export type WidgetSize = "auto" | "s" | "m" | "l";
 export const TAB_IDS = ["food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"] as const;
 export type TabId = (typeof TAB_IDS)[number];
+/** Var en snabbknapp visas (#101): på en flik eller på startsidan. Utan val hamnar den under Ljus. */
+export const BUTTON_PLACES = ["lights", "house", "household", "security", "home"] as const;
+export type ButtonPlace = (typeof BUTTON_PLACES)[number];
+export interface QuickButton {
+  name: string;
+  entityId: string;
+  style: "accent" | "blue" | "amber" | "plain";
+  place?: ButtonPlace;
+}
 
 // ---------- Leverantörsmoduler (skola, mataffär, sopor, elpris) ----------
 
@@ -362,15 +371,15 @@ export interface Config {
   entities: {
     cars: CarEntity[];
     energy: EnergyEntities;
-    /** Snabbknappar på hemvyn. */
+    /** Lampor på startsidans Ljus-ruta. */
     lights: NamedEntity[];
     temps: NamedEntity[];
-    /** Ljusfliken: grupper med Tänd alla / Släck alla. */
-    lightGroups: { name: string; entities: string[] }[];
+    /** Ljusfliken: grupper med Tänd alla / Släck alla. `place` ger gruppen egna knappar även på en annan flik eller startsidan. */
+    lightGroups: { name: string; entities: string[]; place?: ButtonPlace }[];
     /** Lampor som Tänd alla / Tänd inne hoppar över på natten (t.ex. ett barns rum). */
     quietLights?: { entities: string[]; from: string; to: string };
-    /** Scener, skript och knappar, t.ex. "Godnatt – släck uppe". */
-    buttons: { name: string; entityId: string; style: "accent" | "blue" | "amber" | "plain" }[];
+    /** Snabbknappar: scener, skript och knappar, t.ex. "Godnatt – släck uppe". Var de visas väljs per knapp. */
+    buttons: QuickButton[];
     /** Hus-fliken: climate.* och water_heater.* (värmepump, termostat, varmvatten, spabad). */
     climates: (NamedEntity & { controls?: string[] })[];
     /** Hus-fliken: kort byggda av valfria sensorer och reglage (t.ex. värmepump via Husdata). */
@@ -677,8 +686,8 @@ export interface Dashboard {
   security?: Security;
   robots?: Robot[];
   appliances?: ApplianceView[];
-  lightGroups: { index: number; name: string; on: number; total: number; offline: string[]; lamps: Lamp[] }[];
-  buttons: { entityId: string; name: string; style: "accent" | "blue" | "amber" | "plain" }[];
+  lightGroups: { index: number; name: string; on: number; total: number; offline: string[]; lamps: Lamp[]; place?: ButtonPlace }[];
+  buttons: QuickButton[];
   climates: {
     entityId: string;
     name: string;

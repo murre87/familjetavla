@@ -84,6 +84,7 @@ Det som inte finns i HA sköts av **leverantörsmoduler**:
 | Skolmat | Skolmat-integrationen i HA | Mashie, Matilda, FoodIT, Mateo, skolmat.info | stabil |
 | Skola och förskola | **Vklass** | Schema, idrott, omsorgstid, matsedel. Användarnamn + lösenord (inte BankID) | beta |
 | Skola | **SchoolSoft** | Kalender och matsedel. Användarnamn + lösenord (inte BankID) | beta, nytt |
+| Förskola | **Tyra** | Förskolans kalender och omsorgstider. Mobilnummer + lösenord (inte BankID) | experimentell, nytt |
 | Sopor | Sök på adress | 18 renhållare (EDP Future) – provas mot riktiga adresser varje vecka | stabil |
 | Sopor | **SRV Återvinning** | Botkyrka, Haninge, Huddinge, Nynäshamn, Salem – sök på adress, provas varje vecka | stabil |
 | Sopor | Eget schema | Kärl, en hämtdag, intervall, ev. vissa månader | stabil |
@@ -95,7 +96,7 @@ Det som inte finns i HA sköts av **leverantörsmoduler**:
 | Elpris | Spotpris SE1–SE4 | elprisetjustnu.se + ditt påslag, nät, skatt, moms | stabil |
 | Elpris | HA-sensor | Nordpool, Tibber m.fl. | beta |
 
-> Vklass, SchoolSoft, Willys/Hemköp/ICA/City Gross, EDP och SRV är **inofficiella** kopplingar och kan sluta fungera när sajterna ändras. BankID går inte att automatisera – kontona behöver ett lösenord.
+> Vklass, SchoolSoft, Tyra, Willys/Hemköp/ICA/City Gross, EDP och SRV är **inofficiella** kopplingar och kan sluta fungera när sajterna ändras. BankID går inte att automatisera – kontona behöver ett lösenord.
 
 ## Installera
 
