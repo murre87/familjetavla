@@ -3,6 +3,7 @@ name: Bygg image
 # Bygger Docker-images till GitHub Container Registry och släpper sedan versionen:
 #   ghcr.io/<ägare>/familjetavla:<version> och :latest  (multi-arch, för docker compose)
 #   ghcr.io/<ägare>/familjetavla-amd64 / -aarch64     (för Home Assistant-tillägget)
+# Startas av en tagg v<version>, eller för hand (Run workflow på main) – då sätts taggen när versionen är släppt.
 on:
   push:
     tags: ["v*"]
@@ -130,3 +131,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "Släpp $V till Home Assistant (images finns på ghcr)"
           git push origin HEAD:main
+      # A release started by hand (Actions → Bygg image → Run workflow on main) gets its tag here,
+      # on the commit that was built, like a tagged release. A tag pushed with GITHUB_TOKEN starts no
+      # new run, so the version is not built twice. An existing tag is left as it is.
+      - name: Tag the version
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          T="v$V"
+          if git ls-remote --exit-code --tags origin "refs/tags/$T" > /dev/null; then
+            echo "$T finns redan – lämnar den"; exit 0
+          fi
+          git tag "$T" "${{ github.sha }}"
+          git push origin "refs/tags/$T"
