@@ -1,4 +1,5 @@
 import type { WidgetId, WidgetModule } from "./types";
+import buttons from "./buttons";
 import cars from "./cars";
 import chores from "./chores";
 import climates from "./climates";
@@ -16,7 +17,7 @@ import shopping from "./shopping";
 import temps from "./temps";
 
 /** All cards. To add one: make a file like the others and list it here (see README.md in this folder). */
-export const WIDGETS: WidgetModule[] = [meals, schoolday, chores, reminders, custody, shopping, prices, cars, lights, homestatus, todo, temps, energy, climates, music];
+export const WIDGETS: WidgetModule[] = [meals, schoolday, chores, reminders, custody, shopping, prices, cars, lights, buttons, homestatus, todo, temps, energy, climates, music];
 
 const byId = new Map(WIDGETS.map((w) => [w.id, w]));
 export const widget = (id: WidgetId) => byId.get(id as WidgetModule["id"]);

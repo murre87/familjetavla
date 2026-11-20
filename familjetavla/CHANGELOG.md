@@ -1,5 +1,13 @@
 # Ändringar
 
+## 0.33.0
+
+**Välj var snabbknapparna visas** (#101).
+
+- Varje snabbknapp under Inställningar → Huset → Snabbknappar har nu valet **Visas på**: Ljus, Hus, Hushåll, Säkerhet eller Startsidan. Ett skript som skickar dammsugaren hem kan alltså ligga under Hushåll i stället för under Ljus.
+- På startsidan hamnar knapparna i en egen ruta, **Snabbknappar** (i det nya utseendet: i raden längst ner).
+- Knappar du redan har ligger kvar under Ljus tills du väljer något annat.
+
 ## 0.32.1
 
 - **Lerum går att välja igen** under Sophämtning. Lerums tjänst spärrar anrop utifrån Sverige, men fungerar för familjer i Sverige.

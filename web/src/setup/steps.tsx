@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { ScaleSheet } from "../dashboard/ScaleSheet";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { WIDGET_LABELS } from "../widgets";
+import { BUTTON_PLACE_OPTIONS } from "../dashboard/QuickButtons";
 import { CUSTODY_PRESETS, isHome } from "../../../server/src/custody";
 import type {
+  ButtonPlace,
   CalendarCategory,
   CalendarProvider,
   CalendarSource,
@@ -1691,13 +1693,13 @@ export function HouseStep({ cfg, set, saveNow }: StepProps) {
       />
       <ListCard
         title="Snabbknappar"
-        help="Scener och skript, t.ex. Godnatt – släck uppe."
+        help="Scener och skript, t.ex. Godnatt – släck uppe eller Dammsugaren hem. Välj var varje knapp ska visas."
         items={en.buttons}
         onChange={(buttons) => setEn({ buttons })}
         make={() => ({ name: "", entityId: "", style: "blue" as const })}
         addLabel="Lägg till knapp"
         render={(b, s) => (
-          <div className="grid-3">
+          <div className="grid-2">
             <Text label="Text på knappen" value={b.name} onChange={(v) => s({ ...b, name: v })} />
             <EntityPicker label="Scen/skript" domains={["scene", "script", "button", "input_button", "automation"]} value={b.entityId || undefined} onChange={(v, o) => s({ ...b, entityId: v ?? "", name: b.name || o?.name || "" })} optional={false} />
             <Select
@@ -1711,6 +1713,7 @@ export function HouseStep({ cfg, set, saveNow }: StepProps) {
                 { value: "plain", label: "Neutral" },
               ]}
             />
+            <Select label="Visas på" value={b.place ?? "lights"} onChange={(v) => s({ ...b, place: v as ButtonPlace })} options={BUTTON_PLACE_OPTIONS} />
           </div>
         )}
       />

@@ -8,6 +8,8 @@ import { Todo } from "../widgets/todo";
 import type { Actions } from "./Dashboard";
 import { Avatar, travelText } from "./bits";
 import { insideGroups, setGroups } from "./lightGroups";
+import { buttonsAt } from "./QuickButtons";
+import { Hide } from "../hide";
 import { Week, weekColumns } from "./Home";
 import { BOX_TITLE, BoxGear, BoxSheet } from "./BoxSheet";
 import { boxClass, useBoxPrefs, type BoxProps } from "../boxprefs";
@@ -117,14 +119,15 @@ function Idag({ data, actions, box }: { data: Dashboard; actions: Actions; box: 
   );
 }
 
-/** Temperature, lights and music in one row at the bottom: small buttons that open their own tab. */
+/** Temperature, lights, Snabbknappar placed on the start page and music in one row at the bottom. */
 function Teknik({ data, actions, box }: { data: Dashboard; actions: Actions; box: BoxProps }) {
   const lamps = new Map([...data.lights, ...data.lightGroups.flatMap((g) => g.lamps)].map((l) => [l.entityId, l]));
   const total = [...lamps.values()].filter((l) => !l.offline).length;
   const on = [...lamps.values()].filter((l) => l.on).length;
   const sp = data.music?.speakers.find((s) => s.playing && !s.offline) ?? data.music?.speakers.find((s) => !s.offline);
   const transport = (action: "play_pause" | "next" | "previous", label: string) => sp && actions.run(label, () => api.musicTransport(sp.entityId, action), { done: label, check: () => true });
-  if (!data.temps.length && !total && !sp) return null;
+  const quick = buttonsAt(data, "home");
+  if (!data.temps.length && !total && !sp && !quick.length) return null;
   return (
     <div className={`hf-tech-wrap ${box.className}`} style={box.style} {...box.handlers}>
     {box.gear}
@@ -155,6 +158,13 @@ function Teknik({ data, actions, box }: { data: Dashboard; actions: Actions; box
           </button>
         </>
       )}
+      {quick.map((b) => (
+        <Hide key={b.entityId} k={b.entityId} label={b.name} data={data} actions={actions}>
+          <button className="hf-pill hf-act" onClick={() => actions.run(b.name, () => api.button(b.entityId))}>
+            {b.name}
+          </button>
+        </Hide>
+      ))}
       {sp && (
         <div className="hf-pill hf-music grow">
           <button className="hf-music-text" onClick={() => actions.openTab("music")}>

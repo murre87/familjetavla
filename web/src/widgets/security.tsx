@@ -4,6 +4,7 @@ import type { AlarmMode, Dashboard, Robot, Security } from "../../../server/src/
 import { api } from "../api";
 import { Icon } from "../Icon";
 import type { Actions } from "../dashboard/Dashboard";
+import { QuickButtons, buttonsAt } from "../dashboard/QuickButtons";
 
 // ---------- Säkerhet: cameras, locks, alarm, garage doors and doors/windows ----------
 
@@ -49,7 +50,14 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
   const s = data.security;
   const [big, setBig] = useState<string | null>(null);
   const [codes, setCodes] = useState<Record<string, string>>({});
-  if (!s) return <p className="muted">Välj kameror, lås och larm under Inställningar → Huset → Säkerhet.</p>;
+  if (!s)
+    return buttonsAt(data, "security").length ? (
+      <main className="page-grid security">
+        <QuickButtons data={data} actions={actions} place="security" />
+      </main>
+    ) : (
+      <p className="muted">Välj kameror, lås och larm under Inställningar → Huset → Säkerhet.</p>
+    );
   const code = (id: string) => codes[id] || undefined;
   const setCode = (id: string) => (v: string) => setCodes((c) => ({ ...c, [id]: v }));
   // What was taken away under the cog does not count as open either.
@@ -167,6 +175,7 @@ export function SecurityPage({ data, actions }: { data: Dashboard; actions: Acti
           </div>
         </section>
       )}
+      <QuickButtons data={data} actions={actions} place="security" />
     </main>
   );
 }
@@ -178,7 +187,9 @@ const KIND_NAME: Record<string, string> = { washer: "Tvättmaskin", dryer: "Tork
 export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   const robots = data.robots ?? [];
   const machines = data.appliances ?? [];
-  if (!robots.length && !machines.length) return <p className="muted">Välj maskiner och robotar under Inställningar → Huset → Hushåll.</p>;
+  const quick = <QuickButtons data={data} actions={actions} place="household" />;
+  if (!robots.length && !machines.length)
+    return buttonsAt(data, "household").length ? <main className="page-grid household">{quick}</main> : <p className="muted">Välj maskiner och robotar under Inställningar → Huset → Hushåll.</p>;
   const run = (r: Robot, op: "start" | "pause" | "dock", label: string) => actions.run(`${r.name}: ${label}`, () => api.robot(r.entityId, op));
   return (
     <main className="page-grid household">
@@ -243,6 +254,7 @@ export function HouseholdPage({ data, actions }: { data: Dashboard; actions: Act
         </section>
         </Hide>
       ))}
+      {quick}
     </main>
   );
 }

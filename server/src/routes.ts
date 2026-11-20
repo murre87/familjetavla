@@ -54,7 +54,7 @@ import { follows } from "./notify.js";
 import { findStations, playCall, spotifyPlayer, spotifyUri, swedishStations } from "./music.js";
 import { alarmCall, robotCall } from "./security.js";
 import { MEDIA_TYPES, SHELVES, isMaPlayer, knownPlayers, setGroup as maSetGroup, type Shelf, library as maLibrary, playOn as maPlayOn, search as maSearch, tracksOf as maTracks } from "./musicAssistant.js";
-import { HOME_WIDGETS, TAB_IDS, type Config, type FoodPart, type StoreFood, type StoreFoodData, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
+import { BUTTON_PLACES, HOME_WIDGETS, TAB_IDS, type Config, type FoodPart, type StoreFood, type StoreFoodData, type ConfigResponse, type Integration, type IntegrationCategory, type Schedule, type SecretKey } from "./types.js";
 
 export { VERSION } from "./version.js";
 import { VERSION } from "./version.js";
@@ -273,7 +273,7 @@ export const configSchema = z
         .object({ entities: z.array(entity).max(20), from: z.string().regex(/^\d{2}:\d{2}$/), to: z.string().regex(/^\d{2}:\d{2}$/) })
         .optional(),
       buttons: z
-        .array(z.object({ name: label(40), entityId: entity.regex(/^(scene|script|button|input_button|automation)\./), style: z.enum(["accent", "blue", "amber", "plain"]) }))
+        .array(z.object({ name: label(40), entityId: entity.regex(/^(scene|script|button|input_button|automation)\./), style: z.enum(["accent", "blue", "amber", "plain"]), place: z.enum(BUTTON_PLACES).optional() }))
         .max(12),
       climates: z
         .array(z.object({ name: label(40), entityId: entity.regex(/^(climate|water_heater)\./), controls: z.array(entity).max(8).optional() }))
