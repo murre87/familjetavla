@@ -1,6 +1,9 @@
 import type { Dashboard } from "../../../server/src/types";
 import type { WidgetModule } from "./types";
 
+/** The gauge value for a car: battery % for EVs, tank fill for petrol/diesel. */
+export const carLevel = (c: Dashboard["cars"][number]) => c.battery ?? c.fuelPct;
+
 export function Cars({ cars }: { cars: Dashboard["cars"] }) {
   if (!cars.length) return null;
   return (
@@ -10,12 +13,12 @@ export function Cars({ cars }: { cars: Dashboard["cars"] }) {
           <div className="card-head" style={{ alignItems: "baseline" }}>
             <b style={{ fontSize: 17 }}>{c.name}</b>
             <span className="big-num" style={{ fontSize: 22 }}>
-              {c.battery ?? "–"}
-              <small>%</small>
+              {c.battery === null && c.fuelLiters !== null ? c.fuelLiters : (carLevel(c) ?? "–")}
+              <small>{c.battery === null && c.fuelLiters !== null ? "L" : "%"}</small>
             </span>
           </div>
           <div className="meter">
-            <div style={{ width: `${c.battery ?? 0}%` }} />
+            <div style={{ width: `${carLevel(c) ?? 0}%` }} />
           </div>
           <span className="muted" style={{ fontSize: 14 }}>
             {c.status || " "}

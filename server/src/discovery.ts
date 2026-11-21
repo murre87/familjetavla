@@ -117,6 +117,9 @@ export async function deviceEntities(conn: HaConn, anyEntityOfDevice: string): P
   return all.filter((x) => x.d === dev);
 }
 
+/** The entity that names the car's device: battery for EVs, fuel for petrol/diesel, else whatever else is set. */
+export const carAnchor = (c: CarEntity): string => (c.battery ?? c.fuel ?? c.range ?? c.location ?? c.climate) as string;
+
 const has = (s: string | null | undefined, re: RegExp) => Boolean(s && re.test(s));
 const domain = (e: string) => e.split(".")[0];
 
@@ -191,18 +194,21 @@ export function discover(all: HaEntityInfo[]): Discovery {
   const byDevice = new Map<string, HaEntityInfo[]>();
   for (const x of all) if (x.d) byDevice.set(x.d, [...(byDevice.get(x.d) ?? []), x]);
 
-  // ---- Cars: a device with a battery % sensor and a location (tracker) or a known car maker.
+  // ---- Cars: a device with a battery % sensor (EV) or a fuel sensor (petrol/diesel) and a location (tracker) or a known car maker.
   const cars: Discovery["cars"] = [];
-  for (const [, ents] of byDevice) {
+  const carDeviceIds = new Set<string>();
+  for (const [devId, ents] of byDevice) {
     const battery = ents.find((x) => domain(x.e) === "sensor" && x.u === "%" && (x.dc === "battery" || has(x.n, /battery|batteri|state of charge|soc\b|laddniv/i)));
-    if (!battery) continue;
+    // "Bränslemängd" in litres (Volvo, …) or "Fuel level" in %. Consumption (L/100 km) and prices are not the tank.
+    const fuel = battery ? undefined : ents.find((x) => domain(x.e) === "sensor" && has(x.u, /^(l|L|liter|%|gal)$/) && has(x.n, /fuel|bränsle|tank/i) && !has(x.n, /consum|förbruk|price|pris|avstånd|distance|range|räckvidd|lock|lucka/i));
+    if (!battery && !fuel) continue;
     const tracker = ents.find((x) => domain(x.e) === "device_tracker");
     const maker = ents[0].m ?? "";
     // Phones (Companion app) also have a battery, a location and "charging" – never a car.
     const phone = has(maker, PHONE_MAKERS) || has(ents[0].mo, /^(SM-|iPhone|iPad|Pixel|CPH|M\d{4})/i) || ents.some((x) => has(x.n, /app version|sim \d|wifi bssid|mobile data|android auto|carplay/i));
-    const isCar = !phone && ((tracker && ents.some((x) => has(x.n, /range|räckvidd|odometer|mätarställ|charg|laddning/i))) || has(maker, CAR_MAKERS) || has(ents[0].mo, CAR_MAKERS));
+    const isCar = !phone && ((tracker && ents.some((x) => has(x.n, /range|räckvidd|odometer|mätarställ|charg|laddning|avstånd till tom/i))) || has(maker, CAR_MAKERS) || has(ents[0].mo, CAR_MAKERS));
     if (!isCar) continue;
-    const range = ents.find((x) => domain(x.e) === "sensor" && has(x.u, /^(km|mi)$/) && has(x.n, /range|räckvidd/i) && !has(x.n, /ac on/i));
+    const range = ents.find((x) => domain(x.e) === "sensor" && has(x.u, /^(km|mi)$/) && has(x.n, /range|räckvidd|avstånd till tom|distance to empty/i) && !has(x.n, /ac on/i));
     const charging =
       ents.find((x) => domain(x.e) === "binary_sensor" && (x.dc === "battery_charging" || has(x.n, /charging|laddar/i))) ??
       ents.find((x) => domain(x.e) === "sensor" && has(x.n, /charging state|laddstatus/i));
@@ -210,18 +216,20 @@ export function discover(all: HaEntityInfo[]): Discovery {
     const climate =
       ents.find((x) => domain(x.e) === "climate") ??
       ents.find((x) => ["switch", "button"].includes(domain(x.e)) && has(x.n, /climate|klimat|precondition|förvärm|heat|värm|defrost/i));
+    carDeviceIds.add(devId);
     cars.push({
-      name: ents[0].dn ?? battery.n.replace(/ ?battery.*$/i, ""),
+      name: ents[0].dn ?? (battery ?? fuel)!.n.replace(/ ?(battery|bränsle|fuel).*$/i, ""),
       deviceName: ents[0].dn ?? "",
       maker: maker || undefined,
-      battery: battery.e,
+      battery: battery?.e,
+      fuel: fuel?.e,
       range: range?.e,
       location: tracker?.e ?? plugged?.e,
       charging: charging?.e,
       climate: climate?.e,
     });
   }
-  const carDevices = new Set(cars.map((c) => all.find((x) => x.e === c.battery)?.d));
+  const carDevices: Set<string | null> = carDeviceIds;
 
   // ---- Energy
   // Sensors with a real value first: a meter that says "unknown" is no use on the board.
@@ -297,7 +305,7 @@ export function discover(all: HaEntityInfo[]): Discovery {
     .slice(0, 12)
     .map((x) => ({ name: x.n, entityId: x.e }));
 
-  const live = (c: Discovery["cars"][number]) => (Number.isFinite(Number(all.find((x) => x.e === c.battery)?.st)) ? 0 : 1);
+  const live = (c: Discovery["cars"][number]) => (Number.isFinite(Number(all.find((x) => x.e === carAnchor(c))?.st)) ? 0 : 1);
   cars.sort((a, b) => live(a) - live(b));
   const todo = all.filter((x) => domain(x.e) === "todo").map((x) => ({ name: x.n, entityId: x.e }));
   const calendars = all
@@ -378,7 +386,7 @@ export function discover(all: HaEntityInfo[]): Discovery {
 // ---------- Car "Alla data" ----------
 
 const GROUPS: { name: string; re: RegExp }[] = [
-  { name: "Batteri & laddning", re: /batter|charg|ladd|soc|plug|kWh|state of charge|range|räckvidd/i },
+  { name: "Batteri, bränsle & laddning", re: /batter|charg|ladd|soc|plug|kWh|state of charge|range|räckvidd|bränsle|fuel|tom tank/i },
   { name: "Klimat & temperatur", re: /climate|klimat|temp|heat|värm|defrost|seat|ac\b|hvac|preconditio/i },
   { name: "Körning & däck", re: /tire|tyre|däck|odometer|mätar|speed|hastighet|drive|shift|gear|trip/i },
   { name: "Lås & luckor", re: /lock|lås|door|dörr|window|fönster|trunk|frunk|bagage|sunroof|charge port|lucka/i },

@@ -337,6 +337,40 @@ if (d.cars[0]) {
     source: "EnergyWizard",
   };
 }
+// A petrol car (Volvo XC60): fuel gauge instead of battery, no charging – only warm-up, lock and horn.
+d.cars.push({
+  name: "Volvo XC60",
+  battery: null,
+  fuelLiters: 41,
+  fuelPct: 59,
+  rangeKm: 428,
+  home: true,
+  charging: false,
+  ageHours: 0,
+  status: "Hemma · 428 km",
+  climate: { entityId: "button.volvo_xc60_starta_klimatiseringen", on: false },
+  schedules: [],
+});
+fx.cars.push({
+  name: "Volvo XC60",
+  valid: 6,
+  total: 7,
+  rows: [
+    { entityId: "sensor.volvo_xc60_branslemangd", name: "Bränslemängd", value: "41 L", group: "Batteri, bränsle & laddning", ok: true, domain: "sensor" },
+    { entityId: "sensor.volvo_xc60_avstand_till_tom_tank", name: "Avstånd till tom tank", value: "428 km", group: "Batteri, bränsle & laddning", ok: true, domain: "sensor" },
+    { entityId: "sensor.volvo_xc60_matarstallning", name: "Mätarställning", value: "207559 km", group: "Körning & däck", ok: true, domain: "sensor" },
+    { entityId: "lock.volvo_xc60_las", name: "Lås", value: "locked", group: "Lås & luckor", ok: true, domain: "lock" },
+    { entityId: "binary_sensor.volvo_xc60_dorr_vanster_fram", name: "Dörr vänster fram", value: "off", group: "Lås & luckor", ok: true, domain: "binary_sensor" },
+    { entityId: "binary_sensor.volvo_xc60_fonster_hoger_bakdorr", name: "Fönster höger bakdörr", value: "on", group: "Lås & luckor", ok: false, domain: "binary_sensor" },
+    { entityId: "device_tracker.volvo_xc60_plats", name: "Plats", value: "home", group: "Plats", ok: true, domain: "device_tracker" },
+  ],
+  actions: [
+    { entityId: "button.volvo_xc60_blinka", name: "Blinka", domain: "button", state: "unknown" },
+    { entityId: "button.volvo_xc60_tuta", name: "Tuta", domain: "button", state: "unknown" },
+    { entityId: "button.volvo_xc60_starta_klimatiseringen", name: "Starta klimatiseringen", domain: "button", state: "unknown" },
+    { entityId: "lock.volvo_xc60_las", name: "Lås", domain: "lock", state: "locked" },
+  ],
+} as unknown as CarDetails);
 // ---- Energy today in the demo (a sunny October day with solar and a grid meter) ----
 if (d.energy) {
   d.energy.selfUseKw = Math.min(d.energy.solarKw ?? 0, d.energy.houseKw ?? 0);

@@ -17,6 +17,7 @@ import { libraryName } from "./musicAssistant.js";
 import { haSocket } from "./connectors/haws.js";
 import { applyLeave, applySick, loadLeave, loadSick } from "./sick.js";
 import { coldestBetween, forecast, rainBetween, skyNow, sunToday, tempNow, weatherSummary, type Forecast } from "./connectors/weather.js";
+import { carAnchor } from "./discovery.js";
 import { careTimesFor, custodyStatus, isHome } from "./custody.js";
 import {
   collectCalendars,
@@ -599,14 +600,19 @@ function num(states: Map<string, HaState>, id?: string): number | null {
 
 function buildCar(c: Config["entities"]["cars"][number], states: Map<string, HaState>, now: Date): Omit<Dashboard["cars"][number], "schedules" | "climate"> {
   const battery = num(states, c.battery);
+  const fuel = num(states, c.fuel);
+  const fuelUnit = c.fuel ? states.get(c.fuel)?.attributes?.unit_of_measurement : undefined;
+  // A tank sensor gives litres (or %): litres need the tank size for the gauge – 70 L unless set.
+  const fuelPct = fuel === null ? null : Math.round(Math.max(0, Math.min(100, fuelUnit === "%" ? fuel : (fuel / (c.tankLiters ?? 70)) * 100)));
   const rangeKm = num(states, c.range);
   const loc = haValue(states, c.location);
   const home = loc === undefined ? null : loc === "home" || loc === "on" || loc === "true";
   const ch = haValue(states, c.charging);
   const charging = ch === "on" || ch === "charging" || ch === "true";
-  const changed = states.get(c.battery)?.last_changed;
+  const anchor = carAnchor(c);
+  const changed = states.get(anchor)?.last_changed;
   // last_changed only moves when the value changes; last_reported/updated is closer to "fresh".
-  const s = states.get(c.battery) as (HaState & { last_reported?: string; last_updated?: string }) | undefined;
+  const s = states.get(anchor) as (HaState & { last_reported?: string; last_updated?: string }) | undefined;
   const stamp = s?.last_reported ?? s?.last_updated ?? changed;
   const ageHours = stamp ? Math.max(0, Math.round((now.getTime() - new Date(stamp).getTime()) / 3_600_000)) : null;
   const status = [
@@ -614,7 +620,7 @@ function buildCar(c: Config["entities"]["cars"][number], states: Map<string, HaS
     rangeKm !== null ? `${Math.round(rangeKm)} km` : "",
     charging ? "laddar" : "",
   ].filter(Boolean);
-  return { name: c.name, battery: battery === null ? null : Math.round(battery), rangeKm, home, charging, ageHours, status: status.join(" · ") };
+  return { name: c.name, battery: battery === null ? null : Math.round(battery), fuelLiters: fuel === null || fuelUnit === "%" ? null : Math.round(fuel), fuelPct, rangeKm, home, charging, ageHours, status: status.join(" · ") };
 }
 
 const MODE_LABELS: Record<string, string> = {

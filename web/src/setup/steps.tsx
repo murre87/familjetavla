@@ -688,7 +688,7 @@ export function DiscoverStep({ cfg, set }: StepProps) {
             <section className="card">
               <h2>Bilar</h2>
               {d.cars.map((c, i) => (
-                <Box key={i} k={`car${i}`} label={c.name} sub={[c.maker, c.range && "räckvidd", c.location && "position", c.climate && "värmestart"].filter(Boolean).join(" · ")} />
+                <Box key={i} k={`car${i}`} label={c.name} sub={[c.maker, c.fuel && "bränsle", c.range && "räckvidd", c.location && "position", c.climate && "värmestart"].filter(Boolean).join(" · ")} />
               ))}
             </section>
           )}
@@ -1606,12 +1606,13 @@ export function HouseStep({ cfg, set, saveNow }: StepProps) {
         help="Fungerar med alla bilmärken som finns i Home Assistant."
         items={en.cars}
         onChange={(cars) => setEn({ cars })}
-        make={(): Config["entities"]["cars"][number] => ({ name: "", battery: "" })}
+        make={(): Config["entities"]["cars"][number] => ({ name: "" })}
         addLabel="Lägg till bil"
         render={(c, s) => (
           <div className="grid-2">
             <Text label="Namn" value={c.name} onChange={(v) => s({ ...c, name: v })} />
-            <EntityPicker label="Batteri (%)" domains={["sensor"]} value={c.battery} onChange={(v) => s({ ...c, battery: v ?? "" })} optional={false} />
+            <EntityPicker label="Batteri (%) – elbil" domains={["sensor"]} value={c.battery} onChange={(v) => s({ ...c, battery: v })} help="Lämna tomt för bensin- och dieselbilar." />
+            <EntityPicker label="Bränslemängd – bensin/diesel" domains={["sensor"]} value={c.fuel} onChange={(v) => s({ ...c, fuel: v })} />
             <EntityPicker label="Räckvidd" domains={["sensor"]} value={c.range} onChange={(v) => s({ ...c, range: v })} />
             <EntityPicker label="Position / hemma" domains={["device_tracker", "binary_sensor", "sensor"]} value={c.location} onChange={(v) => s({ ...c, location: v })} />
             <EntityPicker label="Laddar" domains={["binary_sensor", "sensor", "switch"]} value={c.charging} onChange={(v) => s({ ...c, charging: v })} />
