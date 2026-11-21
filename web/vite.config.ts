@@ -18,5 +18,10 @@ export default defineConfig({
     alias: { "@demo": fileURLToPath(new URL(demo ? "./src/demo/demoApi.ts" : "./src/demo/noDemo.ts", import.meta.url)) },
   },
   server: { port: 5173, proxy: { "/api": "http://localhost:8099" } },
-  build: { outDir: demo ? "dist-demo" : "dist", emptyOutDir: true },
+  build: {
+    outDir: demo ? "dist-demo" : "dist",
+    emptyOutDir: true,
+    // Demon är en enda HTML-fil (dev/inline-demo.mjs) och kan inte läsa en separat kodbit; julkortet laddas annars först när fliken öppnas.
+    ...(demo ? { rollupOptions: { output: { inlineDynamicImports: true } } } : {}),
+  },
 });

@@ -5511,3 +5511,11 @@ html.board-lock body {
   padding-right: 12px;
   white-space: nowrap;
 }
+
+/* ---------- Julkortet (Nordpol), 2026-11-21 ---------- */
+.jul-tile { display: flex; align-items: center; gap: 14px; }
+.jul-tile .jul-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; flex: none; background: color-mix(in srgb, #d63b4a 18%, transparent); color: #e0505e; }
+.jul-page { display: block; }
+.jul-page .jul-host { display: block; min-height: min(78dvh, 760px); border-radius: 18px; overflow: hidden; }
+.jul-page .jul-host > * { display: block; min-height: inherit; }
+.jul-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 10px; color: #d63b4a; font-weight: 600; }

@@ -5,6 +5,7 @@ import { buildRobots, buildSecurity } from "./security.js";
 import { energyLive, energyToday, todaySeries } from "./energy.js";
 import { findAutoModes, findSmartCharging } from "./smartcharging.js";
 import { choresForToday } from "./chores.js";
+import { christmasView } from "./christmas.js";
 import { buildSchoolNews, newsReminders, newsTripReminders, ownCalendarEvents } from "./news.js";
 import { updateAvailable, versionInfo } from "./updates.js";
 import { buildSchoolDays, buildSchoolWeek, schoolEndsOn } from "./schoolday.js";
@@ -514,6 +515,7 @@ export async function buildDashboard(now = new Date(), opts: { allReminders?: bo
     waste: nextWaste(waste, now),
     home: cfg.dashboard.home,
     tabs: cfg.dashboard.tabs,
+    jul: christmasView(cfg, now),
     daypart: inTimeWindow(now, "07:00", "19:00") ? "day" : "night",
     night: cfg.dashboard.nightMode !== false && inTimeWindow(now, cfg.dashboard.nightFrom, cfg.dashboard.nightTo),
     errors,

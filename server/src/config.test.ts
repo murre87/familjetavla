@@ -57,3 +57,26 @@ describe("Snabbknappar (#101)", () => {
     expect(defaultConfig().dashboard.home.find((w) => w.id === "buttons")?.on).toBe(true);
   });
 });
+
+describe("Julkortet (Nordpol)", () => {
+  it("finns som ruta och flik från början, och sparas med valet auto / på / av", () => {
+    const cfg = defaultConfig();
+    expect(cfg.dashboard.home.find((w) => w.id === "jul")?.on).toBe(true);
+    expect(cfg.dashboard.christmas).toBeUndefined(); // inget val = automatiskt (christmas.ts)
+    for (const v of ["auto", "on", "off"] as const) {
+      const r = configSchema.safeParse({ ...cfg, dashboard: { ...cfg.dashboard, christmas: v } });
+      expect(r.success, r.success ? "" : r.error.message).toBe(true);
+      if (r.success) expect(r.data.dashboard.christmas).toBe(v);
+    }
+  });
+  it("vägrar ett okänt val", () => {
+    const cfg = defaultConfig();
+    expect(configSchema.safeParse({ ...cfg, dashboard: { ...cfg.dashboard, christmas: "alltid" } }).success).toBe(false);
+  });
+  it("tabs-listan med Jul klarar gränsen i inställningarna", () => {
+    const cfg = defaultConfig();
+    cfg.dashboard.tabs = [...cfg.dashboard.tabs];
+    expect(cfg.dashboard.tabs.some((t) => t.id === "jul")).toBe(true);
+    expect(configSchema.safeParse(cfg).success).toBe(true);
+  });
+});
