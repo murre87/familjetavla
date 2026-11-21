@@ -1326,7 +1326,8 @@ export function Dashboard() {
                 </span>
               )}
               {data.header.weather && <span className="sub-weather">· {data.header.weather}</span>}
-              {data.jul?.show && tab !== "jul" && tabs.some((t) => t.id === "jul") && <JulChip onOpen={() => goTab("jul", tabIds)} />}
+              {/* Bara på Hem: på andra sidor tog en extra rad i rubriken plats från innehållet (skärmtestet föll på Bil) */}
+              {data.jul?.show && tab === "home" && !page && !personId && tabs.some((t) => t.id === "jul") && <JulChip onOpen={() => goTab("jul", tabIds)} />}
               {data.version && <VersionBadge version={data.version} update={data.update} />}
             </p>
           </div>

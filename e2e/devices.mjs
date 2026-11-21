@@ -259,7 +259,9 @@ for (const [name0, dev, tablet] of DEVICES) {
       for (const f of document.querySelectorAll(".fit")) {
         const z = Number(f.firstElementChild?.style.zoom || 1);
         out.scales.push(Math.round(z * 100));
-        const scrollsByDesign = flatOn && (f.classList.contains("detail-body") || f.classList.contains("tab-body") || f.classList.contains("week-body") || f.classList.contains("hf-fit"));
+        // Julkortet (Nordpol) staplar sina delar i stående läge och är byggt för att rullas; nedskalat till 70 % blir texten för liten, så fliken Jul rullar även i det klassiska utseendet.
+        const julScrolls = f.classList.contains("tab-body") && Boolean(document.querySelector(".jul-page"));
+        const scrollsByDesign = julScrolls || flatOn && (f.classList.contains("detail-body") || f.classList.contains("tab-body") || f.classList.contains("week-body") || f.classList.contains("hf-fit"));
         if (f.classList.contains("fit-overflow") && !scrollsByDesign) out.overflow.push(f.className.replace("fit", "").trim());
       }
       for (const btn of document.querySelectorAll("button, a.btn")) {

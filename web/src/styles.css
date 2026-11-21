@@ -5519,3 +5519,24 @@ html.board-lock body {
 .jul-page .jul-host { display: block; min-height: min(78dvh, 760px); border-radius: 18px; overflow: hidden; }
 .jul-page .jul-host > * { display: block; min-height: inherit; }
 .jul-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 2px 10px; color: #d63b4a; font-weight: 600; }
+/* Kamerorna i fullskärm (Nordpol Card lägger en svart yta direkt på body och stänger vid tryck var som helst): en stor, tydlig "Stäng"-knapp
+   i hörnet i stället för den lilla grå texten längst ner. Knappen är bara en markering; trycket stänger som förut. */
+body > div[style*="z-index: 10000"]::after {
+  content: "×  Stäng";
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 26px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #d63b4a;
+  color: #fff;
+  font: 700 22px/1 system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+body > div[style*="z-index: 10000"] div[style*="font:600 13px system-ui"] { display: none !important; }
