@@ -15,6 +15,7 @@ import { carActions, carCharging, carRows, deviceEntities, discover, readRegistr
 import { runEntityAction } from "./scheduler.js";
 import { findAutoModes, findSmartCharging } from "./smartcharging.js";
 import { loadChores, saveChores, setChoreDone } from "./chores.js";
+import { applyJulNice, JUL_NICE_SERVICES, loadJulNice } from "./julnice.js";
 import { chargingEntities, deleteOwnPlan, readCharging, saveOwnPlan, setChargeEntity } from "./chargeplan.js";
 import { haSocket } from "./connectors/haws.js";
 import { energyLive, liveEnergyIds } from "./energy.js";
@@ -328,6 +329,7 @@ export const configSchema = z
       nightMode: z.boolean().optional(),
       design: z.enum(["flat", "glass"]).optional(),
       sunArc: z.boolean().optional(),
+      christmas: z.enum(["auto", "on", "off"]).optional(),
       lessons: z.enum(["all", "span"]).optional(),
       hidden: z.array(z.string().max(160)).max(500).optional(),
     }),
@@ -1710,6 +1712,16 @@ export async function registerRoutes(app: FastifyInstance) {
     if (body.data.chores.some((c) => !kids.has(c.personId))) return fail(reply, new Error("Sysslor kan bara läggas på barn."));
     saveChores(body.data.chores);
     return { ok: true };
+  });
+
+  // ---------- Julkortet (Nordpol): snällistan. Öppen på tavlan som sysslorna; föräldraläget ligger i kortet ----------
+  app.get("/api/jul/nice", async () => ({ items: loadJulNice() }));
+  app.post("/api/jul/nice", async (req, reply) => {
+    const body = z.object({ service: z.enum(JUL_NICE_SERVICES as unknown as [string, ...string[]]), data: z.record(z.unknown()) }).safeParse(req.body);
+    if (!body.success) return fail(reply, new Error("Ogiltigt"));
+    const r = applyJulNice(body.data.service as (typeof JUL_NICE_SERVICES)[number], body.data.data);
+    if ("error" in r) return fail(reply, new Error(r.error));
+    return r;
   });
 
   // ---------- Backup ----------

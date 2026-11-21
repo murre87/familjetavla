@@ -1,5 +1,15 @@
 # Ändringar
 
+## 0.34.0
+
+**Julkortet: Nordpol på tavlan** (julstämning från 21 november till 26 december).
+
+- Ny flik **Jul** med [Nordpol Card](https://github.com/DKAnord/nordpol-card) av DKAnord (MIT): nedräkning till julafton, fyra tomtekameror, släde som visar när tomten kommer till just ert hem, en **snällista** för barnen (håll in rubriken i en sekund för föräldraläget) och dagens tomte. Allt på svenska.
+- På startsidan syns en liten markör i rubrikraden (**"33 dagar till jul"**) som öppnar fliken, och i det klassiska utseendet en egen ruta, **Jul**.
+- **Visas som standard 21 november – 26 december varje år.** Under **Inställningar → Visning → Julkort** väljer du **Automatiskt**, **Alltid på** eller **Av**. Du kan stänga av det när du vill; en familj som valt Av ser det aldrig.
+- Snällistan sparas i tavlans egen fil, så kortet fungerar utan Home Assistant. Släden använder hemmets plats från installationen (Stockholm om ingen är angiven).
+- Kamerorna är korta filmklipp som webbläsaren hämtar från kortets egen sida (dkanord.github.io) medan fliken Jul är öppen. Inget annat lämnar tavlan.
+
 ## 0.33.0
 
 **Välj var snabbknapparna visas** (#101).

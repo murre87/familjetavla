@@ -16,6 +16,8 @@ import { applyScale, readScale, scaleChosen, screensaverOff, useDesign } from ".
 import { GroceryModal } from "./GroceryModal";
 import { Home, weekColumns } from "./Home";
 import { Fit } from "./Fit";
+import { JulPage } from "../jul/JulPage";
+import { JulChip } from "../jul/JulChip";
 import { DetailPage, PageBar, PAGE_TITLES, type PageId } from "./Detail";
 import { navigate, useHash } from "../route";
 import { InstallHelp, quickAddUrl } from "../InstallHelp";
@@ -26,8 +28,8 @@ import { FoodPage } from "./Food";
 import { MusicPage } from "../widgets/music";
 import { HouseholdPage, SecurityPage } from "../widgets/security";
 
-export type Tab = "home" | "food" | "cars" | "lights" | "house" | "energy" | "graphs" | "music" | "security" | "household";
-const TAB_IDS: Tab[] = ["home", "food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"];
+export type Tab = "home" | "food" | "cars" | "lights" | "house" | "energy" | "graphs" | "music" | "security" | "household" | "jul";
+const TAB_IDS: Tab[] = ["home", "food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household", "jul"];
 const PAGE_IDS = Object.keys(PAGE_TITLES) as PageId[];
 
 const TABS: { id: Tab; label: string; icon: IconName; show: (d: Dash) => boolean }[] = [
@@ -41,6 +43,7 @@ const TABS: { id: Tab; label: string; icon: IconName; show: (d: Dash) => boolean
   { id: "music", label: "Musik", icon: "music", show: (d) => Boolean(d.music?.speakers.length) },
   { id: "security", label: "Säkerhet", icon: "shield", show: (d) => Boolean(d.security) || quickCount(d, "security") > 0 },
   { id: "household", label: "Hushåll", icon: "robot", show: (d) => Boolean(d.robots?.length || d.appliances?.length || quickCount(d, "household")) },
+  { id: "jul", label: "Jul", icon: "snow", show: (d) => Boolean(d.jul?.show) },
 ];
 
 /** Phones fit six tabs side by side; the rest sit under "Mer" (tablets show them all). */
@@ -1323,6 +1326,8 @@ export function Dashboard() {
                 </span>
               )}
               {data.header.weather && <span className="sub-weather">· {data.header.weather}</span>}
+              {/* Bara på Hem: på andra sidor tog en extra rad i rubriken plats från innehållet (skärmtestet föll på Bil) */}
+              {data.jul?.show && tab === "home" && !page && !personId && tabs.some((t) => t.id === "jul") && <JulChip onOpen={() => goTab("jul", tabIds)} />}
               {data.version && <VersionBadge version={data.version} update={data.update} />}
             </p>
           </div>
@@ -1410,6 +1415,7 @@ export function Dashboard() {
               {tab === "lights" && <LightsPage data={data} actions={actions} />}
               {tab === "security" && <SecurityPage data={data} actions={actions} />}
               {tab === "household" && <HouseholdPage data={data} actions={actions} />}
+              {tab === "jul" && data.jul && <JulPage jul={data.jul} />}
               {tab === "food" && <FoodPage data={data} actions={actions} />}
               {tab === "house" && <HousePage data={data} actions={actions} />}
               {tab === "energy" && <EnergyPage data={data} />}

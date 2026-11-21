@@ -4,6 +4,7 @@ import { InstallHelp, quickAddUrl } from "../InstallHelp";
 import { WIDGET_LABELS } from "../widgets";
 import { BUTTON_PLACE_OPTIONS } from "../dashboard/QuickButtons";
 import { CUSTODY_PRESETS, isHome } from "../../../server/src/custody";
+import { inChristmasSeason } from "../../../server/src/christmas";
 import type {
   ButtonPlace,
   CalendarCategory,
@@ -1892,7 +1893,7 @@ function PhotoFrame({ cfg, set }: { cfg: Config; set: (c: Config) => void }) {
 
 // ======================= Startskärm =======================
 
-const TAB_LABELS: Record<string, string> = { food: "Mat", security: "Säkerhet", household: "Hushåll", cars: "Bil", lights: "Ljus", house: "Hus", energy: "Energi", graphs: "Grafer", music: "Musik" };
+const TAB_LABELS: Record<string, string> = { food: "Mat", security: "Säkerhet", household: "Hushåll", cars: "Bil", lights: "Ljus", house: "Hus", energy: "Energi", graphs: "Grafer", music: "Musik", jul: "Jul" };
 
 const SIZE_OPTIONS = [
   { value: "auto", label: "Auto" },
@@ -1995,6 +1996,22 @@ export function DisplayStep({ cfg, set }: StepProps) {
         <OrderList items={d.home} labels={WIDGET_LABELS} onChange={(home) => setD({ home })} sizes />
         <p className="muted" style={{ margin: "8px 0 0" }}>Tips: håll inne en ruta på tavlan för att flytta eller dölja den direkt.</p>
         <Toggle label="Solbåge vid vädret" help="Soluppgång och solnedgång som en båge under temperaturen i Nu-rutan." checked={Boolean(d.sunArc)} onChange={(v) => setD({ sunArc: v })} />
+      </section>
+      <section className="card">
+        <h2>Julkort</h2>
+        <Select
+          label="Julkortet (Nordpol)"
+          value={d.christmas ?? "auto"}
+          onChange={(v) => setD({ christmas: v === "on" || v === "off" ? v : "auto" })}
+          options={[
+            { value: "auto", label: "Automatiskt – 21 november till 26 december" },
+            { value: "on", label: "Alltid på" },
+            { value: "off", label: "Av" },
+          ]}
+          help={`Nedräkning till jul på startsidan och fliken Jul med tomtekameror, släde, snällista och dagens tomte. Kamerorna är korta filmklipp som hämtas från kortets egen sida (dkanord.github.io) medan fliken Jul är öppen. Du kan stänga av det när du vill. ${
+            d.christmas === "off" ? "Det visas inte." : d.christmas === "on" || inChristmasSeason(new Date()) ? "Det visas just nu." : "Det visas inte just nu och kommer tillbaka 21 november."
+          }`}
+        />
       </section>
       <section className="card">
         <h2>Flikar</h2>

@@ -86,6 +86,10 @@ if (firstRun) {
 
 const wait = <T>(v: T, ms = 180) => new Promise<T>((r) => setTimeout(() => r(structuredClone(v)), ms));
 const d = fx.dashboard;
+let demoNice: { uid: string; summary: string; status: "needs_action" | "completed"; description?: string }[] = [
+  { uid: "n1", summary: "Maja", status: "needs_action", description: '{"emoji":"🧒","score":85,"start":75}' },
+  { uid: "n2", summary: "Ola", status: "needs_action", description: '{"emoji":"🦊","score":70,"start":75}' },
+];
 // Show the Hemmet card in the demo (the fixtures predate it).
 for (const home of [d.home, fx.config.config.dashboard.home]) if (!home.some((w) => w.id === "homestatus")) home.splice(home.findIndex((w) => w.id === "lights") + 1, 0, { id: "homestatus", on: true });
 // "?tema=eink" shows the demo as on an e-ink screen.
@@ -618,6 +622,20 @@ export const demoApi = {
       p.allDone = p.items.every((x) => x.done);
     }
     return wait({ ok: true as const }, 100);
+  },
+  julNice: () => wait({ items: demoNice }, 80),
+  julService: (service: string, data: Record<string, unknown>) => {
+    if (service === "add_item") demoNice = [...demoNice, { uid: `n${demoNice.length + 1}`, summary: String(data.item ?? ""), status: "needs_action" as const, description: data.description as string | undefined }];
+    else if (service === "remove_item") {
+      const gone = new Set((Array.isArray(data.item) ? data.item : [data.item]).map(String));
+      demoNice = demoNice.filter((i) => !gone.has(i.uid));
+    } else
+      demoNice = demoNice.map((i) =>
+        i.uid === data.item || i.summary === data.item
+          ? { ...i, summary: data.rename != null ? String(data.rename) : i.summary, description: data.description != null ? String(data.description) : i.description, status: (data.status as "needs_action" | "completed" | undefined) ?? i.status }
+          : i,
+      );
+    return wait({ items: demoNice }, 80);
   },
   chores: () => wait({ chores: d.chores.flatMap((p) => p.items.map((i) => ({ id: i.id, personId: p.personId, title: i.title, days: [] as number[] }))) }, 100),
   saveChores: (_c: { id: string; personId: string; title: string; days: number[] }[]) => wait({ ok: true as const }, 100),

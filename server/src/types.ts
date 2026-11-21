@@ -127,11 +127,11 @@ export interface TravelChoice {
   home?: TravelLeg;
 }
 
-export const HOME_WIDGETS = ["now", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "buttons", "homestatus", "todo", "temps", "energy", "climates", "music"] as const;
+export const HOME_WIDGETS = ["now", "jul", "meals", "schoolday", "chores", "reminders", "custody", "week", "shopping", "prices", "cars", "lights", "buttons", "homestatus", "todo", "temps", "energy", "climates", "music"] as const;
 export type HomeWidget = (typeof HOME_WIDGETS)[number];
 /** Startskärmens rutor: "auto" följer hur många rutor som visas, annars liten/normal/stor. */
 export type WidgetSize = "auto" | "s" | "m" | "l";
-export const TAB_IDS = ["food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household"] as const;
+export const TAB_IDS = ["food", "cars", "lights", "house", "energy", "graphs", "music", "security", "household", "jul"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 /** Var en snabbknapp visas (#101): på en flik eller på startsidan. Utan val hamnar den under Ljus. */
 export const BUTTON_PLACES = ["lights", "house", "household", "security", "home"] as const;
@@ -414,6 +414,8 @@ export interface Config {
     design?: "flat" | "glass";
     /** Solbågen under temperaturen i Nu-rutan (av som standard). */
     sunArc?: boolean;
+    /** Julkortet (Nordpol): "auto" = 21 nov–26 dec, "on" = året runt, "off" = aldrig. Saknas = auto. Se christmas.ts. */
+    christmas?: "auto" | "on" | "off";
     /** Sidan Skolan: "span" visar bara när skoldagen slutar (och idrott), inte varje lektion. Standard är alla lektioner. */
     lessons?: "all" | "span";
     /** Knappar, kort och val som familjen tagit bort under kugghjulet på en sida (#2026-11-14): entity_id, eller entity_id#val för ett läge. Gäller alla skärmar. */
@@ -717,6 +719,8 @@ export interface Dashboard {
   theme: "auto" | "dark" | "light" | "eink" | "mirror";
   home: { id: HomeWidget; on: boolean; size?: WidgetSize }[];
   tabs: { id: TabId; on: boolean }[];
+  /** Julkortet (Nordpol): när det ska visas och hemmets plats för släden (christmas.ts). */
+  jul?: import("./christmas.js").ChristmasView;
   /** Dygnsfärger: "day" eller "night" utifrån klockan. */
   daypart: "day" | "night";
   night: boolean;

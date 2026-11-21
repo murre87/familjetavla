@@ -38,6 +38,7 @@ Kalendrar, **barnvecka**, barnens **sport** (SportAdmin, laget.se) med **dit/hem
 - **Kommande 7 dagar:** färg per person. Barnens sport syns bara på barnveckorna – men t.ex. **matcher alla veckor** om du vill.
 - **Inköpslista** (egen eller Home Assistants), **elpris**, bilar, ljus och temperaturer.
 - **Välj själv** vilka rutor som visas och i vilken ordning. Rutor utan data döljs.
+- **Jul:** 21 november – 26 december visas julkortet [Nordpol](https://github.com/DKAnord/nordpol-card) som standard: nedräkning, tomtekameror, släde, snällista och dagens tomte. Under Inställningar → Visning väljer du automatiskt, alltid på eller av.
 - Ljust/mörkt tema eller **dygnsfärger**, nattläge med klocka som flyttar sig (skonar OLED).
 
 **Flikar** (visas bara om du har något att visa)
@@ -186,7 +187,7 @@ Har du ingen kod men en plattform eller pryl som saknas? [Berätta här](../../i
 
 ## Tack
 
-Kopplingarna bygger på kartläggning från andra öppna projekt: [ha-ica-todo](https://github.com/lazytarget/ha-ica-todo) (ICA), [willys-mcp](https://github.com/oscarthroedsson/willys-mcp) (Willys/Axfood), [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule) (EDP Future-renhållare och SRV Återvinning – en veckovis koll larmar om deras kod eller tjänsten ändras), [Vklass scrape sensor](https://community.home-assistant.io/t/vklass-scrape-sensor/939402), [node-schoolsoft](https://github.com/CarelessInternet/node-schoolsoft) (SchoolSoft) och [Skolmat](https://github.com/Kaptensanders/skolmat) (skolmaten.se). Elpris från [elprisetjustnu.se](https://www.elprisetjustnu.se), väder från [Open-Meteo](https://open-meteo.com), postnummer från [OpenStreetMap Nominatim](https://nominatim.org).
+Kopplingarna bygger på kartläggning från andra öppna projekt: [ha-ica-todo](https://github.com/lazytarget/ha-ica-todo) (ICA), [willys-mcp](https://github.com/oscarthroedsson/willys-mcp) (Willys/Axfood), [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule) (EDP Future-renhållare och SRV Återvinning – en veckovis koll larmar om deras kod eller tjänsten ändras), [Vklass scrape sensor](https://community.home-assistant.io/t/vklass-scrape-sensor/939402), [node-schoolsoft](https://github.com/CarelessInternet/node-schoolsoft) (SchoolSoft) och [Skolmat](https://github.com/Kaptensanders/skolmat) (skolmaten.se). Elpris från [elprisetjustnu.se](https://www.elprisetjustnu.se), väder från [Open-Meteo](https://open-meteo.com), postnummer från [OpenStreetMap Nominatim](https://nominatim.org). Julkortet är [Nordpol Card](https://github.com/DKAnord/nordpol-card) av DKAnord (MIT), inlagt oförändrat med sin licens i `web/src/jul/`.
 
 ## Licens
 

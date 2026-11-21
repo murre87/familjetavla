@@ -132,6 +132,11 @@ export function loadConfig(): Config {
     const at = d.home.findIndex((w) => w.id === "lights");
     d.home.splice(at >= 0 ? at + 1 : d.home.length, 0, { id: "buttons", on: true });
   }
+  // Julkortet (Nordpol): finns för alla, och visas bara under julsäsongen om inte familjen valt "på" (christmas.ts).
+  if (!d.home.some((w) => w.id === "jul")) {
+    const at = d.home.findIndex((w) => w.id === "now");
+    d.home.splice(at >= 0 ? at + 1 : 0, 0, { id: "jul", on: true });
+  }
   for (const id of HOME_WIDGETS) if (!d.home.some((w) => w.id === id)) d.home.push({ id, on: false });
   for (const id of TAB_IDS) if (!d.tabs.some((t) => t.id === id)) (id === "food" ? d.tabs.unshift.bind(d.tabs) : d.tabs.push.bind(d.tabs))({ id, on: true });
   return cached;
@@ -240,6 +245,8 @@ export interface LocalFile {
   /** Sysslor barnen ska göra (se chores.ts) och vilka som är avbockade per dag (YYYY-MM-DD → id:n). */
   chores?: import("./chores.js").Chore[];
   choreDone?: Record<string, string[]>;
+  /** Snällistan i julkortet (se julnice.ts). */
+  julNice?: import("./julnice.js").JulNiceItem[];
   /** Senaste version som vi meddelat om (så att samma version bara ger en notis). */
   updateNotified?: string;
   /** Dit/hem-val per händelse, nyckel = travelKey(). */
