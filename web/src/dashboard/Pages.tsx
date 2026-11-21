@@ -10,6 +10,7 @@ import { PriceCard } from "../widgets/prices";
 import { useDesign } from "../uiscale";
 import { insideGroups, outsideGroups, setGroups } from "./lightGroups";
 import { QuickButtons } from "./QuickButtons";
+import { carLevel } from "../widgets/cars";
 
 const DAYS = ["Mån", "Tis", "Ons", "Tor", "Fre", "Lör", "Sön"];
 const fmtNum = (n: number | null | undefined, d = 1) => (n === null || n === undefined ? "–" : String(Math.round(n * 10 ** d) / 10 ** d).replace(".", ","));
@@ -189,7 +190,7 @@ function ScheduleEditor({ car, actions }: { car: Dashboard["cars"][number]; acti
 function CarDetailsSheet({ index, onClose, actions }: { index: number; onClose: () => void; actions: Actions }) {
   const [data, setData] = useState<CarDetails | null>(null);
   const [error, setError] = useState("");
-  const [group, setGroup] = useState("Batteri & laddning");
+  const [group, setGroup] = useState("Batteri, bränsle & laddning");
   const load = () =>
     api
       .car(index)
@@ -231,7 +232,7 @@ function CarDetailsSheet({ index, onClose, actions }: { index: number; onClose: 
                     }
                   >
                     {a.name}
-                    {a.domain !== "button" && <span className="muted">· {a.state}</span>}
+                    {a.domain !== "button" && <span className="muted">· {STATE_SV[a.state] ?? a.state}</span>}
                   </button>
                 ))}
               </div>
@@ -802,6 +803,9 @@ function CarColumn({ data, car, actions }: { data: Dashboard; car: Dashboard["ca
     </div>
   );
 }
+const STATE_SV: Record<string, string> = { locked: "låst", unlocked: "olåst", on: "på", off: "av", open: "öppen", closed: "stängd" };
+const fuelCar = (c: Dashboard["cars"][number]) => c.battery === null && c.fuelPct !== null;
+const carLevelText = (c: Dashboard["cars"][number]) => (fuelCar(c) && c.fuelLiters !== null ? `${c.fuelLiters} L` : `${carLevel(c) ?? "–"} %`);
 
 export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   const flat = useDesign(data.design) === "flat";
@@ -826,7 +830,7 @@ export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions 
         <div className="grid-2" style={{ gridTemplateColumns: `repeat(${data.cars.length}, minmax(0, 1fr))` }}>
           {data.cars.map((c, i) => (
             <button key={c.name} className={`btn ${i === sel ? "selected" : ""}`} onClick={() => setSel(i)}>
-              {c.name} · {c.battery ?? "–"} %
+              {c.name} · {carLevelText(c)}
             </button>
           ))}
         </div>
@@ -841,12 +845,12 @@ export function CarsPage({ data, actions }: { data: Dashboard; actions: Actions 
             </button>
           </div>
           <div className="car-ring">
-            <Ring progress={(car.battery ?? 0) / 100} size={140} stroke={11}>
+            <Ring progress={(carLevel(car) ?? 0) / 100} size={140} stroke={11}>
               <b style={{ fontSize: 40, fontWeight: 800, lineHeight: 1 }}>
-                {car.battery ?? "–"}
-                <small style={{ fontSize: 18 }}>%</small>
+                {fuelCar(car) && car.fuelLiters !== null ? car.fuelLiters : (carLevel(car) ?? "–")}
+                <small style={{ fontSize: 18 }}>{fuelCar(car) && car.fuelLiters !== null ? " L" : "%"}</small>
               </b>
-              <small className="muted">batteri</small>
+              <small className="muted">{fuelCar(car) ? "bränsle" : "batteri"}</small>
             </Ring>
           </div>
           <div className="chips">

@@ -159,6 +159,37 @@ describe("discovery", () => {
   });
 });
 
+describe("discovery: petrol car", () => {
+  const e = (x: Partial<import("./discovery.js").HaEntityInfo> & { e: string; n: string }) => ({ a: null, d: "xc60", dn: "Volvo XC60", m: "Volvo", mo: "XC60", dc: null, u: null, st: "1", lu: new Date().toISOString(), ...x });
+  const all = [
+    e({ e: "sensor.volvo_xc60_branslemangd", n: "Volvo XC60 Bränslemängd", u: "L", st: "59.0" }),
+    e({ e: "sensor.volvo_xc60_manuell_genomsnittlig_bransleforbrukning", n: "Volvo XC60 Manuell - Genomsnittlig bränsleförbrukning", u: "L/100 km", st: "7.6" }),
+    e({ e: "sensor.volvo_xc60_avstand_till_tom_tank", n: "Volvo XC60 Avstånd till tom tank", u: "km", st: "615" }),
+    e({ e: "device_tracker.volvo_xc60_plats", n: "Volvo XC60 Plats", st: "home" }),
+    e({ e: "button.volvo_xc60_starta_klimatiseringen", n: "Volvo XC60 Starta klimatiseringen" }),
+  ];
+
+  it("finds a Volvo without a battery by its fuel sensor", async () => {
+    const { discover } = await import("./discovery.js");
+    const d = discover(all);
+    expect(d.cars).toHaveLength(1);
+    expect(d.cars[0]).toMatchObject({ name: "Volvo XC60", fuel: "sensor.volvo_xc60_branslemangd", range: "sensor.volvo_xc60_avstand_till_tom_tank", location: "device_tracker.volvo_xc60_plats", climate: "button.volvo_xc60_starta_klimatiseringen" });
+    expect(d.cars[0].battery).toBeUndefined();
+  });
+
+  it("does not take a heating-oil tank for a car", async () => {
+    const { discover } = await import("./discovery.js");
+    const oil = [{ ...all[0], e: "sensor.oljetank", n: "Oljetank", d: "oil", dn: "Oljetank", m: "Tankspec", mo: null }];
+    expect(discover(oil).cars).toHaveLength(0);
+  });
+
+  it("anchors the car device on battery first, then fuel", async () => {
+    const { carAnchor } = await import("./discovery.js");
+    expect(carAnchor({ name: "x", fuel: "sensor.f" })).toBe("sensor.f");
+    expect(carAnchor({ name: "x", battery: "sensor.b", fuel: "sensor.f" })).toBe("sensor.b");
+  });
+});
+
 describe("design helpers", () => {
   it("picks an icon from title and calendar name", async () => {
     const { activityIcon } = await import("./dashboard.js");
