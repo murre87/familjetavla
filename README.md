@@ -80,6 +80,7 @@ Det som inte finns i HA sköts av **leverantörsmoduler**:
 | Kalender | **laget.se** | Lagets kalender → Prenumerera (en länk per lag) | stabil |
 | Kalender | **SportAdmin** | Appen → Aktiviteter → Prenumerera. **Lagfilter** om barnet har flera lag | stabil |
 | Kalender | Home Assistant | Valfri `calendar.*` | stabil |
+| Skola | InfoMentor via Home Assistant | Skoldagssensor per barn, valfri kalender och skolnyheter | beta |
 | Skola | SchoolSoft, Unikum, IST, Skola24, InfoMentor, Edlevo | Kalenderlänk (ICS) | stabil |
 | Skolmat | **Skolmaten.se** | Ingen inloggning | beta |
 | Skolmat | Skolmat-integrationen i HA | Mashie, Matilda, FoodIT, Mateo, skolmat.info | stabil |

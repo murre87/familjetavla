@@ -30,6 +30,10 @@ export interface SchoolEvent extends CalEvent {
   taskKind?: "läxa" | "prov" | "inlämning" | "uppgift";
   /** The item on the school platform. */
   url?: string;
+  /** An item from the school's calendar (a swim test, a dress-up day) – not a lesson, so it says nothing about when school starts and ends. */
+  post?: boolean;
+  /** The school day itself, from start to end, as the platform reports it. Wins over single events when the board works out the school hours. */
+  schoolDay?: boolean;
 }
 
 export interface SchoolNewsItem {

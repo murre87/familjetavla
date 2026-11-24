@@ -1,5 +1,5 @@
 import { fetchIcs } from "../connectors/ics.js";
-import { ha, haConnection } from "../connectors/ha.js";
+import { ha, haConnection, type HaState } from "../connectors/ha.js";
 import { getJson } from "../http.js";
 import { schoolsoftCalendar, schoolsoftLogin, schoolsoftLunch } from "../connectors/schoolsoft.js";
 import { groupsOfClass, skola24Host, skola24Lessons, skola24Selection, skola24Units } from "../connectors/skola24.js";
@@ -7,7 +7,7 @@ import { tyraCare, tyraEvents, tyraKids, tyraLogin, tyraMe, tyraToEvent } from "
 import { isGymLesson, vklassAssignmentInfo, vklassEvents, vklassLogin, vklassWelcome } from "../connectors/vklass.js";
 import { addDays, hhmm, shortDate, shortWeekday } from "../time.js";
 import { menuDishes, splitMenuEvents } from "../mealwords.js";
-import type { ProviderCtx, SchoolEvent, SchoolProvider } from "./types.js";
+import type { ProviderCtx, SchoolEvent, SchoolNewsItem, SchoolProvider } from "./types.js";
 
 const preview = (e: { start: Date; allDay: boolean; title: string }) =>
   `${shortWeekday(e.start)} ${shortDate(e.start)}${e.allDay ? "" : ` ${hhmm(e.start)}`} · ${e.title}`;
@@ -394,3 +394,153 @@ export const skola24: SchoolProvider = (() => {
     },
   };
 })();
+
+// ---------- InfoMentor via Home Assistant ----------
+
+const SPAN = /^([01]?\d|2[0-3]):([0-5]\d)\s*[–—-]\s*([01]?\d|2[0-3]):([0-5]\d)$/;
+const pad2 = (n: number | string) => String(n).padStart(2, "0");
+const ymd = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+/** A school day the platform has told us about. */
+export interface KnownDay {
+  /** "08:30" */
+  s: string;
+  e: string;
+  /** Number of lessons, first and last lesson. */
+  n?: number;
+  f?: string;
+  z?: string;
+}
+
+/**
+ * The InfoMentor sensor ("Skoldag" = "08:30–14:00") holds one school day, the next one, and
+ * moves on at night. So the day is remembered by its date: tomorrow's hours are today's tomorrow.
+ * Days more than a week old are dropped.
+ */
+export function rememberSchoolDay(known: Record<string, KnownDay>, st: Pick<HaState, "state" | "attributes"> | undefined, today: Date): Record<string, KnownDay> {
+  const out = { ...known };
+  const a = (st?.attributes ?? {}) as Record<string, unknown>;
+  const m = st ? SPAN.exec(st.state.trim()) : null;
+  const date = typeof a.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(a.date) ? a.date : "";
+  if (m && date && ymd(new Date(date + "T12:00:00")) === date && Number(m[1]) * 60 + Number(m[2]) < Number(m[3]) * 60 + Number(m[4])) {
+    out[date] = {
+      s: `${pad2(m[1])}:${m[2]}`,
+      e: `${pad2(m[3])}:${m[4]}`,
+      n: typeof a.lesson_count === "number" ? a.lesson_count : undefined,
+      f: typeof a.first_lesson === "string" ? a.first_lesson : undefined,
+      z: typeof a.last_lesson === "string" ? a.last_lesson : undefined,
+    };
+  }
+  const oldest = ymd(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7));
+  for (const k of Object.keys(out)) if (k < oldest) delete out[k];
+  return out;
+}
+
+/** The remembered days as events that span the school day. */
+export function schoolDayEvents(known: Record<string, KnownDay>, from: Date, to: Date): SchoolEvent[] {
+  const out: SchoolEvent[] = [];
+  for (const [date, d] of Object.entries(known)) {
+    const [y, mo, da] = date.split("-").map(Number);
+    const [sh, sm] = d.s.split(":").map(Number);
+    const [eh, em] = d.e.split(":").map(Number);
+    const start = new Date(y, mo - 1, da, sh, sm);
+    const end = new Date(y, mo - 1, da, eh, em);
+    if (!(end > start) || end < from || start > to) continue;
+    const detail = [d.n ? `${d.n} lektioner` : "", d.f && d.z ? `${d.f} – ${d.z}` : ""].filter(Boolean).join(" · ");
+    out.push({ title: "Skoldag", start, end, allDay: false, description: detail || undefined, schoolDay: true });
+  }
+  return out;
+}
+
+function readKnown(ctx: ProviderCtx): Record<string, KnownDay> {
+  try {
+    const v = JSON.parse(ctx.secret("days") ?? "{}") as Record<string, KnownDay>;
+    return v && typeof v === "object" ? v : {};
+  } catch {
+    return {};
+  }
+}
+
+const text = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+
+/** The school's news from the InfoMentor sensor (attribute "news"). */
+export function infomentorNews(st: Pick<HaState, "attributes"> | undefined): SchoolNewsItem[] {
+  const list = st?.attributes?.news;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((n: Record<string, unknown>) => {
+    const title = text(n?.title);
+    if (!title) return [];
+    const published = text(n.published);
+    const iso = published && !Number.isNaN(Date.parse(published)) ? new Date(published).toISOString() : undefined;
+    return [{ id: `${title}|${published}`, title, text: text(n.text) || text(n.body) || text(n.content) || text(n.summary), published: iso, files: [] }];
+  });
+}
+
+/**
+ * InfoMentor through its Home Assistant integration (HACS): the school hours from the "Skoldag" sensor,
+ * the school's calendar posts (swim test, dress-up day …) and its news. Replaces a calendar link, which only
+ * carries single events – the board then took one swim test for the whole school day.
+ */
+export const infomentorHa: SchoolProvider = {
+  meta: {
+    id: "infomentor-ha",
+    category: "school",
+    name: "InfoMentor från Home Assistant",
+    description: "Skoltider, händelser och nyheter från InfoMentor-integrationen (HACS) i Home Assistant. En per barn.",
+    status: "beta",
+    needsHa: true,
+    fields: [
+      { key: "schoolDay", label: "Skoldag-sensor", type: "entity", domains: ["sensor"] },
+      { key: "entityId", label: "Skolkalender (händelser, valfri)", type: "entity", domains: ["calendar"] },
+      { key: "news", label: "Skolans nyheter (valfri)", type: "entity", domains: ["sensor"] },
+    ],
+    guide: [
+      "Installera InfoMentor-integrationen i Home Assistant (HACS) och logga in med barnets konto.",
+      "Välj barnets Skoldag-sensor. Den ger skolans start- och sluttid för nästa skoldag; tavlan minns dagen tills den är över.",
+      "Välj gärna skolkalendern för händelser som simprov och utklädningsdag, och sensorn för skolans nyheter.",
+      "Lägg till en per barn och välj vilket barn den gäller.",
+    ],
+  },
+  async test(ctx) {
+    const conn = haConnection();
+    if (!conn) throw new Error("Home Assistant är inte anslutet.");
+    const dayId = ctx.str("schoolDay");
+    const calId = ctx.str("entityId");
+    if (!dayId && !calId) throw new Error("Välj Skoldag-sensorn eller skolkalendern.");
+    const lines: string[] = [];
+    if (dayId) {
+      const st = await ha.state(conn, dayId).catch(() => null);
+      if (!st) throw new Error(`Hittar inte ${dayId} i Home Assistant.`);
+      const known = rememberSchoolDay({}, st, new Date());
+      const [date, d] = Object.entries(known)[0] ?? [];
+      lines.push(d ? `Skoldag ${date}: ${d.s}–${d.e}` : `Sensorn säger "${st.state}" – ingen tid att läsa än.`);
+    }
+    if (calId) {
+      const now = new Date();
+      const evs = await ha.calendarEvents(conn, calId, now, new Date(now.getTime() + 21 * 86_400_000));
+      lines.push(...evs.slice(0, 4).map(preview));
+    }
+    return { ok: true, message: dayId ? "Skoldagen läses från Home Assistant." : "Kalendern läses från Home Assistant.", preview: lines };
+  },
+  async fetch(ctx, from, to) {
+    const conn = haConnection();
+    if (!conn) throw new Error("Home Assistant är inte anslutet.");
+    const events: SchoolEvent[] = [];
+    const dayId = ctx.str("schoolDay");
+    if (dayId) {
+      const st = await ha.state(conn, dayId).catch(() => undefined);
+      const before = readKnown(ctx);
+      const known = rememberSchoolDay(before, st, new Date());
+      if (JSON.stringify(known) !== JSON.stringify(before)) ctx.remember("days", JSON.stringify(known));
+      events.push(...schoolDayEvents(known, from, to));
+    }
+    const calId = ctx.str("entityId");
+    if (calId) {
+      const evs = await ha.calendarEvents(conn, calId, from, to);
+      events.push(...evs.map((e) => ({ ...e, gym: isGymLesson(e), post: true })));
+    }
+    const newsId = ctx.str("news");
+    const news = newsId ? infomentorNews(await ha.state(conn, newsId).catch(() => undefined)) : [];
+    return { events, news };
+  },
+};

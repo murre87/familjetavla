@@ -36,9 +36,13 @@ export function buildSchoolDays(
       const day = plusDays(today, i);
       const next = plusDays(day, 1);
       const that = mine.filter((e) => e.start >= day && e.start < next && isHere(e, day));
-      if (!that.length) continue;
-      const start = new Date(Math.min(...that.map((e) => e.start.getTime())));
-      const end = new Date(Math.max(...that.map((e) => e.end.getTime())));
+      // The school's own hours when the platform gives them; otherwise the lessons. A swim test or a
+      // dress-up day in the school calendar is not a lesson: it must not be taken for the school day.
+      const own = that.filter((e) => e.schoolDay);
+      const basis = own.length ? own : that.filter((e) => !e.post);
+      if (!basis.length) continue;
+      const start = new Date(Math.min(...basis.map((e) => e.start.getTime())));
+      const end = new Date(Math.max(...basis.map((e) => e.end.getTime())));
       if (i === 0 && now.getTime() > end.getTime() + 15 * 60_000) continue;
       out.push({
         personId: p.id,
@@ -96,11 +100,15 @@ export function buildSchoolWeek(
     for (let i = 0; i < 5; i++) {
       const day = plusDays(monday, i);
       const next = plusDays(day, 1);
-      const lessons = mine
+      const items = mine
         .filter((e) => !e.allDay && !e.task && e.start >= day && e.start < next && !TASK.test(e.title) && isHere(e, day))
-        .sort((a, b) => a.start.getTime() - b.start.getTime())
+        .sort((a, b) => a.start.getTime() - b.start.getTime());
+      const reported = items.find((e) => e.schoolDay);
+      const dayHours = reported && { start: hm(reported.start), end: hm(reported.end), gym: items.some((e) => e.gym) };
+      const actualLessons = items.filter((e) => !e.post && !e.schoolDay);
+      const lessons = (actualLessons.length || !reported ? actualLessons : [reported])
         .map((e) => ({ start: hm(e.start), end: hm(e.end), title: e.title, location: e.location || undefined, gym: Boolean(e.gym) }));
-      days.push({ dayKey: dayKey(day), label: LONG[day.getDay()], today: day.getTime() === today.getTime(), lessons });
+      days.push({ dayKey: dayKey(day), label: LONG[day.getDay()], today: day.getTime() === today.getTime(), hours: dayHours, lessons });
     }
     const until = plusDays(today, 14);
     const CLOSED = /stängt|stängd|lov\b|studiedag|planeringsdag|apt\b/i;
@@ -153,8 +161,10 @@ export function schoolEndsOn(events: SourcedEvent[], people: Map<string, Person>
     const lessons = events.filter(
       (e) => e.personId === p.id && (e.sourceId.startsWith("school:") || e.category === "school") && !e.allDay && !e.task && !TASK.test(e.title) && e.start >= from && e.start < to,
     );
-    if (!lessons.length) continue;
-    const last = lessons.reduce((a, b) => (b.end > a.end ? b : a));
+    const reported = lessons.filter((e) => e.schoolDay);
+    const basis = reported.length ? reported : lessons.filter((e) => !e.post);
+    if (!basis.length) continue;
+    const last = basis.reduce((a, b) => (b.end > a.end ? b : a));
     out.push({ name: p.name, end: hm(last.end), gym: lessons.some((l) => l.gym), home: isHome(p, day) });
   }
   return out;

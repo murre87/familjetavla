@@ -333,6 +333,7 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
   }
   const kid = kids.find((k) => k.personId === who) ?? kids[0];
   const today = kid.days.find((d) => d.today);
+  const selectedDay = today ?? kid.days.find((d) => d.lessons.length);
   return (
     <div className="stack">
       <div className="school-top">
@@ -350,7 +351,7 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
       <div className="school-grid">
         <section className="card">
           <h2>{today ? "Idag" : "Nästa skoldag"}</h2>
-          {data.lessonView === "span" ? <DaySpan lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} /> : <Lessons lessons={(today ?? kid.days.find((d) => d.lessons.length))?.lessons ?? []} />}
+          {data.lessonView === "span" ? <DaySpan hours={selectedDay?.hours} lessons={selectedDay?.lessons ?? []} /> : <Lessons lessons={selectedDay?.lessons ?? []} />}
         </section>
         <section className="card">
           <h2>Läxor och uppgifter</h2>
@@ -377,8 +378,8 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
               {d.lessons.length ? (
                 <>
                   <small className="muted">
-                    {data.lessonView === "span" ? `Slutar ${d.lessons[d.lessons.length - 1].end}` : `${d.lessons[0].start}–${d.lessons[d.lessons.length - 1].end}`}
-                    {d.lessons.some((l) => l.gym) ? " · Idrott" : ""}
+                    {data.lessonView === "span" ? `Slutar ${d.hours?.end ?? d.lessons[d.lessons.length - 1].end}` : `${d.hours?.start ?? d.lessons[0].start}–${d.hours?.end ?? d.lessons[d.lessons.length - 1].end}`}
+                    {(d.hours?.gym ?? d.lessons.some((l) => l.gym)) ? " · Idrott" : ""}
                   </small>
                   {data.lessonView !== "span" && <Lessons lessons={d.lessons} compact />}
                 </>
@@ -395,14 +396,14 @@ function SchoolPage({ data, actions }: { data: Dashboard; actions: Actions }) {
 }
 
 /** Only when the school day starts and ends – for families who don't need every lesson. */
-function DaySpan({ lessons }: { lessons: NonNullable<Dashboard["school"]>[number]["days"][number]["lessons"] }) {
+function DaySpan({ lessons, hours }: { hours?: NonNullable<Dashboard["school"]>[number]["days"][number]["hours"]; lessons: NonNullable<Dashboard["school"]>[number]["days"][number]["lessons"] }) {
   if (!lessons.length) return <small className="muted">Ingen skola</small>;
-  const gym = lessons.some((l) => l.gym);
+  const gym = hours?.gym ?? lessons.some((l) => l.gym);
   return (
     <div className="day-span">
       <div>
         <small className="muted">Slutar</small>
-        <b>{lessons[lessons.length - 1]!.end}</b>
+        <b>{hours?.end ?? lessons[lessons.length - 1]!.end}</b>
       </div>
       {gym && <span className="chip">Idrott – gympapåse</span>}
     </div>
