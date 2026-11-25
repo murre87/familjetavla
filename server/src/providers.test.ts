@@ -594,3 +594,54 @@ describe("middagsfavoriter, hyllan och veckodagar", () => {
     expect(r.map((x) => `${x.type} ${x.label}`)).toEqual(["Matavfall idag", "Kärl 1 imorgon", "Kärl 2 ons 18/11"]);
   });
 });
+
+describe("InfoMentor via Home Assistant", () => {
+  const st = (state: string, attributes: Record<string, unknown> = {}) => ({ state, attributes });
+  const today = new Date(2026, 9, 22, 13, 0);
+
+  it("reads the school day from the Skoldag sensor by its date", async () => {
+    const { rememberSchoolDay } = await import("./providers/school.js");
+    const known = rememberSchoolDay({}, st("08:30–14:00", { date: "2026-10-23", lesson_count: 5, first_lesson: "Matematik", last_lesson: "Mål arbete" }), today);
+    expect(known).toEqual({ "2026-10-23": { s: "08:30", e: "14:00", n: 5, f: "Matematik", z: "Mål arbete" } });
+  });
+
+  it("remembers earlier days (the sensor moves on at night) and forgets old ones", async () => {
+    const { rememberSchoolDay } = await import("./providers/school.js");
+    const before = { "2026-10-22": { s: "08:30", e: "15:30" }, "2026-10-01": { s: "08:30", e: "14:00" } };
+    const known = rememberSchoolDay(before, st("08:30–14:00", { date: "2026-10-23" }), today);
+    expect(Object.keys(known).sort()).toEqual(["2026-10-22", "2026-10-23"]);
+  });
+
+  it("ignores a sensor without a time or a date", async () => {
+    const { rememberSchoolDay } = await import("./providers/school.js");
+    expect(rememberSchoolDay({}, st("unknown", { date: "2026-10-23" }), today)).toEqual({});
+    expect(rememberSchoolDay({}, st("08:30–14:00"), today)).toEqual({});
+    expect(rememberSchoolDay({}, undefined, today)).toEqual({});
+    expect(rememberSchoolDay({}, st("08:30–25:00", { date: "2026-10-23" }), today)).toEqual({});
+    expect(rememberSchoolDay({}, st("14:00–08:30", { date: "2026-10-23" }), today)).toEqual({});
+    expect(rememberSchoolDay({}, st("08:30–14:00", { date: "2026-02-31" }), today)).toEqual({});
+  });
+
+  it("makes the remembered days into school-day events", async () => {
+    const { schoolDayEvents } = await import("./providers/school.js");
+    const evs = schoolDayEvents({ "2026-10-22": { s: "08:30", e: "15:30", n: 6 }, "2026-11-30": { s: "08:30", e: "14:00" } }, new Date(2026, 9, 22), new Date(2026, 9, 29));
+    expect(evs).toHaveLength(1);
+    expect(evs[0]).toMatchObject({ title: "Skoldag", schoolDay: true, allDay: false, description: "6 lektioner" });
+    expect(evs[0].start).toEqual(new Date(2026, 9, 22, 8, 30));
+    expect(evs[0].end).toEqual(new Date(2026, 9, 22, 15, 30));
+  });
+
+  it("reads the school's news from the sensor", async () => {
+    const { infomentorNews } = await import("./providers/school.js");
+    const news = infomentorNews({ attributes: { news: [{ title: "Utflykt på fredag", published: "2026-10-21T08:00:00+02:00", text: "Ta med matsäck" }, { title: "" }] } });
+    expect(news).toHaveLength(1);
+    expect(news[0]).toMatchObject({ title: "Utflykt på fredag", text: "Ta med matsäck", files: [] });
+    expect(news[0].published).toBe("2026-10-21T06:00:00.000Z");
+    expect(infomentorNews(undefined)).toEqual([]);
+  });
+
+  it("is one of the school providers in the setup guide", async () => {
+    const { findProvider } = await import("./providers/registry.js");
+    expect(findProvider("school", "infomentor-ha")?.meta).toMatchObject({ needsHa: true, name: "InfoMentor från Home Assistant" });
+  });
+});

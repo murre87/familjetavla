@@ -741,7 +741,7 @@ export interface SchoolChild {
   name: string;
   color: string;
   /** Måndag–fredag den här veckan (nästa vecka på helgen). */
-  days: { dayKey: string; label: string; today: boolean; lessons: { start: string; end: string; title: string; location?: string; gym: boolean }[] }[];
+  days: { dayKey: string; label: string; today: boolean; hours?: { start: string; end: string; gym: boolean }; lessons: { start: string; end: string; title: string; location?: string; gym: boolean }[] }[];
   /** Läxor, prov och uppgifter de kommande två veckorna. */
   tasks: {
     dayKey: string;

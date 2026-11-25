@@ -25,6 +25,10 @@ export interface SourcedEvent extends CalEvent {
   taskKind?: "läxa" | "prov" | "inlämning" | "uppgift";
   /** The item on the school platform. */
   url?: string;
+  /** A school calendar item that is not a lesson (see SchoolEvent.post). */
+  post?: boolean;
+  /** The school day's own start and end (see SchoolEvent.schoolDay). */
+  schoolDay?: boolean;
   /** Name of the calendar (helps pick an icon: "Fotboll F14" → ball). */
   sourceName?: string;
   /** Shown even when the child is at the other home (calendar set to "always" or an alwaysShow match). */
